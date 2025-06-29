@@ -1,11 +1,11 @@
 import express from "express";
-import { getCrawlerMessages } from "lib/config";
+import { getCrawlerData } from "lib/crawler";
 
 /*
  * "/" here represents "/init"
  */
 
 const router = express.Router();
-router.get("/crawlerMessages", getCrawlerMessages);
+router.get("/crawlerData", getCrawlerData);
 
 export default router;

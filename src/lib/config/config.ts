@@ -34,11 +34,9 @@ const CONFIG_PATH = {
 const CONFIG_ABSOLUTE_PATH = `${CONFIG_PATH.FOLDER}/${CONFIG_PATH.FILE}`;
 const BAD_CONFIG_FILE_ERROR_MESSAGE = "Unable to load config file, defaults have been loaded";
 
-const CRAWLER_PATH = {
-  FOLDER: "./cfg",
-  FILE: "crawler.txt",
-};
-const CRAWLER_ABSOLUTE_PATH = `${CRAWLER_PATH.FOLDER}/${CRAWLER_PATH.FILE}`;
+import { getCrawlerFilePath } from "lib/crawler";
+const crawlerFilePath = getCrawlerFilePath();
+
 const MUSIC_DIR = "music";
 
 class Config {
@@ -160,9 +158,9 @@ class Config {
   }
 
   private loadCrawlerMessages() {
-    logger.log("Loading crawler messages from", CRAWLER_ABSOLUTE_PATH);
+    logger.log("Loading crawler messages from", crawlerFilePath);
     try {
-      const data = fs.readFileSync(CRAWLER_ABSOLUTE_PATH, "utf8");
+      const data = fs.readFileSync(crawlerFilePath, "utf8");
       this.crawlerMessages = data
         .split("\n")
         .map((message) => message.trim())
@@ -181,9 +179,9 @@ class Config {
   }
 
   private saveCrawlerMessages() {
-    logger.log("Saving crawler messages to", CRAWLER_ABSOLUTE_PATH);
+    logger.log("Saving crawler messages to", crawlerFilePath);
     try {
-      fs.writeFileSync(CRAWLER_ABSOLUTE_PATH, this.crawlerMessages.join("\n"), "utf8");
+      fs.writeFileSync(crawlerFilePath, this.crawlerMessages.join("\n"), "utf8");
       logger.log("Saved", this.crawlerMessages.length, "crawler messages");
     } catch (err) {
       if (err.code === "ENOENT") {
