@@ -157,13 +157,8 @@ class Config {
   }
 
   private loadCrawlerMessages() {
-    logger.log("Loading crawler messages calling class");
+    logger.log("Loading crawler messages");
     try {
-      //const data = fs.readFileSync(crawlerFilePath, "utf8");
-      //this.crawlerMessages = data
-      //  .split("\n")
-      //  .map((message) => message.trim())
-      //  .filter((message) => message.length);
       const crawler = initializeCrawler();
       this.crawlerMessages = crawler.messages;
       logger.log("Loaded", this.crawlerMessages.length, "crawler messages");
@@ -173,11 +168,10 @@ class Config {
   }
 
   private saveCrawlerMessages() {
-    logger.log("Saving crawler messages calling class");
+    logger.log("Saving crawler messages");
     try {
       const crawler = initializeCrawler();
       crawler.messages = this.crawlerMessages;
-      // fs.writeFileSync(crawlerFilePath, this.crawlerMessages.join("\n"), "utf8");
       logger.log("Saved", crawler.messages.length, "crawler messages");
     } catch (err) {
       logger.error("Unable to call crawler save");
