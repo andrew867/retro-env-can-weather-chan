@@ -34,8 +34,7 @@ const CONFIG_PATH = {
 const CONFIG_ABSOLUTE_PATH = `${CONFIG_PATH.FOLDER}/${CONFIG_PATH.FILE}`;
 const BAD_CONFIG_FILE_ERROR_MESSAGE = "Unable to load config file, defaults have been loaded";
 
-import { getCrawlerFilePath } from "lib/crawler";
-const crawlerFilePath = getCrawlerFilePath();
+import { Crawler, initializeCrawler } from "lib/crawler";
 
 const MUSIC_DIR = "music";
 
@@ -158,39 +157,30 @@ class Config {
   }
 
   private loadCrawlerMessages() {
-    logger.log("Loading crawler messages from", crawlerFilePath);
+    logger.log("Loading crawler messages calling class");
     try {
-      const data = fs.readFileSync(crawlerFilePath, "utf8");
-      this.crawlerMessages = data
-        .split("\n")
-        .map((message) => message.trim())
-        .filter((message) => message.length);
-
+      //const data = fs.readFileSync(crawlerFilePath, "utf8");
+      //this.crawlerMessages = data
+      //  .split("\n")
+      //  .map((message) => message.trim())
+      //  .filter((message) => message.length);
+      const crawler = initializeCrawler();
+      this.crawlerMessages = crawler.messages;
       logger.log("Loaded", this.crawlerMessages.length, "crawler messages");
     } catch (err) {
-      if (err.code === "ENOENT") {
-        // handle no file found
-        logger.error("No crawler file found");
-      } else {
-        // handle any other error
-        logger.error("Unable to load from crawler file");
-      }
+      logger.error("Unable to call crawler load");
     }
   }
 
   private saveCrawlerMessages() {
-    logger.log("Saving crawler messages to", crawlerFilePath);
+    logger.log("Saving crawler messages calling class");
     try {
-      fs.writeFileSync(crawlerFilePath, this.crawlerMessages.join("\n"), "utf8");
-      logger.log("Saved", this.crawlerMessages.length, "crawler messages");
+      const crawler = initializeCrawler();
+      crawler.messages = this.crawlerMessages;
+      // fs.writeFileSync(crawlerFilePath, this.crawlerMessages.join("\n"), "utf8");
+      logger.log("Saved", crawler.messages.length, "crawler messages");
     } catch (err) {
-      if (err.code === "ENOENT") {
-        // handle no file found
-        logger.error("No crawler file found");
-      } else {
-        // handle any other error
-        logger.error("Unable to save to crawler file");
-      }
+      logger.error("Unable to call crawler save");
     }
   }
 

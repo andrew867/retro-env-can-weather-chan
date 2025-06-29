@@ -14,60 +14,74 @@ export class Crawler {
     speed: number = CRAWLER_DEFAULT_SPEED;
 
     constructor() {
-        this.loadCrawlerMessages();
+      try {
+        this.messages = this.loadCrawlerMessages();
+      } catch (err){
+        this.messages = null;
       }
+    }
     
     get crawler() {
-    return {
-        messages: this.messages,
-        speed: this.speed,
-    };
+      return {
+          messages: this.messages,
+          speed: this.speed,
+      };
     }
 
-      private loadCrawlerMessages() {
-        logger.log("Loading crawler messages from", CRAWLER_ABSOLUTE_PATH);
-        try {
-          const data = fs.readFileSync(CRAWLER_ABSOLUTE_PATH, "utf8");
-          this.messages = data
-            .split("\n")
-            .map((message) => message.trim())
-            .filter((message) => message.length);
-    
-          logger.log("Loaded", this.messages.length, "crawler messages");
-        } catch (err) {
-          if (err.code === "ENOENT") {
-            // handle no file found
-            logger.error("No crawler file found");
-          } else {
-            // handle any other error
-            logger.error("Unable to load from crawler file");
-          }
+    set crawler(data: any) {
+      try {
+        this.setCrawlerMessages(data.messages);
+      } catch (err){
+        return;
+      }
+    }
+
+    private loadCrawlerMessages(): string[] {
+      logger.log("Loading crawler messages from", CRAWLER_ABSOLUTE_PATH);
+      try {
+        const data = fs.readFileSync(CRAWLER_ABSOLUTE_PATH, "utf8");
+        const messages = data
+          .split("\n")
+          .map((message) => message.trim())
+          .filter((message) => message.length);
+        logger.log("Loaded", messages.length, "crawler messages");
+        return messages;
+      } catch (err) {
+        if (err.code === "ENOENT") {
+          // handle no file found
+          logger.error("No crawler file found");
+          return null;
+        } else {
+          // handle any other error
+          logger.error("Unable to load from crawler file");
+          return null;
         }
       }
-
-    private saveCrawlerMessages() {
-        logger.log("Saving crawler messages to", CRAWLER_ABSOLUTE_PATH);
-        try {
-        fs.writeFileSync(CRAWLER_ABSOLUTE_PATH, this.messages.join("\n"), "utf8");
-        logger.log("Saved", this.messages.length, "crawler messages");
-        } catch (err) {
-        if (err.code === "ENOENT") {
-            // handle no file found
-            logger.error("No crawler file found");
-        } else {
-            // handle any other error
-            logger.error("Unable to save to crawler file");
-        }
-        }
     }
-
-    public setCrawlerMessages(crawler: string[]) {
-        this.messages.splice(
-          0,
-          this.messages.length,
-          ...crawler.map((message) => message.trim()).filter((message) => message.length)
-        );
-        this.saveCrawlerMessages();
+    
+    private saveCrawlerMessages(messages: string[]) {
+      logger.log("Saving crawler messages to", CRAWLER_ABSOLUTE_PATH);
+      try {
+          fs.writeFileSync(CRAWLER_ABSOLUTE_PATH, messages.join("\n"), "utf8");
+          logger.log("Saved", messages.length, "crawler messages");
+      } catch (err) {
+          if (err.code === "ENOENT") {
+              // handle no file found
+              logger.error("No crawler file found");
+          } else {
+              // handle any other error
+              logger.error("Unable to save to crawler file");
+          }
+      }
+    }
+    
+    private setCrawlerMessages(crawler: string[]) {
+      this.messages.splice(
+        0,
+        this.messages.length,
+        ...crawler.map((message) => message.trim()).filter((message) => message.length)
+      );
+      this.saveCrawlerMessages(this.messages);
     }
 }
 
@@ -80,6 +94,3 @@ export function initializeCrawler(): Crawler {
   crawler = new Crawler();
   return crawler;
 }
-
-export function getCrawlerFilePath(): string { return CRAWLER_ABSOLUTE_PATH; }
-
