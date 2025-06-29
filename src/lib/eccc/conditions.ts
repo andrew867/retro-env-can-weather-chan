@@ -41,6 +41,7 @@ import { initializeClimateNormals } from "./climateNormals";
 import { generateConditionsUUID } from "./utils";
 import eventbus from "lib/eventbus";
 import { getTempRecordForDate } from "lib/temprecords";
+import { GetWeatherFileFromECCC } from "./datamart";
 
 const ECCC_BASE_API_URL = "https://dd.weather.gc.ca/citypage_weather/xml/";
 const ECCC_API_ENGLISH_SUFFIX = "_e.xml";
@@ -92,7 +93,7 @@ class CurrentConditions {
 
     // hook up the amqp listener
     const { connection, emitter: listener } = listen({
-      amqp_subtopic: `*.WXO-DD.citypage_weather.xml.${config.primaryLocation.province}.#`,
+      amqp_subtopic: `*.WXO-DD.citypage_weather.${config.primaryLocation.province}.#`,
     });
 
     // handle errors and messages
@@ -100,7 +101,7 @@ class CurrentConditions {
       .on("error", (...error) => logger.error("AMQP error:", error))
       .on("message", (date: string, url: string) => {
         // make sure its relevant to us
-        if (!url.includes(`${this._weatherStationID}_e.xml`)) return;
+        if (!url.includes(`${this._weatherStationID}`)) return;
 
         this.fetchConditions(url);
         logger.log("Received new conditions from AMQP at", date);
@@ -112,70 +113,75 @@ class CurrentConditions {
     logger.log("Started AMQP conditions listener");
   }
 
-  private fetchConditions(url: string = this._apiUrl) {
-    axios
-      .get(url)
-      .then((resp) => {
-        // parse to weather object
-        const weather = new Weather(resp.data);
-        if (!weather) return;
+  private async fetchConditions(url?: string) {
+    const searchedURL =
+      url != undefined
+        ? url
+        : await GetWeatherFileFromECCC(config.primaryLocation.province, config.primaryLocation.location);
+    searchedURL &&
+      axios
+        .get(searchedURL)
+        .then((resp) => {
+          // parse to weather object
+          const weather = new Weather(resp.data);
+          if (!weather) return;
 
-        // make sure all weather is there
-        const { all: allWeather } = weather;
-        if (!allWeather) return;
+          // make sure all weather is there
+          const { all: allWeather } = weather;
+          if (!allWeather) return;
 
-        // store station lat/long
-        this.parseStationLatLong(allWeather.location.name);
+          // store station lat/long
+          this.parseStationLatLong(allWeather.location.name);
 
-        // generate uuid for these conditions and reject if a config option is on
-        const conditionUUID = generateConditionsUUID(weather.current?.dateTime[1].timeStamp ?? "");
-        if (config.misc.rejectInHourConditionUpdates && conditionUUID === this._conditionUUID) {
-          // update the forecast at least but reject the rest of it
-          logger.log("Rejecting in-hour conditions update as", conditionUUID, "was already parsed");
-          return;
-        }
+          // generate uuid for these conditions and reject if a config option is on
+          const conditionUUID = generateConditionsUUID(weather.current?.dateTime[1].timeStamp ?? "");
+          if (config.misc.rejectInHourConditionUpdates && conditionUUID === this._conditionUUID) {
+            // update the forecast at least but reject the rest of it
+            logger.log("Rejecting in-hour conditions update as", conditionUUID, "was already parsed");
+            return;
+          }
 
-        // store the condition uuid for later use
-        this._conditionUUID = conditionUUID;
+          // store the condition uuid for later use
+          this._conditionUUID = conditionUUID;
 
-        // store the observed date/time in our own format
-        this.generateWeatherStationTimeData(weather.current?.dateTime[1] ?? {});
+          // store the observed date/time in our own format
+          this.generateWeatherStationTimeData(weather.current?.dateTime[1] ?? {});
 
-        // time/date done so now fetch historical data
-        const observedDateTime: Date = this.observedDateTimeAtStation();
-        historicalData.fetchLastTwoYearsOfData(observedDateTime);
-        climateNormals.fetchClimateNormals(observedDateTime);
+          // time/date done so now fetch historical data
+          const observedDateTime: Date = this.observedDateTimeAtStation();
+          historicalData.fetchLastTwoYearsOfData(observedDateTime);
+          climateNormals.fetchClimateNormals(observedDateTime);
 
-        // get city name info
-        this._weatherStationCityName = allWeather.location.name.value;
+          // get city name info
+          this._weatherStationCityName = allWeather.location.name.value;
 
-        // get relevant conditions
-        this.parseRelevantConditions(weather.current);
+          // get relevant conditions
+          this.parseRelevantConditions(weather.current);
 
-        // get sunrise/sunset info
-        this.parseSunriseSunset(allWeather.riseSet);
+          // get sunrise/sunset info
+          this.parseSunriseSunset(allWeather.riseSet);
 
-        // get the almanac data (normal, records, etc.)
-        this.generateAlmanac(allWeather.almanac);
+          // get the almanac data (normal, records, etc.)
+          this.generateAlmanac(allWeather.almanac);
 
-        // calculate the windchill
-        this.generateWindchill(weather.current);
+          // calculate the windchill
+          this.generateWindchill(weather.current);
 
-        // generate the forecast
-        this.generateForecast(weather.weekly);
+          // generate the forecast
+          this.generateForecast(weather.weekly);
 
-        // check if we've got an alternate record source
-        this.getTempRecordsForDay();
+          // check if we've got an alternate record source
+          this.getTempRecordsForDay();
 
-        // tell national stations what we're expecting
-        eventbus.emit(
-          EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS,
-          generateConditionsUUID(weather.current?.dateTime[0].timeStamp)
-        );
-      })
-      .catch((err) => {
-        logger.error("Unable to retrieve update to conditions from ECCC API", err);
-      });
+          // tell national stations what we're expecting
+          eventbus.emit(
+            EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS,
+            generateConditionsUUID(weather.current?.dateTime[0].timeStamp)
+          );
+        })
+        .catch((err) => {
+          logger.error("Unable to retrieve update to conditions from ECCC API", err);
+        });
   }
 
   private parseStationLatLong({ lat, lon }: { lat: string; lon: string }) {

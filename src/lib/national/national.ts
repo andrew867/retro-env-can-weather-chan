@@ -7,6 +7,7 @@ import {
   MB_WEATHER_STATIONS,
   NATIONAL_WEATHER_FETCH_INTERVAL,
   WEST_WEATHER_STATIONS,
+  ON_WEATHER_STATIONS
 } from "consts";
 import { NationalStationConfig, NationalStationObservation, NationalStationObservations } from "types";
 import Logger from "lib/logger";
@@ -15,12 +16,14 @@ import { harshTruncateConditions } from "lib/conditions";
 import { generateConditionsUUID } from "lib/eccc/utils";
 import { initializeConfig } from "lib/config";
 import eventbus from "lib/eventbus";
+import { GetWeatherFileFromECCC } from "lib/eccc/datamart";
 
 const config = initializeConfig();
 
 const logger = new Logger("National");
 class NationalWeather {
   private _manitobaStations: NationalStationObservations = [];
+  private _ontarioStations: NationalStationObservations = [];
   private _eastStations: NationalStationObservations = [];
   private _westStations: NationalStationObservations = [];
   private _expectedConditionUUID: string;
@@ -34,6 +37,7 @@ class NationalWeather {
 
   private periodicUpdate(clearExistingData: boolean = false) {
     this.fetchWeatherForStations(MB_WEATHER_STATIONS, this._manitobaStations, clearExistingData);
+    this.fetchWeatherForStations(ON_WEATHER_STATIONS, this._ontarioStations, clearExistingData);
     this.fetchWeatherForStations(EAST_WEATHER_STATIONS, this._eastStations, clearExistingData);
     this.fetchWeatherForStations(WEST_WEATHER_STATIONS, this._westStations, clearExistingData);
   }
@@ -69,7 +73,11 @@ class NationalWeather {
       observations.splice(
         0,
         observations.length,
-        ...[...stations].map((stationConfig) => ({ ...stationConfig, condition: null, temperature: null }))
+        ...[...stations].map(
+          (stationConfig) =>
+            ({ ...stationConfig, condition: null, temperature: null } as NationalStationConfig &
+              NationalStationObservation)
+        )
       );
     }
 
@@ -78,38 +86,43 @@ class NationalWeather {
   }
 
   private fetchWeatherForStation(station: NationalStationConfig, observations: NationalStationObservations) {
-    axios
-      .get(`https://dd.weather.gc.ca/citypage_weather/xml/${station.code}_e.xml`)
-      .then((resp) => {
-        const data = resp && resp.data;
-        const weather = new Weather(data);
-        if (!weather) throw "Unable to parse weather data";
+    const [province, stationID] = station.code.split("/");
+    GetWeatherFileFromECCC(province, stationID).then((url) => {
+      url &&
+        axios
+          .get(url)
+          .then((resp) => {
+            const data = resp && resp.data;
+            const weather = new Weather(data);
+            if (!weather) throw "Unable to parse weather data";
 
-        const stationIx = observations.findIndex((observationStation) => observationStation.code === station.code);
-        if (stationIx === -1) return;
+            const stationIx = observations.findIndex((observationStation) => observationStation.code === station.code);
+            if (stationIx === -1) return;
 
-        const {
-          condition,
-          temperature: { value: temperature },
-          dateTime: [utc],
-        } = weather.current;
+            const {
+              condition,
+              temperature: { value: temperature },
+              dateTime: [utc],
+            } = weather.current;
 
-        // handle rejecting in-hour updates for these stations too
-        const conditionUUID = generateConditionsUUID(utc.timeStamp);
-        if (config.misc.rejectInHourConditionUpdates && conditionUUID === observations[stationIx].conditionUUID) return;
+            // handle rejecting in-hour updates for these stations too
+            const conditionUUID = generateConditionsUUID(utc.timeStamp);
+            if (config.misc.rejectInHourConditionUpdates && conditionUUID === observations[stationIx].conditionUUID)
+              return;
 
-        // also reject if this station has updated to a new hour but the main station hasn't
-        if (this._expectedConditionUUID && conditionUUID !== this._expectedConditionUUID) return;
+            // also reject if this station has updated to a new hour but the main station hasn't
+            if (this._expectedConditionUUID && conditionUUID !== this._expectedConditionUUID) return;
 
-        observations.splice(stationIx, 1, {
-          ...station,
-          condition: condition ?? null,
-          abbreviatedCondition: condition ? harshTruncateConditions(weather.current?.condition) : null,
-          temperature: temperature && !isNaN(temperature) ? Number(temperature) : null,
-          conditionUUID,
-        });
-      })
-      .catch((err) => logger.error(station.name, "failed to fetch data", err));
+            observations.splice(stationIx, 1, {
+              ...station,
+              condition: condition ?? null,
+              abbreviatedCondition: condition ? harshTruncateConditions(weather.current?.condition) : null,
+              temperature: temperature && !isNaN(temperature) ? Number(temperature) : null,
+              conditionUUID,
+            });
+          })
+          .catch((err) => logger.error(station.name, "failed to fetch data", err));
+    });
   }
 
   public nationalWeather() {

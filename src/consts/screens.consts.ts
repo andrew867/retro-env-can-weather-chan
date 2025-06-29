@@ -14,6 +14,7 @@ export enum Screens {
   INFO,
   SUNSPOTS,
   WINDCHILL,
+  CANADA_TEMP_CONDITIONS_ON,
 }
 
 export const SCREEN_NAMES = {
@@ -24,6 +25,7 @@ export const SCREEN_NAMES = {
   [Screens.AQHI_WARNING]: "AQHI Warning",
   [Screens.PROVINCE_PRECIP]: "Province Temp/Precip",
   [Screens.CANADA_TEMP_CONDITIONS_MB]: "Conditions in Manitoba",
+  [Screens.CANADA_TEMP_CONDITIONS_ON]: "Conditions in Ontario",
   [Screens.CANADA_TEMP_CONDITIONS_WEST]: "Conditions on the West Coast",
   [Screens.CANADA_TEMP_CONDITIONS_EAST]: "Conditions on the East Coast",
   [Screens.USA_TEMP_CONDITIONS]: "Conditions in the USA",
@@ -43,13 +45,14 @@ export const SCREEN_DESCRIPTIONS = {
   [Screens.AQHI_WARNING]: "Relevant warning screen if AQHI for the current weather station is above 3",
   [Screens.PROVINCE_PRECIP]: "Highest or lowest recorded temperature for the day plus the previous day's precipitation",
   [Screens.CANADA_TEMP_CONDITIONS_MB]: "List of Manitoba cities with the current temperature and conditions",
+  [Screens.CANADA_TEMP_CONDITIONS_ON]: "List of Ontario cities with the current temperature and conditions",
   [Screens.CANADA_TEMP_CONDITIONS_WEST]: "List of West-coast cities with the current temperature and conditions",
   [Screens.CANADA_TEMP_CONDITIONS_EAST]: "List of East-coast cities with the current temperature and conditions",
   [Screens.USA_TEMP_CONDITIONS]: "List of US cities with the current temperature and conditions",
   [Screens.STATS]:
     "Screen showing sunrise/set for the day, along with seasonal precipitation stats and the hot/cold spots in Canada",
   [Screens.LAST_MONTH_STATS]:
-    "Statitics about the last month with temperature, precipitation, and hotest/coldest days recorded",
+    "Statistics about the last month with temperature, precipitation, and hotest/coldest days recorded",
   [Screens.INFO]: "Custom text only info screens written by the user",
   [Screens.SUNSPOTS]: "List of forecast for warmer cities during the winter",
   // [Screens.RANDOM]: "Random selection from a pre-determined list of screens",
@@ -65,4 +68,6 @@ export const SCREEN_INFO_DISPLAY_LENGTH = 14 * 25;
 export const SCREEN_FORECAST_DISPLAY_LENGTH = 180 as const;
 
 export const SCREEN_BACKGROUND_BLUE = "rgb(0,0,135)";
+export const SCREEN_BACKGROUND_BLUE_TEXT_COL = "rgb(193,192,250)";
 export const SCREEN_BACKGROUND_RED = "#610b00";
+export const SCREEN_BACKGROUND_RED_TEXT_COL = "rgb(227,168,139)";
