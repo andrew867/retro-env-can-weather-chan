@@ -2,7 +2,7 @@ import axios from "lib/axios";
 import { useEffect, useState } from "react";
 import { CrawlerFields } from "types";
 
-const FETCH_CRAWLER_INTERVAL = 2 * 60 * 1000;
+const FETCH_CRAWLER_INTERVAL = (60 * 1000) * 0.5;
 const CRAWLER_DEFAULT_SPEED = 125;
 
 // tell the channel to fetch the crawler once every interval
@@ -27,5 +27,7 @@ export function useCrawlerData() {
     setInterval(() => fetchCrawlerData(), FETCH_CRAWLER_INTERVAL);
   }, []);
 
-  return { crawlerMessages, crawlerSpeed };
+  const crawlerData = {crawlerMessages, crawlerSpeed};
+
+  return { crawlerData };
 }

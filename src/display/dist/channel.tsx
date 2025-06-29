@@ -31,7 +31,7 @@ function WeatherChannel() {
   const { usaWeather } = useUSAWeather();
   const { sunspots } = useSunspots();
   const { airQuality } = useAirQuality();
-  const { crawlerMessages, crawlerSpeed } = useCrawlerData();
+  const { crawlerData } = useCrawlerData();
 
   useEffect(() => {
     fetchSeason();
@@ -42,8 +42,8 @@ function WeatherChannel() {
   return (
     <>
       <CrawlerBar
-        messages={crawlerMessages}
-        speed={crawlerSpeed}
+        messages={crawlerData?.crawlerMessages}
+        speed={crawlerData?.crawlerSpeed}
       />
       <ScreenRotator
         screens={config?.flavour?.screens}
