@@ -34,7 +34,7 @@ const CONFIG_PATH = {
 const CONFIG_ABSOLUTE_PATH = `${CONFIG_PATH.FOLDER}/${CONFIG_PATH.FILE}`;
 const BAD_CONFIG_FILE_ERROR_MESSAGE = "Unable to load config file, defaults have been loaded";
 
-import { Crawler, initializeCrawler } from "lib/crawler";
+import { initializeCrawler } from "lib/crawler";
 
 const MUSIC_DIR = "music";
 

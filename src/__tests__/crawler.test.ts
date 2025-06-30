@@ -1,7 +1,6 @@
 jest.mock("fs");
 import { initializeCrawler } from "lib/crawler/crawler";
 import fs from "fs";
-import { FS_NO_FILE_FOUND } from "consts/storage.consts";
 
 describe("Crawler data loading", () => {
   it("loads & saves crawler messages from file correctly", () => {
