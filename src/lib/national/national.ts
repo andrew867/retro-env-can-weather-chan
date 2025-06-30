@@ -137,6 +137,9 @@ class NationalWeather {
       west: this._westStations
         .filter((stationObservation) => this.isStationReporting(stationObservation))
         .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
+      on: this._ontarioStations
+        .filter((stationObservation) => this.isStationReporting(stationObservation))
+        .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
     };
   }
 }
