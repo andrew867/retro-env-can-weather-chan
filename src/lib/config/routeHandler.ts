@@ -9,6 +9,7 @@ export function getConfigHandler(req: Request, res: Response) {
     config: config.config,
     crawler: config.crawlerMessages,
     music: config.musicPlaylist ?? [],
+    infoScreen: config.infoScreenMessages,
   });
 }
 
@@ -22,6 +23,7 @@ export function getInitHandler(req: Request, res: Response) {
     crawler: config.crawlerMessages,
     flavour: config.flavour,
     music: config.musicPlaylist ?? [],
+    infoScreen: config.infoScreenMessages,
   });
 }
 
@@ -148,6 +150,27 @@ export function postCrawlerMessages(req: Request, res: Response) {
     if (!Array.isArray(crawler)) throw "`crawler` must be an array of strings";
 
     config.setCrawlerMessages(crawler);
+    res.sendStatus(200);
+  } catch (e) {
+    res.status(500).json({ error: e });
+  }
+}
+
+export function getInfoScreenMessages(req: Request, res: Response) {
+  res.json({
+    infoScreen: config.infoScreenMessages,
+  });
+}
+
+export function postInfoScreenMessages(req: Request, res: Response) {
+  const {
+    body: { infoScreen },
+  } = req ?? {};
+
+  try {
+    if (!Array.isArray(infoScreen)) throw "`infoScreen` must be an array of strings";
+
+    config.setInfoScreenMessages(infoScreen);
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: e });

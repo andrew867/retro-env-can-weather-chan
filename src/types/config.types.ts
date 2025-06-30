@@ -14,6 +14,7 @@ export type ConfigFields = {
   airQualityStation: string;
   crawler: string[];
   music: string[];
+  infoScreen: string[];
 };
 
 export type PrimaryLocation = {

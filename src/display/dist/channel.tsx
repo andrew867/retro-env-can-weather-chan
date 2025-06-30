@@ -16,6 +16,7 @@ import {
 import { useAirQuality } from "hooks/airQuality";
 import { useConfig } from "hooks/init";
 import { useCrawlerData } from "hooks/crawler";
+import { useInfoScreenData } from "hooks/infoscreen";
 import React, { useEffect } from "react";
 import ReactDOM from "react-dom/client";
 
@@ -32,6 +33,7 @@ function WeatherChannel() {
   const { sunspots } = useSunspots();
   const { airQuality } = useAirQuality();
   const { crawlerData } = useCrawlerData();
+  const { infoScreenData } = useInfoScreenData();
 
   useEffect(() => {
     fetchSeason();
@@ -58,6 +60,7 @@ function WeatherChannel() {
         sunspots={sunspots}
         airQuality={airQuality}
         configVersion={config?.config.configVersion}
+        infoScreenData={infoScreenData?.messages}
       />
       <FooterBar timeOffset={currentConditions?.stationTime?.stationOffsetMinutesFromLocal ?? 0} />
       <PlaylistComponent playlist={config?.music} />

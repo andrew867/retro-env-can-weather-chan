@@ -11,6 +11,7 @@ import {
   postCrawlerMessages,
   postAirQualityStation,
   postPlaylist,
+  postInfoScreenMessages,
 } from "lib/config";
 
 /*
@@ -29,5 +30,6 @@ router.post("/lookAndFeel", postLookAndFeel);
 router.post("/airQuality", postAirQualityStation);
 router.post("/crawler", postCrawlerMessages);
 router.post("/playlist", async (req: Request, res: Response) => await postPlaylist(req, res));
+router.post("/infoScreen", postInfoScreenMessages);
 
 export default router;

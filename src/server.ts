@@ -9,6 +9,7 @@ import { initializeProvinceTracking } from "lib/provincetracking";
 import { initializeSunspots } from "lib/sunspots";
 import { initializeUSAWeather } from "lib/usaweather";
 import { initializeCrawler } from "lib/crawler";
+import { initializeInfoScreen } from "lib/infoscreen";
 
 const logger = new Logger("Server");
 
@@ -16,6 +17,7 @@ logger.log("Starting RWC...");
 validateDirectories();
 initializeConfig();
 initializeCrawler();
+initializeInfoScreen();
 initializeCurrentConditions();
 initializeAlertMonitor();
 initializeAirQuality();

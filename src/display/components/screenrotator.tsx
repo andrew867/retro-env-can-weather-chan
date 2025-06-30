@@ -26,6 +26,7 @@ import {
   SunspotScreen,
   WindchillEffectScreen,
   AQHIWarningScreen,
+  InfoScreen,
 } from "./screens";
 
 type ScreenRotatorProps = {
@@ -45,6 +46,7 @@ type ScreenRotatorProps = {
   sunspots: SunspotStationObservations;
   airQuality: AQHIObservationResponse;
   configVersion: string;
+  infoScreenData: string[];
 };
 
 export function ScreenRotator(props: ScreenRotatorProps) {
@@ -61,6 +63,7 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     sunspots,
     airQuality,
     configVersion,
+    infoScreenData,
   } = props ?? {};
 
   const [displayedScreenIx, setDisplayedScreenIx] = useState(-1);
@@ -261,6 +264,14 @@ export function ScreenRotator(props: ScreenRotatorProps) {
 
       case Screens.WINDCHILL:
         return <WindchillEffectScreen onComplete={switchToNextScreen} />;
+
+      case Screens.INFO:
+        return (<InfoScreen
+          messages={infoScreenData}
+          onComplete={switchToNextScreen}
+          />
+        );
+
     }
 
     return <></>;

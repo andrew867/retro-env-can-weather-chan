@@ -11,6 +11,7 @@ import {
   HistoricalDataStationIDConfig,
   ProvinceTempPrecipConfig,
   WeatherStationConfig,
+  InfoScreenConfig,
 } from "display/components/config";
 
 const ConfigScreen = () => {
@@ -32,6 +33,7 @@ const ConfigScreen = () => {
               <Tab>Air Quality</Tab>
               <Tab>Flavours</Tab>
               <Tab>Crawler</Tab>
+              <Tab>Info Screen</Tab>
             </TabList>
 
             <TabPanels>
@@ -71,6 +73,10 @@ const ConfigScreen = () => {
 
               <TabPanel>
                 <CrawlerConfig crawler={config.crawler} />
+              </TabPanel>
+
+              <TabPanel>
+                <InfoScreenConfig infoScreen={config.infoScreen} />
               </TabPanel>
             </TabPanels>
           </Tabs>

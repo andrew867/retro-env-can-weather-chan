@@ -35,6 +35,7 @@ const CONFIG_ABSOLUTE_PATH = `${CONFIG_PATH.FOLDER}/${CONFIG_PATH.FILE}`;
 const BAD_CONFIG_FILE_ERROR_MESSAGE = "Unable to load config file, defaults have been loaded";
 
 import { initializeCrawler } from "lib/crawler";
+import { initializeInfoScreen } from "lib/infoscreen";
 
 const MUSIC_DIR = "music";
 
@@ -63,12 +64,14 @@ class Config {
   provinceStations: ProvinceStation[]; // what provinces to track high/low/precip for
   airQualityStation: string; // what area/station code to use for air quality
   configVersion: string; // config version
+  infoScreenMessages: string[] = [];
 
   constructor() {
     this.loadConfig();
     this.checkFlavoursDirectory();
     this.loadFlavour();
     this.loadCrawlerMessages();
+    this.loadInfoScreenMessages();
     this.checkMusicDirectory();
     this.generateConfigVersion();
   }
@@ -87,6 +90,7 @@ class Config {
       airQualityStation: this.airQualityStation,
       crawler: this.crawlerMessages,
       music: this.musicPlaylist ?? [],
+      infoScreen: this.infoScreenMessages,
     };
   }
 
@@ -154,6 +158,28 @@ class Config {
 
     this.flavour = new FlavourLoader(this.lookAndFeel.flavour);
     if (!this.flavour) logger.error("Unable to load flavour, please check your config");
+  }
+
+  private loadInfoScreenMessages() {
+    logger.log("Loading info screen messages");
+    try {
+      const infoscreen = initializeInfoScreen();
+      this.infoScreenMessages = infoscreen.messages;
+      logger.log("Loaded", this.infoScreenMessages.length, "info screen messages");
+    } catch (err) {
+      logger.error("Unable to call info screen load");
+    }
+  }
+
+  private saveInfoScreenMessages() {
+    logger.log("Saving info screen messages");
+    try {
+      const infoscreen = initializeInfoScreen();
+      infoscreen.messages = this.infoScreenMessages;
+      logger.log("Saved", infoscreen.messages.length, "info screen messages");
+    } catch (err) {
+      logger.error("Unable to call info screen save");
+    }
   }
 
   private loadCrawlerMessages() {
@@ -303,13 +329,22 @@ class Config {
     eventbus.emit(EVENT_BUS_CONFIG_CHANGE_AIR_QUALITY_STATION, true);
   }
 
-  public setCrawlerMessages(crawler: string[]) {
+  public setCrawlerMessages(messages: string[]) {
     this.crawlerMessages.splice(
       0,
       this.crawlerMessages.length,
-      ...crawler.map((message) => message.trim()).filter((message) => message.length)
+      ...messages.map((message) => message.trim()).filter((message) => message.length)
     );
     this.saveCrawlerMessages();
+  }
+
+  public setInfoScreenMessages(messages: string[]) {
+    this.infoScreenMessages.splice(
+      0,
+      this.infoScreenMessages.length,
+      ...messages.map((message) => message.trim()).filter((message) => message.length)
+    );
+    this.saveInfoScreenMessages();
   }
 
   public async regeneratePlaylist() {
