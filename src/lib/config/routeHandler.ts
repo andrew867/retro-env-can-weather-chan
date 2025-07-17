@@ -147,7 +147,7 @@ export function postCrawlerMessages(req: Request, res: Response) {
   try {
     if (!Array.isArray(crawler)) throw "`crawler` must be an array of strings";
 
-    config.setCrawlerMessages(crawler);
+    config.updateAndSaveConfigOption(() => config.setCrawlerMessages(crawler));
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: e });
