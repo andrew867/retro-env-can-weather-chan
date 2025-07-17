@@ -7,7 +7,7 @@ type FooterBarProps = {
 };
 
 export function FooterBar(props: FooterBarProps) {
-  const { timeOffset } = props ?? {};
+  const { timeOffset = 0 } = props ?? {};
   const [time, setTime] = useState<Date>(new Date());
   const timerInterval = useRef<NodeJS.Timeout>(null);
 

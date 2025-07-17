@@ -27,7 +27,7 @@ export function OutlookScreen(props: OutlookScreenProps) {
     // we need to get day 3, 4, and 5 from the forecast. however we know that the forecast includes "night" forecasts too
     // first thing is to find the index in the forecast that is for threeDaysAway
     const startIx: number = forecast.findIndex((f: Forecast) => f.period === twoDaysAwayName.toLocaleLowerCase());
-    if (startIx === -1) return;
+    if (startIx === -1) return [];
 
     // now we can build up a forecast for each day
     const outlookForEachDay = [];

@@ -16,23 +16,27 @@ export function Conditions(props: ConditionsProp) {
     city,
     conditions,
     stationTime,
-    stationTime: { observedDateTime },
+    stationTime: { observedDateTime } = {},
     showPressure = false,
     airQuality,
   } = props ?? {};
+
   const {
-    temperature: { value: temperatureValue, units: temperatureUnits },
-    wind: {
-      speed: { value: windSpeedValue },
-      gust: windGust,
-      direction: windDirection,
-    },
-    humidity: { value: humidityValue, units: humidityUnits },
-    visibility: { value: visibilityValue, units: visibilityUnits },
-    pressure: { value: pressureValue, units: pressureUnits, tendency: pressureTendency },
+    temperature = {},
+    wind = {},
+    humidity = {},
+    visibility = {},
+    pressure = {},
     windchill,
     abbreviatedCondition,
-  } = conditions;
+  } = conditions ?? ({} as ObservedConditions);
+
+  const { value: temperatureValue, units: temperatureUnits } = temperature as any;
+  const { speed = {}, gust: windGust, direction: windDirection } = wind as any;
+  const { value: windSpeedValue } = speed as any;
+  const { value: humidityValue, units: humidityUnits } = humidity as any;
+  const { value: visibilityValue, units: visibilityUnits } = visibility as any;
+  const { value: pressureValue, units: pressureUnits, tendency: pressureTendency } = pressure as any;
 
   const title = useMemo(
     () => stationTime && ` ${city.slice(0, 8).padEnd(11)}${formatObservedLong(stationTime, true)}`,
@@ -118,7 +122,7 @@ export function Conditions(props: ConditionsProp) {
       </div>
       {showPressure && (
         <div>
-          {"Pressure".padStart(11)} {pressureValue.toFixed(1).padStart(5)} {pressureUnits.padEnd(4)} {pressureTendency}
+          {"Pressure".padStart(11)} {isNaN(pressureValue) ? "N/A".padStart(5) : pressureValue.toFixed(1).padStart(5)} {pressureUnits?.padEnd(4)} {pressureTendency ?? ""}
         </div>
       )}
     </div>

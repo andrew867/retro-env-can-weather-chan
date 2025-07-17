@@ -1,5 +1,5 @@
 import Marquee from "react-fast-marquee";
-import { CrawlerMessages } from "types";
+import type { CrawlerMessages } from "types";
 
 type CrawlerMessagesProps = {
   crawler: CrawlerMessages;
