@@ -1,19 +1,22 @@
 import { Request, Response } from "express";
 import { initializeConfig } from "./config";
 import { getECCCWeatherStations } from "lib/eccc/weatherStations";
+import { initializeInfoScreen } from "lib/infoscreen";
 
 const config = initializeConfig();
 
 export function getConfigHandler(req: Request, res: Response) {
+  const infoScreen = initializeInfoScreen();
   res.json({
     config: config.config,
     crawler: config.crawlerMessages,
     music: config.musicPlaylist ?? [],
-    infoScreen: config.infoScreenMessages,
+    infoScreen: infoScreen.messages,
   });
 }
 
 export function getInitHandler(req: Request, res: Response) {
+  const infoScreen = initializeInfoScreen();
   res.json({
     config: {
       font: config.lookAndFeel.font,
@@ -23,7 +26,7 @@ export function getInitHandler(req: Request, res: Response) {
     crawler: config.crawlerMessages,
     flavour: config.flavour,
     music: config.musicPlaylist ?? [],
-    infoScreen: config.infoScreenMessages,
+    infoScreen: infoScreen.messages,
   });
 }
 
@@ -157,8 +160,9 @@ export function postCrawlerMessages(req: Request, res: Response) {
 }
 
 export function getInfoScreenMessages(req: Request, res: Response) {
+  const infoScreen = initializeInfoScreen();
   res.json({
-    infoScreen: config.infoScreenMessages,
+    infoScreen: infoScreen.messages,
   });
 }
 
@@ -170,7 +174,8 @@ export function postInfoScreenMessages(req: Request, res: Response) {
   try {
     if (!Array.isArray(infoScreen)) throw "`infoScreen` must be an array of strings";
 
-    config.setInfoScreenMessages(infoScreen);
+    const screen = initializeInfoScreen();
+    screen.messages = infoScreen;
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: e });

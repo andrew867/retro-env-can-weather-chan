@@ -13,7 +13,11 @@ export function useChannelCurrentConfig() {
         const { data } = resp;
         if (!data) return;
 
-        setConfig({ ...data.config, flavour: data.flavour });
+        setConfig({
+          ...data.config,
+          flavour: data.flavour,
+          infoScreen: data.infoScreen,
+        });
       })
       .catch()
       .finally(() => setHasFetched(true));
