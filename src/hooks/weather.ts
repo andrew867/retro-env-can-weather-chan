@@ -8,38 +8,28 @@ export function useWeatherEventStream() {
   const [currentConditions, setCurrentConditions] = useState<WeatherStation>();
 
   useEffect(() => {
-    let eventStream = weatherEventStream;
+    // dont do anything if we have an event
+    if (weatherEventStream) return;
 
-    const connect = () => {
-      eventStream = new EventSource("api/v1/weather/live");
+    // setup the weather event stream
+    const eventStream = new EventSource("api/v1/weather/live");
 
+    // add an event listener for condition_update
+    eventStream &&
       eventStream.addEventListener(CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT, (conditionUpdate) => {
         const parsedConditionUpdate = JSON.parse(conditionUpdate.data) as WeatherStation;
         if (!parsedConditionUpdate) return;
 
-        // if it's the same observation date (down to the min/sec) then skip updating the state because it'll render too much
-        setCurrentConditions((existing) => {
-          if (parsedConditionUpdate.observationID === existing?.observationID) return existing;
+        // if its the same observation date (down to the min/sec) then skip updating the state because it'll render too much
+        if (parsedConditionUpdate.observationID === currentConditions?.observationID) return;
 
-          return parsedConditionUpdate;
-        });
+        // update the state (and eventually cause a re-render)
+        setCurrentConditions(parsedConditionUpdate);
       });
 
-      // if we encounter an error, close the stream and try again
-      eventStream.onerror = () => {
-        eventStream.close();
-        setWeatherEventStream(undefined);
-      };
-
-      setWeatherEventStream(eventStream);
-    };
-
-    if (!eventStream || eventStream.readyState === EventSource.CLOSED) connect();
-
-    return () => {
-      eventStream && eventStream.close();
-    };
-  }, [weatherEventStream]);
+    // store this for later reference
+    setWeatherEventStream(eventStream);
+  }, []);
 
   return { currentConditions };
 }
