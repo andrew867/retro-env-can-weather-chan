@@ -12,15 +12,9 @@ type ConditionsProp = {
 };
 
 export function Conditions(props: ConditionsProp) {
-  const {
-    city,
-    conditions,
-    stationTime,
-    stationTime: { observedDateTime } = {},
-    showPressure = false,
-    airQuality,
-  } = props ?? {};
-
+  const { city, conditions, stationTime, showPressure = false, airQuality } =  props ?? {};
+  const { observedDateTime } = stationTime ?? {};
+  
   const {
     temperature = {},
     wind = {},
