@@ -24,8 +24,8 @@ Run: `yarn test` from `retro-env-can-weather-chan`.
 
 ## Non-regression
 
-- Visual snapshot: crawler, screen rotator, fonts — unchanged in reliability PRs.
-- `yarn test` and `yarn lint` clean before merge.
+- Visual snapshot: crawler, screen rotator, fonts — unchanged in reliability-focused changes.
+- `yarn test` and `yarn lint` clean before deploy or mainline merge.
 
 ## Config poll interval
 

@@ -15,10 +15,11 @@ ECCC data is ingested server-side via AMQP + XML (`src/lib/eccc/conditions.ts`).
 
 ## Decision
 
-### Fork strategy
+### Parallel product line (no upstream contribution)
 
-- Use a **GitHub fork** of upstream with `upstream` remote pointing at Forceh91’s repo.
-- **Avoid a hard fork** unless upstream is abandoned or licensing/product direction diverges.
+- This tree is a **parallel application** built on top of the original project. **`origin` is canonical** for builds and production pulls.
+- There is **no plan to open pull requests or push changes upstream**. Work here is for our deployment only until the codebase is too different to meaningfully compare—at that point a clean break or rename is a natural next step.
+- An optional read-only **`vendor` / `upstream` remote** (e.g. Forceh91’s repo) is only for occasional diff or cherry-pick reference, not for submission workflow.
 
 ### Data plane boundaries
 
