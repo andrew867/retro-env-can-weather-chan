@@ -12,11 +12,10 @@ function mockReqRes() {
     emitClose: () => (reqListeners["close"] ?? []).forEach((cb) => cb()),
   } as unknown as Request & { emitClose: () => void };
 
-  let writableEnded = false;
   const chunks: string[] = [];
   const resListeners: Record<string, (() => void)[]> = {};
   const res = {
-    writableEnded,
+    writableEnded: false,
     writeHead: jest.fn(),
     write: jest.fn((c: string) => {
       chunks.push(c);

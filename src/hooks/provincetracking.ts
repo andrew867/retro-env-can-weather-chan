@@ -21,7 +21,8 @@ export function useProvinceTracking() {
 
   useEffect(() => {
     fetchProvinceTracking();
-    setInterval(() => fetchProvinceTracking(), FETCH_PROVINCE_TRACKING_INTERVAL);
+    const id = setInterval(() => fetchProvinceTracking(), FETCH_PROVINCE_TRACKING_INTERVAL);
+    return () => clearInterval(id);
   }, []);
 
   return { provinceTracking };

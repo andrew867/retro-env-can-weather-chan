@@ -22,7 +22,8 @@ export function useNationalWeather() {
 
   useEffect(() => {
     fetchNationalWeather();
-    setInterval(() => fetchNationalWeather(), FETCH_NATIONAL_WEATHER_INTERVAL);
+    const id = setInterval(() => fetchNationalWeather(), FETCH_NATIONAL_WEATHER_INTERVAL);
+    return () => clearInterval(id);
   }, []);
 
   return { nationalWeather, fetchNationalWeather };

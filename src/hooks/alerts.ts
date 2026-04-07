@@ -24,7 +24,8 @@ export function useAlerts() {
 
   useEffect(() => {
     fetchAlerts();
-    setInterval(() => fetchAlerts(), FETCH_ALERTS_INTERVAL);
+    const id = setInterval(() => fetchAlerts(), FETCH_ALERTS_INTERVAL);
+    return () => clearInterval(id);
   }, []);
 
   return { alerts, hasFetched, mostImportantAlert: alerts[0] ?? null };

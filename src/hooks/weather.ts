@@ -2,33 +2,73 @@ import { CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT } from "consts";
 import { useEffect, useState } from "react";
 import { WeatherStation } from "types";
 
-// tell the channel to fetch the config once every 15mins
+const SSE_RECONNECT_BASE_MS = 2000;
+const SSE_RECONNECT_MAX_MS = 60000;
+
 export function useWeatherEventStream() {
-  const [weatherEventStream, setWeatherEventStream] = useState<EventSource>();
   const [currentConditions, setCurrentConditions] = useState<WeatherStation>();
 
   useEffect(() => {
-    // dont do anything if we have an event
-    if (weatherEventStream) return;
+    let closed = false;
+    let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
+    let reconnectAttempt = 0;
 
-    // setup the weather event stream
-    const eventStream = new EventSource("api/v1/weather/live");
+    const clearReconnect = () => {
+      if (reconnectTimer !== undefined) {
+        clearTimeout(reconnectTimer);
+        reconnectTimer = undefined;
+      }
+    };
 
-    // add an event listener for condition_update
-    eventStream &&
-      eventStream.addEventListener(CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT, (conditionUpdate) => {
-        const parsedConditionUpdate = JSON.parse(conditionUpdate.data) as WeatherStation;
-        if (!parsedConditionUpdate) return;
+    const scheduleReconnect = () => {
+      if (closed) return;
+      clearReconnect();
+      const delay = Math.min(
+        SSE_RECONNECT_MAX_MS,
+        SSE_RECONNECT_BASE_MS * Math.pow(2, reconnectAttempt)
+      );
+      reconnectAttempt += 1;
+      reconnectTimer = setTimeout(connect, delay);
+    };
 
-        // if its the same observation date (down to the min/sec) then skip updating the state because it'll render too much
-        if (parsedConditionUpdate.observationID === currentConditions?.observationID) return;
+    const connect = () => {
+      if (closed) return;
+      clearReconnect();
+      es?.close();
+      es = new EventSource("api/v1/weather/live");
 
-        // update the state (and eventually cause a re-render)
-        setCurrentConditions(parsedConditionUpdate);
+      es.addEventListener(CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT, (conditionUpdate) => {
+        try {
+          const parsed = JSON.parse(conditionUpdate.data) as WeatherStation;
+          if (!parsed) return;
+          setCurrentConditions((prev) => {
+            if (parsed.observationID === prev?.observationID) return prev;
+            return parsed;
+          });
+        } catch {
+          /* ignore malformed payload */
+        }
       });
 
-    // store this for later reference
-    setWeatherEventStream(eventStream);
+      es.onopen = () => {
+        reconnectAttempt = 0;
+      };
+
+      es.onerror = () => {
+        es?.close();
+        es = null;
+        scheduleReconnect();
+      };
+    };
+
+    connect();
+
+    return () => {
+      closed = true;
+      clearReconnect();
+      es?.close();
+    };
   }, []);
 
   return { currentConditions };

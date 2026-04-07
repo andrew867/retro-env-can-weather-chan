@@ -22,7 +22,8 @@ export function useCanadaHotColdSpots() {
 
   useEffect(() => {
     fetchHotColdSpots();
-    setInterval(() => fetchHotColdSpots(), FETCH_HOT_COLD_SPOT_INTERVAL);
+    const id = setInterval(() => fetchHotColdSpots(), FETCH_HOT_COLD_SPOT_INTERVAL);
+    return () => clearInterval(id);
   }, []);
 
   return { hotColdSpots };

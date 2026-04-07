@@ -23,7 +23,8 @@ export function useAirQuality() {
 
   useEffect(() => {
     fetchAirQuality();
-    setInterval(() => fetchAirQuality(), FETCH_AIR_QUALITY_INTERVAL);
+    const id = setInterval(() => fetchAirQuality(), FETCH_AIR_QUALITY_INTERVAL);
+    return () => clearInterval(id);
   }, []);
 
   return { airQuality };

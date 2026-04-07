@@ -22,7 +22,8 @@ export function useUSAWeather() {
 
   useEffect(() => {
     fetchUSAWeather();
-    setInterval(() => fetchUSAWeather(), FETCH_USA_WEATHER_INTERVAL);
+    const id = setInterval(() => fetchUSAWeather(), FETCH_USA_WEATHER_INTERVAL);
+    return () => clearInterval(id);
   }, []);
 
   return { usaWeather };

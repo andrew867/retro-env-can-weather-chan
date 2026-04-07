@@ -1,11 +1,14 @@
 import axios from "lib/axios";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Season } from "types";
+
+/** Season flags rarely change; still poll so a dead SSE stream does not strand this data. */
+const FETCH_SEASON_INTERVAL_MS = 15 * 60 * 1000;
 
 export function useSeason() {
   const [season, setSeason] = useState<Season>();
 
-  const fetchSeason = () => {
+  const fetchSeason = useCallback(() => {
     axios
       .get("season")
       .then((resp) => {
@@ -15,7 +18,13 @@ export function useSeason() {
         setSeason(data);
       })
       .catch();
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSeason();
+    const id = setInterval(fetchSeason, FETCH_SEASON_INTERVAL_MS);
+    return () => clearInterval(id);
+  }, [fetchSeason]);
 
   return { season, fetchSeason };
 }

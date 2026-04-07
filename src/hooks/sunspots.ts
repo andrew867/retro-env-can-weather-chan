@@ -21,7 +21,8 @@ export function useSunspots() {
 
   useEffect(() => {
     fetchSunspots();
-    setInterval(() => fetchSunspots(), FETCH_SUNSPOTS_INTERVAL);
+    const id = setInterval(() => fetchSunspots(), FETCH_SUNSPOTS_INTERVAL);
+    return () => clearInterval(id);
   }, []);
 
   return { sunspots };

@@ -23,11 +23,11 @@ export function attachConditionsSse(req: Request, res: Response, options: Condit
   });
 
   let cleaned = false;
-  let interval: ReturnType<typeof setInterval> | undefined;
+  const timer = { id: null as ReturnType<typeof setInterval> | null };
   const cleanup = () => {
     if (cleaned) return;
     cleaned = true;
-    if (interval !== undefined) clearInterval(interval);
+    if (timer.id !== null) clearInterval(timer.id);
   };
 
   const push = () => {
@@ -51,7 +51,7 @@ export function attachConditionsSse(req: Request, res: Response, options: Condit
   };
 
   push();
-  interval = setInterval(push, intervalMs);
+  timer.id = setInterval(push, intervalMs);
 
   req.on("close", cleanup);
   res.on("close", cleanup);
