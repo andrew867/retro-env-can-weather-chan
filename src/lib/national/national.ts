@@ -25,6 +25,9 @@ class NationalWeather {
   private _eastStations: NationalStationObservations = [];
   private _westStations: NationalStationObservations = [];
   private _expectedConditionUUID: string;
+  private _fetchedAt: string | null = null;
+  private _lastBatchStartMs = 0;
+  private _nationalBatchId = 0;
 
   constructor() {
     this.periodicUpdate();
@@ -34,9 +37,19 @@ class NationalWeather {
   }
 
   private periodicUpdate(clearExistingData: boolean = false) {
-    this.fetchWeatherForStations(MB_WEATHER_STATIONS, this._manitobaStations, clearExistingData);
-    this.fetchWeatherForStations(EAST_WEATHER_STATIONS, this._eastStations, clearExistingData);
-    this.fetchWeatherForStations(WEST_WEATHER_STATIONS, this._westStations, clearExistingData);
+    const now = Date.now();
+    if (!clearExistingData && this._lastBatchStartMs && now - this._lastBatchStartMs < 2000) {
+      return;
+    }
+    this._lastBatchStartMs = now;
+    const batchId = ++this._nationalBatchId;
+    this.fetchWeatherForStations(MB_WEATHER_STATIONS, this._manitobaStations, clearExistingData, batchId);
+    this.fetchWeatherForStations(EAST_WEATHER_STATIONS, this._eastStations, clearExistingData, batchId);
+    this.fetchWeatherForStations(WEST_WEATHER_STATIONS, this._westStations, clearExistingData, batchId);
+  }
+
+  public getLastSuccessfulFetchIso(): string | null {
+    return this._fetchedAt;
   }
 
   private forceUpdate(conditionUUID: string) {
@@ -66,7 +79,8 @@ class NationalWeather {
   private fetchWeatherForStations(
     stations: NationalStationConfig[],
     observations: NationalStationObservations,
-    clearExistingData: boolean = false
+    clearExistingData: boolean = false,
+    batchId: number
   ) {
     // empty out the current observations and generate new data
     if (clearExistingData || !observations?.length) {
@@ -82,16 +96,22 @@ class NationalWeather {
     }
 
     // loop through stations and get current conditions for them
-    stations.forEach((station) => this.fetchWeatherForStation(station, observations));
+    stations.forEach((station) => this.fetchWeatherForStation(station, observations, batchId));
   }
 
-  private fetchWeatherForStation(station: NationalStationConfig, observations: NationalStationObservations) {
+  private fetchWeatherForStation(
+    station: NationalStationConfig,
+    observations: NationalStationObservations,
+    batchId: number
+  ) {
     const [province, stationID] = station.code.split("/");
     GetWeatherFileFromECCC(province, stationID).then((url) => {
+      if (batchId !== this._nationalBatchId) return;
       url &&
         axios
           .get(url)
           .then((resp) => {
+            if (batchId !== this._nationalBatchId) return;
             const data = resp && resp.data;
             const weather = new Weather(data);
             if (!weather) throw "Unable to parse weather data";
@@ -120,6 +140,7 @@ class NationalWeather {
               temperature: temperature && !isNaN(temperature) ? Number(temperature) : null,
               conditionUUID,
             });
+            this._fetchedAt = new Date().toISOString();
           })
           .catch((err) => logger.error(station.name, "failed to fetch data", err));
     });

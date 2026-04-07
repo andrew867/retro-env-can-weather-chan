@@ -8,6 +8,7 @@ import {
   CrawlerConfig,
   DisplayConfig,
   FlavoursConfig,
+  GfxConfig,
   HistoricalDataStationIDConfig,
   ProvinceTempPrecipConfig,
   WeatherStationConfig,
@@ -25,6 +26,7 @@ const ConfigScreen = () => {
           <Tabs>
             <TabList>
               <Tab>Display</Tab>
+              <Tab>Graphics</Tab>
               <Tab>Weather Station</Tab>
               <Tab>Province Temp/Precip</Tab>
               <Tab>Historical Data</Tab>
@@ -43,6 +45,9 @@ const ConfigScreen = () => {
                   flavours={config.flavours}
                   playlist={config.music}
                 />
+              </TabPanel>
+              <TabPanel>
+                <GfxConfig gfx={config.gfx ?? {}} />
               </TabPanel>
               <TabPanel>
                 <WeatherStationConfig weatherStation={config.primaryLocation} />

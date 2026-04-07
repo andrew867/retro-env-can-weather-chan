@@ -1,4 +1,9 @@
-import { USA_WEATHER_STATIONS, MAX_USA_STATIONS_PER_PAGE, EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS } from "consts";
+import {
+  USA_WEATHER_STATIONS,
+  USA_WEATHER_FETCH_INTERVAL,
+  MAX_USA_STATIONS_PER_PAGE,
+  EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS,
+} from "consts";
 import { USAStationConfig, USAStationObservation, USAStationObservations } from "types";
 import Logger from "lib/logger";
 import axios from "lib/backendAxios";
@@ -13,16 +18,25 @@ const logger = new Logger("USA");
 class USAWeather {
   private _usaStations: USAStationObservations = [];
   private _expectedConditionUUID: string;
+  private _fetchedAt: string | null = null;
+  private _lastBatchStartMs = 0;
+  private _usaBatchId = 0;
 
   constructor() {
     this.periodicUpdate();
-    setInterval(() => this.periodicUpdate(), 5 * 60 * 1000);
+    setInterval(() => this.periodicUpdate(), USA_WEATHER_FETCH_INTERVAL);
 
     eventbus.addListener(EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS, (data) => this.forceUpdate(data));
   }
 
   private periodicUpdate(clearExistingData: boolean = false) {
-    this.fetchWeatherForStations(USA_WEATHER_STATIONS, this._usaStations, clearExistingData);
+    const now = Date.now();
+    if (!clearExistingData && this._lastBatchStartMs && now - this._lastBatchStartMs < 2000) {
+      return;
+    }
+    this._lastBatchStartMs = now;
+    const batchId = ++this._usaBatchId;
+    this.fetchWeatherForStations(USA_WEATHER_STATIONS, this._usaStations, clearExistingData, batchId);
   }
 
   private forceUpdate(conditionUUID: string) {
@@ -47,7 +61,8 @@ class USAWeather {
   private fetchWeatherForStations(
     stations: USAStationConfig[],
     observations: USAStationObservations,
-    clearExistingData: boolean = false
+    clearExistingData: boolean = false,
+    batchId: number
   ) {
     logger.log("Fetching latest observations");
     // empty out the current observations and generate new data
@@ -63,13 +78,18 @@ class USAWeather {
     }
 
     // loop through stations and get current conditions for them
-    stations.forEach((station) => this.fetchWeatherForStation(station, observations));
+    stations.forEach((station) => this.fetchWeatherForStation(station, observations, batchId));
   }
 
-  private fetchWeatherForStation(station: USAStationConfig, observations: USAStationObservations) {
+  private fetchWeatherForStation(
+    station: USAStationConfig,
+    observations: USAStationObservations,
+    batchId: number
+  ) {
     axios
       .get(`https://api.weather.gov/stations/${station.code}/observations/latest`)
       .then((resp) => {
+        if (batchId !== this._usaBatchId) return;
         const { data: weather } = resp;
         if (!weather) throw "Unable to parse USA weather data";
 
@@ -91,8 +111,13 @@ class USAWeather {
           temperature: temperature?.value && !isNaN(temperature.value) ? Number(temperature.value) : null,
           conditionUUID,
         });
+        this._fetchedAt = new Date().toISOString();
       })
       .catch((err) => logger.error(station.name, "failed to fetch data", err));
+  }
+
+  public getLastSuccessfulFetchIso(): string | null {
+    return this._fetchedAt;
   }
 
   public weather() {

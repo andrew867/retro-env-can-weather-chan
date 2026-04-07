@@ -1,5 +1,6 @@
 const Weather = require("ec-weather-js");
-import axios from "lib/backendAxios";
+import { isAxiosError } from "axios";
+import backendAxios from "lib/backendAxios";
 import { listen } from "lib/amqp";
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
@@ -74,6 +75,11 @@ class CurrentConditions {
   private _windchill: number | null;
   private _forecast: WeekForecast;
   public stationLatLong: LatLong = { lat: 0, long: 0 };
+  private _conditionsFetchBusy = false;
+  private _conditionsFetchPending: { url?: string } | null = null;
+  private _conditionsFetchedAt: string | null = null;
+  private _conditionsApplyGen = 0;
+  private _conditionsInFlightAbort: AbortController | null = null;
 
   constructor() {
     this.initialize();
@@ -86,7 +92,7 @@ class CurrentConditions {
 
     this.startAMQPConnection();
     this._apiUrl = `${ECCC_BASE_API_URL}${config.primaryLocation.province}/${this._weatherStationID}${ECCC_API_ENGLISH_SUFFIX}`;
-    this.fetchConditions();
+    this.requestConditionsFetch();
   }
 
   private startAMQPConnection() {
@@ -104,7 +110,7 @@ class CurrentConditions {
         // make sure its relevant to us
         if (!url.endsWith(`${this._weatherStationID}_en.xml`)) return;
 
-        this.fetchConditions(url);
+        this.requestConditionsFetch(url);
         logger.log("Received new conditions from AMQP at", date);
       });
 
@@ -114,77 +120,91 @@ class CurrentConditions {
     logger.log("Started AMQP conditions listener");
   }
 
-  private async fetchConditions(url?: string) {
-    // if we got a url from amqp then use that, otherwise we need to find the correct one
-    const searchedURL =
-      url != undefined
-        ? url
-        : await GetWeatherFileFromECCC(config.primaryLocation.province, config.primaryLocation.location);
+  /** Coalesces overlapping fetches; AMQP URL wins over a queued datamart resolve. */
+  private requestConditionsFetch(url?: string) {
+    if (this._conditionsFetchBusy) {
+      if (url !== undefined) {
+        this._conditionsFetchPending = { url };
+        this._conditionsInFlightAbort?.abort();
+      } else if (!this._conditionsFetchPending) {
+        this._conditionsFetchPending = {};
+      }
+      return;
+    }
+    void this.runConditionsFetch(url);
+  }
 
-    // now that we know we have a file to use, we can go and get it
-    searchedURL &&
-      axios
-        .get(searchedURL)
-        .then((resp) => {
-          // parse to weather object
-          const weather = new Weather(resp.data);
-          if (!weather) return;
+  public getLastSuccessfulFetchIso(): string | null {
+    return this._conditionsFetchedAt;
+  }
 
-          // make sure all weather is there
-          const { all: allWeather } = weather;
-          if (!allWeather) return;
+  private async runConditionsFetch(url?: string): Promise<void> {
+    this._conditionsFetchBusy = true;
+    const controller = new AbortController();
+    this._conditionsInFlightAbort = controller;
+    const { signal } = controller;
+    const applyGen = ++this._conditionsApplyGen;
+    try {
+      const searchedURL =
+        url !== undefined
+          ? url
+          : await GetWeatherFileFromECCC(config.primaryLocation.province, config.primaryLocation.location);
 
-          // store station lat/long
-          this.parseStationLatLong(allWeather.location.name);
+      if (!searchedURL) return;
 
-          // generate uuid for these conditions and reject if a config option is on
-          const conditionUUID = generateConditionsUUID(weather.current?.dateTime[1].timeStamp ?? "");
-          if (config.misc.rejectInHourConditionUpdates && conditionUUID === this._conditionUUID) {
-            // update the forecast at least but reject the rest of it
-            logger.log("Rejecting in-hour conditions update as", conditionUUID, "was already parsed");
-            return;
-          }
+      try {
+        const resp = await backendAxios.get(searchedURL, { signal });
+        if (applyGen !== this._conditionsApplyGen) return;
 
-          // store the condition uuid for later use
-          this._conditionUUID = conditionUUID;
+        const weather = new Weather(resp.data);
+        if (!weather) return;
 
-          // store the observed date/time in our own format
-          this.generateWeatherStationTimeData(weather.current?.dateTime[1] ?? {});
+        const { all: allWeather } = weather;
+        if (!allWeather) return;
 
-          // time/date done so now fetch historical data
-          const observedDateTime: Date = this.observedDateTimeAtStation();
-          historicalData.fetchLastTwoYearsOfData(observedDateTime);
-          climateNormals.fetchClimateNormals(observedDateTime);
+        this.parseStationLatLong(allWeather.location.name);
 
-          // get city name info
-          this._weatherStationCityName = allWeather.location.name.value;
+        const conditionUUID = generateConditionsUUID(weather.current?.dateTime[1].timeStamp ?? "");
+        if (config.misc.rejectInHourConditionUpdates && conditionUUID === this._conditionUUID) {
+          logger.log("Rejecting in-hour conditions update as", conditionUUID, "was already parsed");
+          return;
+        }
 
-          // get relevant conditions
-          this.parseRelevantConditions(weather.current);
+        this._conditionUUID = conditionUUID;
+        this.generateWeatherStationTimeData(weather.current?.dateTime[1] ?? {});
 
-          // get sunrise/sunset info
-          this.parseSunriseSunset(allWeather.riseSet);
+        const observedDateTime: Date = this.observedDateTimeAtStation();
+        historicalData.fetchLastTwoYearsOfData(observedDateTime);
+        climateNormals.fetchClimateNormals(observedDateTime);
 
-          // get the almanac data (normal, records, etc.)
-          this.generateAlmanac(allWeather.almanac);
+        this._weatherStationCityName = allWeather.location.name.value;
+        this.parseRelevantConditions(weather.current);
+        this.parseSunriseSunset(allWeather.riseSet);
+        this.generateAlmanac(allWeather.almanac);
+        this.generateWindchill(weather.current);
+        this.generateForecast(weather.weekly);
+        this.getTempRecordsForDay();
 
-          // calculate the windchill
-          this.generateWindchill(weather.current);
+        this._conditionsFetchedAt = new Date().toISOString();
 
-          // generate the forecast
-          this.generateForecast(weather.weekly);
+        eventbus.emit(EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS, weather.current?.dateTime[0].timeStamp);
 
-          // check if we've got an alternate record source
-          this.getTempRecordsForDay();
-
-          // tell national stations what we're expecting
-          eventbus.emit(EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS, weather.current?.dateTime[0].timeStamp);
-
-          logger.log("Parsed new conditions with UUID of", conditionUUID);
-        })
-        .catch((err) => {
-          logger.error("Unable to retrieve update to conditions from ECCC API", err);
-        });
+        logger.log("Parsed new conditions with UUID of", conditionUUID);
+      } catch (err) {
+        if (isAxiosError(err) && err.code === "ERR_CANCELED") return;
+        logger.error("Unable to retrieve update to conditions from ECCC API", err);
+      }
+    } finally {
+      if (this._conditionsInFlightAbort === controller) {
+        this._conditionsInFlightAbort = null;
+      }
+      this._conditionsFetchBusy = false;
+      const pending = this._conditionsFetchPending;
+      this._conditionsFetchPending = null;
+      if (pending) {
+        void this.runConditionsFetch(pending.url);
+      }
+    }
   }
 
   private parseStationLatLong({ lat, lon }: { lat: string; lon: string }) {
@@ -380,6 +400,7 @@ class CurrentConditions {
       city: this._weatherStationCityName,
       stationTime: this._weatherStationTimeData,
       stationID: this._weatherStationID,
+      fetchedAt: this._conditionsFetchedAt,
       observed: { ...this._conditions, windchill: this._windchill },
       almanac: {
         ...this._almanac,

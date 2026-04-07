@@ -1,32 +1,23 @@
-import axios from "lib/axios";
-import { useEffect, useState } from "react";
 import { CAPObject } from "types";
+import { usePollingFetch } from "./usePollingFetch";
 
-const FETCH_ALERTS_INTERVAL = 60 * 1000 * 1;
+const FETCH_ALERTS_INTERVAL = 3 * 60 * 1000;
 
-// tell the channel to fetch the config once every 15mins
 export function useAlerts() {
-  const [alerts, setAlerts] = useState<CAPObject[]>([]);
-  const [hasFetched, setHasFetched] = useState(false);
-
-  const fetchAlerts = () => {
-    axios
-      .get("weather/alerts")
-      .then((resp) => {
-        const { data } = resp;
-        if (!data) return;
-
-        setAlerts(data.alerts);
-      })
-      .catch()
-      .finally(() => setHasFetched(true));
+  const { data, dataFetchedAt, hasAttempted, refetch } = usePollingFetch<CAPObject[]>(
+    "weather/alerts",
+    FETCH_ALERTS_INTERVAL,
+    "alerts",
+    {
+      parseResponse: (resp) => (resp.data as { alerts?: CAPObject[] })?.alerts ?? [],
+    }
+  );
+  const alerts = data ?? [];
+  return {
+    alerts,
+    hasFetched: hasAttempted,
+    mostImportantAlert: alerts[0] ?? null,
+    alertsDataFetchedAt: dataFetchedAt,
+    refetchAlerts: refetch,
   };
-
-  useEffect(() => {
-    fetchAlerts();
-    const id = setInterval(() => fetchAlerts(), FETCH_ALERTS_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-
-  return { alerts, hasFetched, mostImportantAlert: alerts[0] ?? null };
 }

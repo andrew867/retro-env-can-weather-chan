@@ -21,6 +21,8 @@ const config = initializeConfig();
 class HistoricalTempPrecip {
   private _apiURL: string;
   private _historicalData: any[] = [];
+  private _fetchBusy = false;
+  private _fetchPendingDate: Date | null = null;
 
   private _lastYearTemperatures: HistoricalTemperatureAlmanac = { min: null, max: null };
   private _seasonPrecipData: HistoricalPrecipData = { amount: 0, normal: 0, unit: "mm", type: "rain" };
@@ -42,14 +44,18 @@ class HistoricalTempPrecip {
   }
 
   public fetchLastTwoYearsOfData(currentDate: Date = new Date()) {
+    if (this._fetchBusy) {
+      this._fetchPendingDate = currentDate;
+      return;
+    }
+    this._fetchBusy = true;
+
     const currentYear = currentDate.getFullYear();
     const yearsToFetch = [currentYear - 1, currentYear];
     logger.log("Preparing to fetch historical data for years", yearsToFetch.join());
 
-    // clear out what we have in the historical data
     this._historicalData.splice(0, this._historicalData.length);
 
-    // loop through years to fetch
     const promises: Promise<any>[] = [];
     yearsToFetch.forEach((year) => {
       logger.log("Fetching historical data for", year);
@@ -90,7 +96,15 @@ class HistoricalTempPrecip {
       );
     });
 
-    Promise.allSettled(promises).then(() => this.parseHistoricalStationData(currentDate));
+    Promise.allSettled(promises).then(() => {
+      this.parseHistoricalStationData(currentDate);
+      this._fetchBusy = false;
+      if (this._fetchPendingDate) {
+        const next = this._fetchPendingDate;
+        this._fetchPendingDate = null;
+        this.fetchLastTwoYearsOfData(next);
+      }
+    });
   }
 
   private parseHistoricalStationData(currentDate: Date) {

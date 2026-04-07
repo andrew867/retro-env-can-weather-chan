@@ -9,6 +9,8 @@ import { isSunSpotSeason } from "lib/date";
 const logger = new Logger("Sunspots");
 class Sunspots {
   private _sunspotStations: SunspotStationObservations = [];
+  private _sunspotBatchId = 0;
+  private _fetchedAt: string | null = null;
 
   constructor() {
     this.periodicUpdate();
@@ -17,7 +19,8 @@ class Sunspots {
 
   private periodicUpdate() {
     if (!isSunSpotSeason()) return;
-    this.fetchWeatherForStations(SUNSPOT_CITIES, this._sunspotStations);
+    const batchId = ++this._sunspotBatchId;
+    this.fetchWeatherForStations(SUNSPOT_CITIES, this._sunspotStations, batchId);
   }
 
   private isStationReporting(station: SunspotStationObservation) {
@@ -29,7 +32,11 @@ class Sunspots {
     );
   }
 
-  private fetchWeatherForStations(stations: SunspotStationConfig[], observations: SunspotStationObservations) {
+  private fetchWeatherForStations(
+    stations: SunspotStationConfig[],
+    observations: SunspotStationObservations,
+    batchId: number
+  ) {
     logger.log("Fetching latest observations");
     // empty out the current observations and generate new data
     observations.splice(
@@ -48,13 +55,18 @@ class Sunspots {
     );
 
     // loop through stations and get current conditions for them
-    stations.forEach((station) => this.fetchWeatherForStation(station, observations));
+    stations.forEach((station) => this.fetchWeatherForStation(station, observations, batchId));
   }
 
-  private fetchWeatherForStation(station: SunspotStationConfig, observations: SunspotStationObservations) {
+  private fetchWeatherForStation(
+    station: SunspotStationConfig,
+    observations: SunspotStationObservations,
+    batchId: number
+  ) {
     axios
       .get(`https://api.weather.gov/gridpoints/${station.code}/${station.x},${station.y}/forecast`)
       .then((resp) => {
+        if (batchId !== this._sunspotBatchId) return;
         const { data: weather } = resp;
         if (!weather) throw "Unable to parse sunspot weather data";
 
@@ -82,6 +94,7 @@ class Sunspots {
           highTemp: hiTemp,
           lowTemp: loTemp,
         });
+        this._fetchedAt = new Date().toISOString();
       })
       .catch(() => logger.error(station.name, "failed to fetch data"));
   }
@@ -89,6 +102,10 @@ class Sunspots {
   public sunspots() {
     // when we return we should filter down to just reporting stations, and then limit each one
     return this._sunspotStations.filter((stationObservation) => this.isStationReporting(stationObservation));
+  }
+
+  public getLastFetchIso(): string | null {
+    return this._fetchedAt;
   }
 }
 

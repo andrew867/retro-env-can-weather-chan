@@ -24,6 +24,7 @@ ol {
 }
 
 #weather_channel {
+  position: relative;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
@@ -98,8 +99,40 @@ ol {
       margin-left: -1.5ch;
     }
 
+    #data_stale_hint {
+      @include recwc_body;
+      color: #c9a227;
+      font-size: 0.85em;
+      margin-top: 0.15em;
+    }
+
     #time_date {
       @include recwc_body;
     }
   }
+
+  &.gfx-scanlines-on::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 900;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 2px,
+      rgba(0, 0, 0, var(--gfx-scanline-opacity, 0)) 2px,
+      rgba(0, 0, 0, var(--gfx-scanline-opacity, 0)) 3px
+    );
+  }
+
+  &.gfx-phosphor-green {
+    filter: sepia(0.22) hue-rotate(68deg) saturate(1.15);
+  }
+
+  &.gfx-phosphor-amber {
+    filter: sepia(0.32) hue-rotate(348deg) saturate(1.12);
+  }
+
+  box-shadow: inset 0 0 min(120px, 18vw) rgba(0, 0, 0, var(--gfx-vignette, 0));
 }

@@ -1,4 +1,5 @@
 import { initializeAPI } from "api";
+import "lib/serverStartedAt";
 import { validateDirectories } from "lib";
 import { initializeConfig } from "lib/config";
 import { initializeAirQuality, initializeCanadaProvincialHotColdSpot, initializeCurrentConditions } from "lib/eccc";

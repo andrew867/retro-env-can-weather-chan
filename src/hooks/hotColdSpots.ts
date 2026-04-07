@@ -1,30 +1,13 @@
-import axios from "lib/axios";
-import { useEffect, useState } from "react";
 import { HotColdSpots } from "types";
+import { usePollingFetch } from "./usePollingFetch";
 
 const FETCH_HOT_COLD_SPOT_INTERVAL = 60 * 1000 * 30;
 
-// tell the channel to fetch hot/cold spots once every 30 mins
 export function useCanadaHotColdSpots() {
-  const [hotColdSpots, setHotColdSpots] = useState<HotColdSpots>();
-
-  const fetchHotColdSpots = () => {
-    axios
-      .get("weather/hotcoldspots")
-      .then((resp) => {
-        const { data } = resp;
-        if (!data) return;
-
-        setHotColdSpots(data);
-      })
-      .catch();
-  };
-
-  useEffect(() => {
-    fetchHotColdSpots();
-    const id = setInterval(() => fetchHotColdSpots(), FETCH_HOT_COLD_SPOT_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-
-  return { hotColdSpots };
+  const { data, dataFetchedAt, refetch } = usePollingFetch<HotColdSpots>(
+    "weather/hotColdSpots",
+    FETCH_HOT_COLD_SPOT_INTERVAL,
+    "hotColdSpots"
+  );
+  return { hotColdSpots: data, hotColdDataFetchedAt: dataFetchedAt, refetchHotColdSpots: refetch };
 }

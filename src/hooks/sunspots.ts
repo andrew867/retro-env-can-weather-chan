@@ -1,29 +1,13 @@
-import axios from "lib/axios";
-import { useEffect, useState } from "react";
 import { SunspotStationObservations } from "types";
+import { usePollingFetch } from "./usePollingFetch";
 
-const FETCH_SUNSPOTS_INTERVAL = 60 * 1000 * 1;
+const FETCH_SUNSPOTS_INTERVAL = 5 * 60 * 1000;
 
 export function useSunspots() {
-  const [sunspots, setSunspots] = useState<SunspotStationObservations>();
-
-  const fetchSunspots = () => {
-    axios
-      .get("weather/sunspots")
-      .then((resp) => {
-        const { data } = resp;
-        if (!data) return;
-
-        setSunspots(data);
-      })
-      .catch();
-  };
-
-  useEffect(() => {
-    fetchSunspots();
-    const id = setInterval(() => fetchSunspots(), FETCH_SUNSPOTS_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-
-  return { sunspots };
+  const { data, dataFetchedAt, refetch } = usePollingFetch<SunspotStationObservations>(
+    "weather/sunspots",
+    FETCH_SUNSPOTS_INTERVAL,
+    "sunspots"
+  );
+  return { sunspots: data, sunspotsDataFetchedAt: dataFetchedAt, refetchSunspots: refetch };
 }

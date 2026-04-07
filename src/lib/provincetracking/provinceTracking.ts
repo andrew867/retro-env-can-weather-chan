@@ -22,6 +22,8 @@ class ProvinceTracking {
   private _displayTemp: string;
   private _tempToTrack: string;
   private _yesterdayPrecipDate: string = "";
+  private _periodicBusy = false;
+  private _fetchedAt: string | null = null;
 
   constructor() {
     this.load();
@@ -53,6 +55,11 @@ class ProvinceTracking {
   }
 
   private periodicUpdate() {
+    if (this._periodicBusy) {
+      return;
+    }
+    this._periodicBusy = true;
+
     if (!this._tracking?.length) {
       this._tracking = this._stations.map(
         (provinceStation) =>
@@ -81,7 +88,15 @@ class ProvinceTracking {
     const promises: Promise<void>[] = [];
     this._tracking.forEach((station) => promises.push(this.fetchWeatherForStation(station)));
 
-    Promise.allSettled(promises).then(() => this.save());
+    Promise.allSettled(promises).then(() => {
+      this._fetchedAt = new Date().toISOString();
+      this.save();
+      this._periodicBusy = false;
+    });
+  }
+
+  public getLastFetchIso(): string | null {
+    return this._fetchedAt;
   }
 
   private async fetchWeatherForStation(station: ProvinceStationTracking) {

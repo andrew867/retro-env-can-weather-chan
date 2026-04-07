@@ -18,6 +18,7 @@ import {
   ClimateNormals,
   ECCCWeatherStation,
   Flavour,
+  GfxRuntimeConfig,
   LookAndFeel,
   MiscConfig,
   PrimaryLocation,
@@ -40,6 +41,19 @@ const CRAWLER_PATH = {
 };
 const CRAWLER_ABSOLUTE_PATH = `${CRAWLER_PATH.FOLDER}/${CRAWLER_PATH.FILE}`;
 const MUSIC_DIR = "music";
+
+const DEFAULT_GFX: GfxRuntimeConfig = {
+  features: {
+    authenticRefreshEnabled: false,
+    nextGenVisualLayersEnabled: false,
+  },
+  safeArea: { top: 0.02, bottom: 0.06, left: 0.02, right: 0.02 },
+  retro: {
+    scanlinesOpacity: 0,
+    phosphorTint: "none",
+    vignetteStrength: 0,
+  },
+};
 
 class Config {
   primaryLocation: PrimaryLocation = {
@@ -66,6 +80,12 @@ class Config {
   provinceStations: ProvinceStation[]; // what provinces to track high/low/precip for
   airQualityStation: string; // what area/station code to use for air quality
   configVersion: string; // config version
+  gfx: GfxRuntimeConfig = {
+    ...DEFAULT_GFX,
+    features: { ...DEFAULT_GFX.features },
+    safeArea: { ...DEFAULT_GFX.safeArea },
+    retro: { ...DEFAULT_GFX.retro },
+  };
 
   constructor() {
     this.loadConfig();
@@ -90,6 +110,7 @@ class Config {
       airQualityStation: this.airQualityStation,
       crawler: this.crawlerMessages,
       music: this.musicPlaylist ?? [],
+      gfx: this.gfx,
     };
   }
 
@@ -123,6 +144,7 @@ class Config {
         misc,
         provinceStations,
         airQualityStation,
+        gfx,
       } = parsedConfig;
 
       // but first we make sure that we have at least the province info
@@ -138,6 +160,14 @@ class Config {
       this.provinceStations =
         provinceHighLowEnabled && provinceStations?.length ? provinceStations : PROVINCE_TRACKING_DEFAULT_STATIONS;
       this.airQualityStation = airQualityStation ?? AIR_QUALITY_DEFAULT_STATION;
+
+      if (gfx && typeof gfx === "object") {
+        this.gfx = {
+          features: { ...DEFAULT_GFX.features, ...(gfx.features ?? {}) },
+          safeArea: { ...DEFAULT_GFX.safeArea, ...(gfx.safeArea ?? {}) },
+          retro: { ...DEFAULT_GFX.retro, ...(gfx.retro ?? {}) },
+        };
+      }
 
       logger.log("Loaded weather channel. Location:", `${name}, ${province}`, `(${location})`);
     } catch (err) {
@@ -313,6 +343,15 @@ class Config {
     else this.lookAndFeel.flavour = flavour;
 
     this.loadFlavour();
+  }
+
+  public setGfx(patch: GfxRuntimeConfig) {
+    if (!patch || typeof patch !== "object") return;
+    this.gfx = {
+      features: { ...DEFAULT_GFX.features, ...(this.gfx?.features ?? {}), ...(patch.features ?? {}) },
+      safeArea: { ...DEFAULT_GFX.safeArea, ...(this.gfx?.safeArea ?? {}), ...(patch.safeArea ?? {}) },
+      retro: { ...DEFAULT_GFX.retro, ...(this.gfx?.retro ?? {}), ...(patch.retro ?? {}) },
+    };
   }
 
   public setAirQualityStation(station: string) {

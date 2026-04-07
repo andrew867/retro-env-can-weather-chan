@@ -15,3 +15,6 @@ export const PROVINCE_TRACKING_TEMP_TO_TRACK = {
 };
 
 export const PROVINCE_TRACKING_MAX_STATIONS = 6;
+
+/** Display poll interval — align with backend `ProvinceTracking` refresh (~5 min). */
+export const PROVINCE_TRACKING_CLIENT_POLL_MS = 5 * 60 * 1000;

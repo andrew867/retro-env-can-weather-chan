@@ -1,6 +1,8 @@
-# Retro Envrionment Canada Weather Channel
+# Retro Environment Canada Weather Channel
 
-This project is a simulator of the Environemnt Canada Weather Channel that Winnipeg broadcast via cable from the 80s to the early 2000s. This project aims to recreate the mid-90s version of the channel.
+This project is a simulator of the Environment Canada Weather Channel that Winnipeg broadcast via cable from the 80s to the early 2000s. It aims to recreate the mid-90s version of the channel.
+
+**Release notes:** see [CHANGELOG.md](./CHANGELOG.md) for reliability work, GFX controls, API endpoints, and broadcast-oriented rationale.
 
 ## Features
 
@@ -21,6 +23,26 @@ This project includes all of the features from the original weather channel such
 - Flavours
 
 Some of the above features are season/time of month specific and will automatically come and go as required
+
+## Broadcast reliability (summary)
+
+The stack is built for **24/7-style operation**: upstream HTTP timeouts, coalesced fetches, generation/batch guards so slow responses cannot overwrite newer state, and **`X-RWC-Data-Fetched-At`** on REST routes so clients know how old each snapshot is.
+
+The **display** combines **SSE** (`GET /api/v1/weather/live`) for primary conditions with **polled** JSON for national/US/province/alerts/AQHI/etc. After a **server restart or network blip**, SSE reconnects and conditions update—but auxiliary feeds only had fresh HTTP headers on their **next poll interval**, so the footer “snapshot outdated” hint could linger. The client now:
+
+1. **Merges** SSE payloads when the ECCC `observationID` is unchanged so a new server-side **`fetchedAt`** still flows into React state.
+2. **Refetches all polled feeds** when the EventSource **opens** (first load and reconnect) and when **`observationID` or `fetchedAt` changes**, so freshness headers catch up immediately after recovery without waiting for timers.
+
+**Ops endpoints** (same origin as the API, default port **8600**):
+
+| Endpoint | Purpose |
+| -------- | ------- |
+| `GET /api/v1/health` | Liveness: `ok`, `uptimeSec`, `service`. |
+| `GET /api/v1/metrics` | Aggregated outbound HTTP metrics from the server axios instance. If **`RWC_METRICS_TOKEN`** is set in the environment, send header `Authorization: Bearer <token>`. |
+
+**GFX** (scanlines, phosphor tint, safe area) is editable under the config UI **Graphics** tab and stored via `POST /api/v1/config/gfx`; the display reads **`gfx`** from `GET /api/v1/init` every few seconds.
+
+For full detail, see [CHANGELOG.md](./CHANGELOG.md).
 
 ## Project Setup
 

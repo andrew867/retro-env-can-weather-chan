@@ -1,11 +1,17 @@
 import { Request, Response } from "express";
+import { RWC_DATA_FETCHED_AT_HEADER } from "consts";
 import { initializeAirQuality } from "lib/eccc";
 import { doesAQHINeedWarning, getAQHITextSummary } from "./utils";
 import { getECCCAirQualityStations } from "lib/eccc/airQualityStations";
 
 const airQuality = initializeAirQuality();
 
+function setFetchedAtHeader(res: Response, iso: string | null) {
+  if (iso) res.setHeader(RWC_DATA_FETCHED_AT_HEADER, iso);
+}
+
 export function getAirQuality(req: Request, res: Response) {
+  setFetchedAtHeader(res, airQuality.getLastFetchIso());
   const obs = airQuality.observation;
   if (!obs) {
     res.status(200).json(null);

@@ -111,6 +111,10 @@ class CanadaProvincialHotColdSpots {
       lastUpdated: this._lastUpdated?.toISOString(),
     };
   }
+
+  public getLastFetchIso(): string | null {
+    return this._lastUpdated?.toISOString() ?? null;
+  }
 }
 
 let canadaProvincialHotColdSpots: CanadaProvincialHotColdSpots = null;

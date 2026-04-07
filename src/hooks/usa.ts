@@ -1,30 +1,12 @@
-import axios from "lib/axios";
-import { useEffect, useState } from "react";
+import { USA_WEATHER_FETCH_INTERVAL } from "consts";
 import { USAStationObservations } from "types";
+import { usePollingFetch } from "./usePollingFetch";
 
-const FETCH_USA_WEATHER_INTERVAL = 60 * 1000 * 1;
-
-// tell the channel to fetch the config once every 15mins
 export function useUSAWeather() {
-  const [usaWeather, setUSAWeather] = useState<USAStationObservations>();
-
-  const fetchUSAWeather = () => {
-    axios
-      .get("weather/usa")
-      .then((resp) => {
-        const { data } = resp;
-        if (!data) return;
-
-        setUSAWeather(data);
-      })
-      .catch();
-  };
-
-  useEffect(() => {
-    fetchUSAWeather();
-    const id = setInterval(() => fetchUSAWeather(), FETCH_USA_WEATHER_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-
-  return { usaWeather };
+  const { data, dataFetchedAt, refetch } = usePollingFetch<USAStationObservations>(
+    "weather/usa",
+    USA_WEATHER_FETCH_INTERVAL,
+    "usaWeather"
+  );
+  return { usaWeather: data, usaDataFetchedAt: dataFetchedAt, fetchUSAWeather: refetch };
 }

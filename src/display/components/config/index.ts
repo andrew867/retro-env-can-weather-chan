@@ -5,5 +5,6 @@ export * from "./historicalDataStationID";
 export * from "./climateNormals";
 export * from "./flavours";
 export * from "./display";
+export * from "./gfx";
 export * from "./crawler";
 export * from "./airQuality";

@@ -5,7 +5,7 @@ import { Connection } from "types/amqp.types";
 import Logger from "lib/logger";
 import { CAPCPFile } from "lib/cap-cp";
 import axios from "lib/backendAxios";
-import { FS_NO_FILE_FOUND } from "consts";
+import { FS_NO_FILE_FOUND, MAX_STORED_CAP_ALERTS } from "consts";
 import { compareAsc, parseISO } from "date-fns";
 
 const logger = new Logger("Alert_Monitor");
@@ -16,6 +16,7 @@ const ALERTS_FILE = "db/alerts.txt";
 class AlertMonitor {
   private _amqpConnection: Connection;
   private _alerts: CAPCPFile[] = [];
+  private _lastMutationAt: string | null = null;
 
   constructor() {
     this.startAMQPConnection();
@@ -83,10 +84,19 @@ class AlertMonitor {
 
     // push the new cap file to the list
     this._alerts.push(cap);
+    this.trimAlertsIfNeeded();
     logger.log(`Ingested CAP (${cap.identifier}) which will expire at`, cap.expires, `(total: ${this._alerts.length})`);
 
-    // store the alerts for later
     this.saveCAPFiles();
+    this._lastMutationAt = new Date().toISOString();
+  }
+
+  /** Prefer newest CAP files when over the retention cap. */
+  private trimAlertsIfNeeded() {
+    if (this._alerts.length <= MAX_STORED_CAP_ALERTS) return;
+    this._alerts.sort((a, b) => compareAsc(b.sent, a.sent));
+    this._alerts.length = MAX_STORED_CAP_ALERTS;
+    logger.warn(`Trimmed CAP list to ${MAX_STORED_CAP_ALERTS} newest entries`);
   }
 
   private loadStoredCAPFiles() {
@@ -123,16 +133,16 @@ class AlertMonitor {
 
     logger.log("Running periodic cleanup");
 
-    // remove any alerts that have expired from memory, but go backwards through the array
-    this._alerts.reverse().forEach((alert: CAPCPFile, ix: number) => {
-      if (compareAsc(parseISO(new Date().toISOString()), alert.expires) !== 1) return;
-
-      this._alerts.splice(ix, 1);
-      logger.log("Removed expired CAP", alert.identifier);
+    const nowIso = parseISO(new Date().toISOString());
+    this._alerts = this._alerts.filter((alert) => {
+      const expired = compareAsc(nowIso, alert.expires) === 1;
+      if (expired) logger.log("Removed expired CAP", alert.identifier);
+      return !expired;
     });
+    this.trimAlertsIfNeeded();
 
-    // resave the list of urls
     this.saveCAPFiles();
+    this._lastMutationAt = new Date().toISOString();
   }
 
   private sortAlerts() {
@@ -154,6 +164,10 @@ class AlertMonitor {
       // both the same
       return 0;
     });
+  }
+
+  public getLastDataAsOf(): string | null {
+    return this._lastMutationAt;
   }
 
   public alerts() {

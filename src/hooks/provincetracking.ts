@@ -1,29 +1,12 @@
-import axios from "lib/axios";
-import { useEffect, useState } from "react";
+import { PROVINCE_TRACKING_CLIENT_POLL_MS } from "consts";
 import { ProvinceTracking } from "types";
-
-const FETCH_PROVINCE_TRACKING_INTERVAL = 60 * 1000 * 1;
+import { usePollingFetch } from "./usePollingFetch";
 
 export function useProvinceTracking() {
-  const [provinceTracking, setProvinceTracking] = useState<ProvinceTracking>();
-
-  const fetchProvinceTracking = () => {
-    axios
-      .get("weather/province")
-      .then((resp) => {
-        const { data } = resp;
-        if (!data) return;
-
-        setProvinceTracking(data);
-      })
-      .catch();
-  };
-
-  useEffect(() => {
-    fetchProvinceTracking();
-    const id = setInterval(() => fetchProvinceTracking(), FETCH_PROVINCE_TRACKING_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-
-  return { provinceTracking };
+  const { data, dataFetchedAt, refetch } = usePollingFetch<ProvinceTracking>(
+    "weather/province",
+    PROVINCE_TRACKING_CLIENT_POLL_MS,
+    "provinceTracking"
+  );
+  return { provinceTracking: data, provinceDataFetchedAt: dataFetchedAt, refetchProvinceTracking: refetch };
 }

@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { initializeConfig } from "./config";
 import { getECCCWeatherStations } from "lib/eccc/weatherStations";
+import { GfxRuntimeConfig } from "types";
 
 const config = initializeConfig();
 
@@ -19,6 +20,7 @@ export function getInitHandler(req: Request, res: Response) {
       provinceHighLowEnabled: config.provinceHighLowEnabled,
       configVersion: config.configVersion,
     },
+    gfx: config.gfx,
     crawler: config.crawlerMessages,
     flavour: config.flavour,
     music: config.musicPlaylist ?? [],
@@ -169,5 +171,16 @@ export async function postPlaylist(req: Request, res: Response) {
     res.send(config.musicPlaylist);
   } catch (e) {
     res.status(500).json({ error: e });
+  }
+}
+
+export function postGfx(req: Request, res: Response) {
+  const body = req.body as GfxRuntimeConfig;
+  try {
+    if (!body || typeof body !== "object") throw new Error("Invalid gfx body");
+    config.updateAndSaveConfigOption(() => config.setGfx(body));
+    res.sendStatus(200);
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
   }
 }

@@ -1,11 +1,21 @@
 import { CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT } from "consts";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { WeatherStation } from "types";
 
 const SSE_RECONNECT_BASE_MS = 2000;
 const SSE_RECONNECT_MAX_MS = 60000;
 
-export function useWeatherEventStream() {
+export type WeatherEventStreamOptions = {
+  /**
+   * Called every time the EventSource opens, including first connect and after reconnect.
+   * Use to refetch polled feeds so footer freshness headers catch up right after the API is back.
+   */
+  onStreamConnected?: () => void;
+};
+
+export function useWeatherEventStream(options?: WeatherEventStreamOptions) {
+  const onConnectedRef = useRef(options?.onStreamConnected);
+  onConnectedRef.current = options?.onStreamConnected;
   const [currentConditions, setCurrentConditions] = useState<WeatherStation>();
 
   useEffect(() => {
@@ -43,7 +53,10 @@ export function useWeatherEventStream() {
           const parsed = JSON.parse(conditionUpdate.data) as WeatherStation;
           if (!parsed) return;
           setCurrentConditions((prev) => {
-            if (parsed.observationID === prev?.observationID) return prev;
+            // Same observation hour can still get a new `fetchedAt` after server restart/reparse; merge so the stale footer clears.
+            if (prev && parsed.observationID === prev.observationID) {
+              return { ...prev, ...parsed };
+            }
             return parsed;
           });
         } catch {
@@ -53,6 +66,7 @@ export function useWeatherEventStream() {
 
       es.onopen = () => {
         reconnectAttempt = 0;
+        onConnectedRef.current?.();
       };
 
       es.onerror = () => {

@@ -40,7 +40,7 @@ describe("Province tracking hook", () => {
     moxios.wait(() => {
       const request = moxios.requests.mostRecent();
       request.respondWith({ status: 200 });
-      expect(airQuality).toStrictEqual(null);
+      expect(airQuality).toBeUndefined();
     });
   });
 
@@ -49,7 +49,7 @@ describe("Province tracking hook", () => {
     moxios.wait(() => {
       const request = moxios.requests.mostRecent();
       request.respondWith({ status: 404 });
-      expect(airQuality).toStrictEqual(null);
+      expect(airQuality).toBeUndefined();
     });
   });
 
@@ -58,7 +58,7 @@ describe("Province tracking hook", () => {
     moxios.wait(() => {
       const request = moxios.requests.mostRecent();
       request.respondWith({ status: 500 });
-      expect(airQuality).toStrictEqual(null);
+      expect(airQuality).toBeUndefined();
     });
   });
 
@@ -67,7 +67,7 @@ describe("Province tracking hook", () => {
     moxios.wait(() => {
       const request = moxios.requests.mostRecent();
       request.respondWith({ status: 200, response: { showWarning: false, textValue: "Good" } });
-      expect(airQuality).toStrictEqual(null);
+      expect(airQuality).toBeUndefined();
     });
   });
 
@@ -76,7 +76,7 @@ describe("Province tracking hook", () => {
     moxios.wait(() => {
       const request = moxios.requests.mostRecent();
       request.respondWith({ status: 200, response: null });
-      expect(airQuality).toStrictEqual(null);
+      expect(airQuality).toBeUndefined();
     });
   });
 
@@ -85,7 +85,7 @@ describe("Province tracking hook", () => {
     moxios.wait(() => {
       const request = moxios.requests.mostRecent();
       request.respondWith({ status: 200, response: { value: "" } });
-      expect(airQuality).toStrictEqual(null);
+      expect(airQuality).toBeUndefined();
     });
   });
 
@@ -94,7 +94,7 @@ describe("Province tracking hook", () => {
     moxios.wait(() => {
       const request = moxios.requests.mostRecent();
       request.respondWith({ status: 200, response: { value: null } });
-      expect(airQuality).toStrictEqual(null);
+      expect(airQuality).toBeUndefined();
     });
   });
 });

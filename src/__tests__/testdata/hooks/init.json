@@ -3,6 +3,18 @@
     "font": "vt323",
     "provinceHighLowEnabled": true
   },
+  "gfx": {
+    "features": {
+      "authenticRefreshEnabled": false,
+      "nextGenVisualLayersEnabled": false
+    },
+    "safeArea": {
+      "top": 0.02,
+      "bottom": 0.06,
+      "left": 0.02,
+      "right": 0.02
+    }
+  },
   "crawler": ["this is a crawler message", "matt is awesome, look at this config page", "wow"],
   "flavour": {
     "name": "test",

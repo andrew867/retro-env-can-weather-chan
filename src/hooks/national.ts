@@ -1,30 +1,12 @@
-import axios from "lib/axios";
-import { useEffect, useState } from "react";
+import { NATIONAL_WEATHER_FETCH_INTERVAL } from "consts";
 import { NationalWeather } from "types";
+import { usePollingFetch } from "./usePollingFetch";
 
-const FETCH_NATIONAL_WEATHER_INTERVAL = 60 * 1000 * 1;
-
-// tell the channel to fetch the config once every 15mins
 export function useNationalWeather() {
-  const [nationalWeather, setNationalWeather] = useState<NationalWeather>();
-
-  const fetchNationalWeather = () => {
-    axios
-      .get("weather/national")
-      .then((resp) => {
-        const { data } = resp;
-        if (!data) return;
-
-        setNationalWeather(data);
-      })
-      .catch();
-  };
-
-  useEffect(() => {
-    fetchNationalWeather();
-    const id = setInterval(() => fetchNationalWeather(), FETCH_NATIONAL_WEATHER_INTERVAL);
-    return () => clearInterval(id);
-  }, []);
-
-  return { nationalWeather, fetchNationalWeather };
+  const { data, dataFetchedAt, refetch } = usePollingFetch<NationalWeather>(
+    "weather/national",
+    NATIONAL_WEATHER_FETCH_INTERVAL,
+    "nationalWeather"
+  );
+  return { nationalWeather: data, nationalDataFetchedAt: dataFetchedAt, fetchNationalWeather: refetch };
 }

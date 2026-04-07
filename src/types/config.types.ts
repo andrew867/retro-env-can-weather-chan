@@ -1,4 +1,5 @@
 import { Flavour, FlavourNames } from "./flavour.types";
+import type { GfxRuntimeConfig } from "./gfx.types";
 import { ProvinceStation } from "./provincetracking.types";
 
 export type ConfigFields = {
@@ -14,6 +15,7 @@ export type ConfigFields = {
   airQualityStation: string;
   crawler: string[];
   music: string[];
+  gfx?: GfxRuntimeConfig;
 };
 
 export type PrimaryLocation = {
@@ -40,6 +42,7 @@ export type MiscConfig = {
 
 export type InitChannel = {
   config: { font: string; provinceHighLowEnabled: boolean; configVersion?: string };
+  gfx?: GfxRuntimeConfig;
   crawler: CrawlerMessages;
   flavour: Flavour;
   music: string[];

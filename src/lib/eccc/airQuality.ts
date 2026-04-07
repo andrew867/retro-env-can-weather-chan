@@ -13,6 +13,7 @@ const AIR_QUALITY_FETCH_INTERVAL = 10 * 60 * 1000;
 class AirQuality {
   private _apiURL = "";
   private _aqhiObservation: AQHIObservation = null;
+  private _fetchedAt: string | null = null;
 
   constructor() {
     this.initialize();
@@ -100,6 +101,10 @@ class AirQuality {
 
   public get observation() {
     return this._aqhiObservation;
+  }
+
+  public getLastFetchIso(): string | null {
+    return this._fetchedAt;
   }
 }
 

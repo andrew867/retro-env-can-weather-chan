@@ -1,6 +1,14 @@
 import axios from "axios";
 
 /** Short log line for failed HTTP/XML fetches (avoid dumping full Axios stacks). */
+/** One-line warning for browser hooks when `/api/v1` polls fail. */
+export function logClientFetchWarning(scope: string, err: unknown): void {
+  const msg = formatFetchError(err);
+  if (typeof console !== "undefined" && typeof console.warn === "function") {
+    console.warn(`[RWC ${scope}] ${msg}`);
+  }
+}
+
 export function formatFetchError(err: unknown): string {
   if (axios.isAxiosError(err)) {
     const status = err.response?.status;

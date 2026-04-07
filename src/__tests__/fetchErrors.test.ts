@@ -1,5 +1,6 @@
 import {
   formatFetchError,
+  logClientFetchWarning,
   looksLikeClimatedataXml,
   looksLikeClimateNormalsCsv,
   looksLikeNormalsXml,
@@ -20,6 +21,13 @@ describe("fetchErrors", () => {
     const header = "CLIMATE_IDENTIFIER,E_NORMAL_ELEMENT_NAME,MONTH\n";
     expect(looksLikeClimateNormalsCsv(header)).toBe(true);
     expect(looksLikeClimateNormalsCsv("<!DOCTYPE html>")).toBe(false);
+  });
+
+  it("logClientFetchWarning does not throw", () => {
+    const warn = jest.spyOn(console, "warn").mockImplementation(() => {});
+    logClientFetchWarning("testScope", new Error("x"));
+    expect(warn).toHaveBeenCalled();
+    warn.mockRestore();
   });
 
   it("formatFetchError shortens axios errors", () => {

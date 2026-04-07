@@ -86,6 +86,8 @@ export type WeatherStation = {
   city: string;
   stationTime: WeatherStationTimeData;
   stationID: string;
+  /** ISO timestamp of last successful server-side parse of ECCC data (SSE + REST). */
+  fetchedAt?: string | null;
   observed: ObservedConditions & { windchill: number | null };
   almanac: Almanac & { sunRiseSet: SunRiseSet };
   forecast: WeekForecast;

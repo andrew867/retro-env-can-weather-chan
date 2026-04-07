@@ -1,6 +1,6 @@
 {
   "name": "retro-env-can-weather-chan",
-  "version": "2.2.2",
+  "version": "2.3.0",
   "private": true,
   "scripts": {
     "lint": "eslint .",
@@ -11,6 +11,8 @@
     "test:coverage": "env NODE_ENV=test jest --collectCoverage=true",
     "test:watch": "env NODE_ENV=test jest --watch",
     "build:display": "yarn parcel build src/display/dist/index.html --dist-dir dist/ --no-optimize && yarn parcel build src/display/dist/config.html --dist-dir dist/ --no-optimize",
+    "test:e2e": "playwright test",
+    "test:e2e:update": "playwright test --update-snapshots",
     "release": "release-it --ci"
   },
   "dependencies": {
@@ -34,6 +36,7 @@
   },
   "devDependencies": {
     "@parcel/transformer-sass": "2.16.4",
+    "@playwright/test": "^1.51.0",
     "@release-it/conventional-changelog": "^7.0.2",
     "@testing-library/react": "^15.0.7",
     "@types/cors": "^2.8.19",
