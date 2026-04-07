@@ -10,6 +10,8 @@ type ConditionsProp = {
   stationTime: WeatherStationTimeData;
   showPressure?: boolean;
   airQuality: AQHIObservationResponse;
+  /** Forecast reload: show line `n` when `revealStep >= n` (see ForecastScreen). Omit to show all lines. */
+  revealStep?: number;
 };
 
 export function Conditions(props: ConditionsProp) {
@@ -20,6 +22,7 @@ export function Conditions(props: ConditionsProp) {
     stationTime: { observedDateTime },
     showPressure = false,
     airQuality,
+    revealStep = Number.MAX_SAFE_INTEGER,
   } = props ?? {};
   const {
     temperature: { value: temperatureValue, units: temperatureUnits },
@@ -73,46 +76,52 @@ export function Conditions(props: ConditionsProp) {
     return `${Math.round(visibilityValue)} ${visibilityUnits}`;
   }, [observedDateTime]);
 
+  const rv = (step: number) => ({
+    visibility: revealStep >= step ? ("visible" as const) : ("hidden" as const),
+  });
+
   return (
     <div id="conditions">
-      <div className="reload-animation step-1">{title}</div>
+      <div className="reload-animation" style={rv(1)}>
+        {title}
+      </div>
       <div>
-        <span className="reload-animation step-2">
+        <span className="reload-animation" style={rv(2)}>
           <span>Temp&nbsp;</span>
           <span>{formattedTemperature}</span>
         </span>
         <span>{"".padEnd(6)}</span>
-        <span className="reload-animation step-3">
+        <span className="reload-animation" style={rv(3)}>
           <span>Wind&nbsp;</span>
           <span>{formattedWind}</span>
         </span>
       </div>
       <div>
-        <span className="reload-animation step-4">
+        <span className="reload-animation" style={rv(4)}>
           <span>Hum&nbsp;&nbsp;</span>
           <span>{formattedHumidity}</span>
         </span>
         <span>{"".padEnd(6)}</span>
-        <span className="reload-animation step-5">
+        <span className="reload-animation" style={rv(5)}>
           <span>{abbreviatedCondition ?? ""}</span>
         </span>
       </div>
       <div>
         {isShowingExtraData && (
           <>
-            <span className="reload-animation step-6">
+            <span className="reload-animation" style={rv(6)}>
               <span>Vsby&nbsp;</span>
               <span>{formattedVisibility.padStart(6)}</span>
             </span>
             <span>{"".padEnd(5)}</span>
-            <span className="reload-animation step-7">
+            <span className="reload-animation" style={rv(7)}>
               {windchill > 0 && <span>Wind Chill {windchill}</span>}
               {!windchill && airQuality?.value && <span>Air Quality {airQuality.textValue}</span>}
             </span>
           </>
         )}
         {!isShowingExtraData && (
-          <span className="reload-animation step-6">
+          <span className="reload-animation" style={rv(6)}>
             {"Visibility".padStart(16)}&nbsp;&nbsp;{formattedVisibility}
           </span>
         )}

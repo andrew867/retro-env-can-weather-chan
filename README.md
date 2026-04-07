@@ -38,11 +38,16 @@ The **display** combines **SSE** (`GET /api/v1/weather/live`) for primary condit
 | Endpoint | Purpose |
 | -------- | ------- |
 | `GET /api/v1/health` | Liveness: `ok`, `uptimeSec`, `service`. |
-| `GET /api/v1/metrics` | Aggregated outbound HTTP metrics from the server axios instance. If **`RWC_METRICS_TOKEN`** is set in the environment, send header `Authorization: Bearer <token>`. |
+| `GET /api/v1/metrics` | Server outbound HTTP (`backendAxios`) plus last **display** axios snapshot (`displayAxiosFromClient`) if a browser session has posted to `POST /api/v1/metrics/client`. If **`RWC_METRICS_TOKEN`** is set, use `Authorization: Bearer <token>` on both GET and POST. |
+| `POST /api/v1/metrics/client` | Display bundle posts in-browser API client counters (same schema as server bucket); merged into `GET /metrics`. |
 
-**GFX** (scanlines, phosphor tint, safe area) is editable under the config UI **Graphics** tab and stored via `POST /api/v1/config/gfx`; the display reads **`gfx`** from `GET /api/v1/init` every few seconds.
+**Operator / deploy notes** (git on servers, env vars, metrics auth): see [OPERATORS.md](./OPERATORS.md).
+
+**GFX** (scanlines, vignette, colour presets such as NES/C64-style or CRT mono, safe area) is editable under the config UI **Graphics** tab and stored via `POST /api/v1/config/gfx`; the display reads **`gfx`** from `GET /api/v1/init` every few seconds.
 
 For full detail, see [CHANGELOG.md](./CHANGELOG.md).
+
+**Sarracenia / push ingest roadmap** (notification-first ECCC data, aligned with [MetPX Sarracenia Overview](https://metpx.github.io/sarracenia/Explanation/Overview.html)): see [docs/specs/](./docs/specs/) — `SPEC-sarracenia-data-tranche.md`, `TEST-PLAN-sarracenia-data-tranche.md`, `PLAN-sarracenia-data-tranche.md`.
 
 ## Project Setup
 

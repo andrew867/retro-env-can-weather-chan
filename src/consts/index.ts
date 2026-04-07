@@ -1,4 +1,5 @@
 export * from "./server.consts";
+export * from "./gfx.consts";
 export * from "./http.consts";
 export * from "./retention.consts";
 export * from "./storage.consts";

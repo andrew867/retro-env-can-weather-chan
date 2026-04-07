@@ -13,13 +13,16 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Recovery refetch (this release)**: After an API outage or restart, the same ECCC observation hour can return an unchanged `observationID` but a **new** `fetchedAt`. The SSE client now **merges** payloads for the same ID (so `fetchedAt` updates). On **EventSource `open`** (including reconnect) and when **`observationID` or `fetchedAt` changes**, the display **refetches all polled feeds** once so national/USA/province/etc. headers refresh immediately instead of waiting for the next poll interval—clearing the stale footer quickly after the server is healthy again.
 - **Stale overwrites prevented**: Conditions use `AbortController` + generation guards; national/USA/sunspot-style multi-station fetches use **batch IDs** so late responses from an older wave cannot corrupt a newer wave; polling hooks use **monotonic generation** so slower axios responses do not overwrite newer state.
 - **Upstream metrics**: Server-side `backendAxios` response interceptors classify successes, timeouts, 4xx, 5xx, and network errors. **`GET /api/v1/metrics`** exposes counters (cancelled in-flight requests are not counted as errors). Optional **`RWC_METRICS_TOKEN`**: when set, metrics require `Authorization: Bearer <token>`.
+- **Display metrics**: The browser `axios` instance (`lib/axios`) uses the same counter model; the display posts **`POST /api/v1/metrics/client`** on an interval while `/` is open. **`GET /api/v1/metrics`** includes `displayAxiosFromClient` and `displayAxiosReportedAt` (last report wins).
+- **Look and feel**: Configurable **footer freshness hint** (show/hide the “snapshot may be outdated” line) and **ECWC/GWCV official fonts** vs **legacy** (consolas + ws4000 crawler), default **official on** for upstream typography parity.
+- **Docs**: [OPERATORS.md](./OPERATORS.md) for deploy/git/`yarn.lock` on servers, env vars, and metrics.
 - **Health**: **`GET /api/v1/health`** returns `{ ok, service, uptimeSec }` for load balancers and ops.
 - **CAP / province DB retention**: Caps and on-disk artifacts respect retention limits with cleanup to avoid unbounded growth.
 
 ### GFX & configuration
 
-- **`GfxRuntimeConfig`**: Feature flags, normalized **safe area** (0–1 insets), and **retro** controls (scanline opacity, phosphor tint green/amber/none, vignette). Defaults live in server config; **`POST /api/v1/config/gfx`** persists updates.
-- **Display**: `GfxRetroApply` pushes CSS variables and classes onto `#weather_channel`; SCSS adds scanline overlay, phosphor grading, and vignette. Config UI includes a **Graphics** tab (sliders + switches).
+- **`GfxRuntimeConfig`**: Feature flags, normalized **safe area** (0–1 insets), and **retro** controls (scanline opacity, **colour preset** none / NES-style / C64-style / CRT green or amber, vignette, optional **broadcast analog / VHS-style** overlay, **`reloadLineMs`** for forecast line-reveal stagger). Defaults live in server config; **`POST /api/v1/config/gfx`** persists updates (JSON field remains `phosphorTint` for compatibility).
+- **Display**: `GfxRetroApply` pushes CSS variables and classes onto `#weather_channel`; SCSS adds scanline overlay, optional grading filters, and vignette. Config **Graphics** tab copy frames broadcast colour as default and RetroArch-style presets for 8-bit or CRT mono looks.
 - **`GET /api/v1/init`** continues to ship `gfx` for the display bundle.
 
 ### Testing & automation

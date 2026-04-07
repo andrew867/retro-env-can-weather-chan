@@ -23,7 +23,12 @@ describe("Config file loading", () => {
     expect(config.provinceStations).toStrictEqual(exampleConfig.provinceStations);
     expect(config.historicalDataStationID).toStrictEqual(exampleConfig.historicalDataStationID);
     expect(config.climateNormals).toStrictEqual(exampleConfig.climateNormals);
-    expect(config.lookAndFeel).toStrictEqual({ font: "vt323", flavour: FLAVOUR_DEFAULT.name });
+    expect(config.lookAndFeel).toStrictEqual({
+      font: "vt323",
+      flavour: FLAVOUR_DEFAULT.name,
+      showFooterFreshnessHint: true,
+      useOfficialFonts: true,
+    });
     expect(config.misc).toStrictEqual({ ...exampleConfig.misc, alternateRecordsSource: undefined });
     expect(config.flavour.name).toStrictEqual(FLAVOUR_DEFAULT.name);
     expect(config.flavour.screens).toStrictEqual(FLAVOUR_DEFAULT.screens);
@@ -103,7 +108,12 @@ describe("Config file loading", () => {
   });
 
   it("loads from file correctly when lookAndFeel is missing", () => {
-    const defaultLookAndFeel = { font: "vt323", flavour: "default" };
+    const defaultLookAndFeel = {
+      font: "vt323",
+      flavour: "default",
+      showFooterFreshnessHint: true,
+      useOfficialFonts: true,
+    };
     jest
       .spyOn(fs, "readFileSync")
       .mockImplementationOnce(() => JSON.stringify({ ...exampleConfig, lookAndFeel: undefined }));
@@ -270,11 +280,17 @@ describe("Config updating", () => {
 
   it("updates the look and feel settings correctly", () => {
     const config = initializeConfig();
-    config.setLookAndFeelSettings("test");
+    config.setLookAndFeelSettings({ flavour: "test" });
     expect(config.lookAndFeel.flavour).toStrictEqual("test");
 
-    config.setLookAndFeelSettings("");
+    config.setLookAndFeelSettings({ flavour: "" });
     expect(config.lookAndFeel.flavour).toStrictEqual("default");
+
+    config.setLookAndFeelSettings({ showFooterFreshnessHint: false });
+    expect(config.lookAndFeel.showFooterFreshnessHint).toStrictEqual(false);
+
+    config.setLookAndFeelSettings({ useOfficialFonts: false });
+    expect(config.lookAndFeel.useOfficialFonts).toStrictEqual(false);
   });
 
   it("updates and saves the config option correctly", () => {

@@ -69,7 +69,8 @@ Many cable and broadcast systems of the era used **character generators** and **
 ## Where the code does “reload” today
 
 - **Rotation + “conditions updated” jump to forecast:** [`src/display/components/screenrotator.tsx`](src/display/components/screenrotator.tsx) — `conditionsOrConfigUpdated`, `observationID` / `configVersion` effects.
-- **Forecast reload styling:** [`src/display/style/forecast.scss`](src/display/style/forecast.scss) — `@keyframes reloadscreen`, stepped delays `.step-1` … `.step-9` (~222 ms steps).
+- **Forecast reload styling:** [`src/display/style/forecast.scss`](src/display/style/forecast.scss) — `@keyframes reloadscreen`, stepped delays `.step-1` … `.step-20`. Conditions use steps **1–7**; alert (if any) is **8**; each **visible** forecast line from [`formatStringTo8x32`](src/lib/display/formatter.ts) gets its own step (**9+** with alert, **8+** without)—split on `\n`, not one blob. Delay between steps is **`gfx.retro.reloadLineMs`** (default **100** ms), exposed as `--gfx-reload-line-ms` on `#weather_channel` via [`GfxRetroApply`](src/display/components/gfxRetroApply.tsx).
+- **Broadcast analog layer:** Optional `gfx.retro.vhsAnalogLayerEnabled` adds a VHS-style grain + bottom-band overlay (`::before` on `#weather_channel`, [`main.scss`](src/display/style/main.scss)); not mono-terminal—full broadcast colour underneath.
 - **Forecast screen timing:** [`src/display/components/screens/forecast.tsx`](src/display/components/screens/forecast.tsx) — `isReload` shortens first-page dwell (**50 s** vs default when reloading).
 
 The current animation is a **staggered visibility** pattern, not a **per-character serial** simulation. **#998** asks for closer match to **hardware character arrival** and **clear-then-repaint** behaviour described in the Krushen notes.

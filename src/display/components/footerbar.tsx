@@ -7,10 +7,12 @@ type FooterBarProps = {
   timeOffset: number;
   /** Any ISO timestamps from polled feeds; stale if the oldest relevant snapshot is too old. */
   snapshotFreshnessIsos?: (string | null | undefined)[];
+  /** When false, never show the bottom “snapshot may be outdated” line (Look and Feel). */
+  showFooterFreshnessHint?: boolean;
 };
 
 export function FooterBar(props: FooterBarProps) {
-  const { timeOffset, snapshotFreshnessIsos = [] } = props ?? {};
+  const { timeOffset, snapshotFreshnessIsos = [], showFooterFreshnessHint = true } = props ?? {};
   const [time, setTime] = useState<Date>(new Date());
   const timerInterval = useRef<NodeJS.Timeout>(null);
 
@@ -27,7 +29,8 @@ export function FooterBar(props: FooterBarProps) {
   const formattedTime = format(time, "HH:mm:ss");
   const formattedDate = formatDisplayDate(time.getTime());
 
-  const showStaleHint = snapshotFreshnessIsos.some((iso) => isSnapshotStale(iso));
+  const showStaleHint =
+    showFooterFreshnessHint && snapshotFreshnessIsos.some((iso) => isSnapshotStale(iso));
 
   return (
     <div id="footer_bar">

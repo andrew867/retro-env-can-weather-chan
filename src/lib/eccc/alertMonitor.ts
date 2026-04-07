@@ -5,6 +5,7 @@ import { Connection } from "types/amqp.types";
 import Logger from "lib/logger";
 import { CAPCPFile } from "lib/cap-cp";
 import axios from "lib/backendAxios";
+import { axiosGetWithMscMirror } from "lib/eccc/mscHttpMirror";
 import { FS_NO_FILE_FOUND, MAX_STORED_CAP_ALERTS } from "consts";
 import { compareAsc, parseISO } from "date-fns";
 
@@ -50,8 +51,7 @@ class AlertMonitor {
   }
 
   private parseCAPFile(url: string, skipRelevancyCheck: boolean = false) {
-    axios
-      .get(url)
+    axiosGetWithMscMirror(axios, url)
       .then((resp) => {
         const { data } = resp;
         if (!data) return;

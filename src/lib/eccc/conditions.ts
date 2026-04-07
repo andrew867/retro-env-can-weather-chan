@@ -44,8 +44,9 @@ import eventbus from "lib/eventbus";
 import { getTempRecordForDate } from "lib/temprecords";
 import { GetWeatherFileFromECCC } from "./datamart";
 import { isLooseNull } from "lib/isnull";
+import { axiosGetWithMscMirror, MSC_HPFX_ORIGIN } from "lib/eccc/mscHttpMirror";
 
-const ECCC_BASE_API_URL = "https://dd.weather.gc.ca/citypage_weather/xml/";
+const ECCC_BASE_API_URL = `${MSC_HPFX_ORIGIN}/today/citypage_weather/xml/`;
 const ECCC_API_ENGLISH_SUFFIX = "_e.xml";
 
 const logger = new Logger("conditions");
@@ -153,7 +154,7 @@ class CurrentConditions {
       if (!searchedURL) return;
 
       try {
-        const resp = await backendAxios.get(searchedURL, { signal });
+        const resp = await axiosGetWithMscMirror(backendAxios, searchedURL, { signal });
         if (applyGen !== this._conditionsApplyGen) return;
 
         const weather = new Weather(resp.data);

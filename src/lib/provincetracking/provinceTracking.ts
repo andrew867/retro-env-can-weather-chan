@@ -2,6 +2,7 @@ const Weather = require("ec-weather-js");
 import fs from "fs";
 import { EVENT_BUS_CONFIG_CHANGE_PROVINCE_TRACKING, PROVINCE_TRACKING_TEMP_TO_TRACK } from "consts";
 import axios from "lib/backendAxios";
+import { axiosGetWithMscMirror } from "lib/eccc/mscHttpMirror";
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
 import { ProvinceStationTracking, ProvinceStations } from "types";
@@ -106,8 +107,7 @@ class ProvinceTracking {
     const url = await GetWeatherFileFromECCC(province, stationID);
     if (!url) return Promise.reject("URL was invalid.");
 
-    return axios
-      .get(url)
+    return axiosGetWithMscMirror(axios, url)
       .then((resp) => {
         const data = resp && resp.data;
         const weather = new Weather(data);

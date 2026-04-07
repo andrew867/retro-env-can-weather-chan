@@ -23,35 +23,39 @@ describe("ECCC weather station list", () => {
   });
 
   it("handles a 4xx response correctly", async () => {
-    moxios.wait(() => {
-      const mostRecent = moxios.requests.mostRecent();
-      if (!mostRecent) return;
-
-      mostRecent.respondWith({ status: 400 });
+    const firstDone = new Promise<void>((resolve) => {
+      moxios.wait(() => {
+        void moxios.requests.at(0).respondWith({ status: 404 });
+        resolve();
+      });
     });
-
-    let stations;
-    try {
-      stations = await getECCCWeatherStations(search);
-    } catch {
-      expect(stations).toBeUndefined();
-    }
+    const p = getECCCWeatherStations(search);
+    await firstDone;
+    await new Promise<void>((resolve) => {
+      moxios.wait(() => {
+        void moxios.requests.at(1).respondWith({ status: 404 });
+        resolve();
+      });
+    });
+    await expect(p).rejects.toBeTruthy();
   });
 
   it("handles a 5xx response correctly", async () => {
-    moxios.wait(() => {
-      const mostRecent = moxios.requests.mostRecent();
-      if (!mostRecent) return;
-
-      mostRecent.respondWith({ status: 500 });
+    const firstDone = new Promise<void>((resolve) => {
+      moxios.wait(() => {
+        void moxios.requests.at(0).respondWith({ status: 500 });
+        resolve();
+      });
     });
-
-    let stations;
-    try {
-      stations = await getECCCWeatherStations(search);
-    } catch {
-      expect(stations).toBeUndefined();
-    }
+    const p = getECCCWeatherStations(search);
+    await firstDone;
+    await new Promise<void>((resolve) => {
+      moxios.wait(() => {
+        void moxios.requests.at(1).respondWith({ status: 500 });
+        resolve();
+      });
+    });
+    await expect(p).rejects.toBeTruthy();
   });
 
   it("handles a malformed 2xx response correctly (1/3)", async () => {

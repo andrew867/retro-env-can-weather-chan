@@ -1,6 +1,7 @@
 import {
   USA_WEATHER_STATIONS,
   USA_WEATHER_FETCH_INTERVAL,
+  USA_WEATHER_HTTP_TIMEOUT_MS,
   MAX_USA_STATIONS_PER_PAGE,
   EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS,
 } from "consts";
@@ -15,6 +16,16 @@ import { initializeConfig } from "lib/config";
 const config = initializeConfig();
 
 const logger = new Logger("USA");
+
+function summarizeFetchError(err: unknown): string {
+  if (err && typeof err === "object") {
+    const e = err as { code?: string; message?: string; response?: { status?: number } };
+    const parts = [e.code, e.response?.status != null ? `HTTP ${e.response.status}` : null, e.message].filter(Boolean);
+    if (parts.length) return parts.join(" · ");
+  }
+  return err instanceof Error ? err.message : String(err);
+}
+
 class USAWeather {
   private _usaStations: USAStationObservations = [];
   private _expectedConditionUUID: string;
@@ -87,7 +98,9 @@ class USAWeather {
     batchId: number
   ) {
     axios
-      .get(`https://api.weather.gov/stations/${station.code}/observations/latest`)
+      .get(`https://api.weather.gov/stations/${station.code}/observations/latest`, {
+        timeout: USA_WEATHER_HTTP_TIMEOUT_MS,
+      })
       .then((resp) => {
         if (batchId !== this._usaBatchId) return;
         const { data: weather } = resp;
@@ -113,7 +126,7 @@ class USAWeather {
         });
         this._fetchedAt = new Date().toISOString();
       })
-      .catch((err) => logger.error(station.name, "failed to fetch data", err));
+      .catch((err) => logger.warn(`${station.name}: NWS observation fetch failed (${summarizeFetchError(err)})`));
   }
 
   public getLastSuccessfulFetchIso(): string | null {

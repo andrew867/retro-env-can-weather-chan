@@ -40,7 +40,9 @@
     },
     "lookAndFeel": {
       "font": "vt323",
-      "flavour": "test"
+      "flavour": "test",
+      "showFooterFreshnessHint": true,
+      "useOfficialFonts": true
     },
     "misc": {
       "rejectInHourConditionUpdates": true

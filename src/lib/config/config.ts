@@ -11,13 +11,19 @@ import {
   FLAVOUR_DIRECTORY,
   FS_NO_FILE_FOUND,
   PROVINCE_TRACKING_DEFAULT_STATIONS,
+  GFX_RELOAD_LINE_MS_DEFAULT,
+  GFX_RELOAD_LINE_MS_MAX,
+  GFX_RELOAD_LINE_MS_MIN,
 } from "consts";
 import { FlavourLoader } from "lib/flavour";
 import Logger from "lib/logger";
 import {
+  AuthenticRefreshConfig,
   ClimateNormals,
   ECCCWeatherStation,
   Flavour,
+  GfxDisplayAspectRatio,
+  GfxDisplayResolution,
   GfxRuntimeConfig,
   LookAndFeel,
   MiscConfig,
@@ -42,7 +48,20 @@ const CRAWLER_PATH = {
 const CRAWLER_ABSOLUTE_PATH = `${CRAWLER_PATH.FOLDER}/${CRAWLER_PATH.FILE}`;
 const MUSIC_DIR = "music";
 
+const DEFAULT_AUTHENTIC_REFRESH: AuthenticRefreshConfig = {
+  enabled: false,
+  charsPerSecond: 10,
+  clearHoldMs: 120,
+  clearStyle: "blank",
+  jitterMsPerCharMax: 12,
+  secondaryPageStreaming: false,
+  respectReducedMotion: true,
+  streamUnit: "grapheme",
+};
+
 const DEFAULT_GFX: GfxRuntimeConfig = {
+  displayAspectRatio: "4:3",
+  displayResolution: "sd",
   features: {
     authenticRefreshEnabled: false,
     nextGenVisualLayersEnabled: false,
@@ -52,6 +71,8 @@ const DEFAULT_GFX: GfxRuntimeConfig = {
     scanlinesOpacity: 0,
     phosphorTint: "none",
     vignetteStrength: 0,
+    vhsAnalogLayerEnabled: false,
+    reloadLineMs: GFX_RELOAD_LINE_MS_DEFAULT,
   },
 };
 
@@ -68,7 +89,12 @@ class Config {
     climateID: 5023222, // (used for climate normals on last month summary)
     province: "MB",
   };
-  lookAndFeel: LookAndFeel = { font: "vt323", flavour: "default" };
+  lookAndFeel: LookAndFeel = {
+    font: "vt323",
+    flavour: "default",
+    showFooterFreshnessHint: true,
+    useOfficialFonts: true,
+  };
   misc: MiscConfig = {
     rejectInHourConditionUpdates: false, // whether we should only update conditions once an hour
     alternateRecordsSource: undefined, // if you want to supply your own record data to override what ECCC has, you can do it here with a JSON file at http(s)://example.com/records.json
@@ -86,6 +112,8 @@ class Config {
     safeArea: { ...DEFAULT_GFX.safeArea },
     retro: { ...DEFAULT_GFX.retro },
   };
+
+  authenticRefresh: AuthenticRefreshConfig = { ...DEFAULT_AUTHENTIC_REFRESH };
 
   constructor() {
     this.loadConfig();
@@ -111,6 +139,7 @@ class Config {
       crawler: this.crawlerMessages,
       music: this.musicPlaylist ?? [],
       gfx: this.gfx,
+      authenticRefresh: this.authenticRefresh,
     };
   }
 
@@ -145,6 +174,7 @@ class Config {
         provinceStations,
         airQualityStation,
         gfx,
+        authenticRefresh,
       } = parsedConfig;
 
       // but first we make sure that we have at least the province info
@@ -156,6 +186,8 @@ class Config {
       this.historicalDataStationID = historicalDataStationID ?? this.historicalDataStationID;
       this.climateNormals = { ...this.climateNormals, ...climateNormals };
       this.lookAndFeel = { ...this.lookAndFeel, ...lookAndFeel };
+      if (this.lookAndFeel.showFooterFreshnessHint === undefined) this.lookAndFeel.showFooterFreshnessHint = true;
+      if (this.lookAndFeel.useOfficialFonts === undefined) this.lookAndFeel.useOfficialFonts = true;
       this.misc = { ...this.misc, ...misc };
       this.provinceStations =
         provinceHighLowEnabled && provinceStations?.length ? provinceStations : PROVINCE_TRACKING_DEFAULT_STATIONS;
@@ -163,10 +195,23 @@ class Config {
 
       if (gfx && typeof gfx === "object") {
         this.gfx = {
+          displayAspectRatio: this.normalizeDisplayAspectRatio(gfx.displayAspectRatio),
+          displayResolution: this.normalizeDisplayResolution(gfx.displayResolution),
           features: { ...DEFAULT_GFX.features, ...(gfx.features ?? {}) },
           safeArea: { ...DEFAULT_GFX.safeArea, ...(gfx.safeArea ?? {}) },
           retro: { ...DEFAULT_GFX.retro, ...(gfx.retro ?? {}) },
         };
+        this.clampGfxRetro(this.gfx.retro);
+      }
+
+      if (authenticRefresh && typeof authenticRefresh === "object") {
+        this.authenticRefresh = this.normalizeAuthenticRefresh({ ...this.authenticRefresh, ...authenticRefresh });
+      }
+      if (this.gfx?.features?.authenticRefreshEnabled) {
+        this.authenticRefresh = this.normalizeAuthenticRefresh({
+          ...this.authenticRefresh,
+          enabled: true,
+        });
       }
 
       logger.log("Loaded weather channel. Location:", `${name}, ${province}`, `(${location})`);
@@ -338,20 +383,89 @@ class Config {
     this.misc.rejectInHourConditionUpdates = rejectInHourConditionUpdates;
   }
 
-  public setLookAndFeelSettings(flavour: string) {
-    if (!flavour) this.lookAndFeel.flavour = "default";
-    else this.lookAndFeel.flavour = flavour;
-
-    this.loadFlavour();
+  public setLookAndFeelSettings(
+    patch: Partial<Pick<LookAndFeel, "flavour" | "showFooterFreshnessHint" | "useOfficialFonts">>
+  ) {
+    let flavourChanged = false;
+    if (patch.flavour !== undefined) {
+      if (!patch.flavour) this.lookAndFeel.flavour = "default";
+      else this.lookAndFeel.flavour = patch.flavour;
+      flavourChanged = true;
+    }
+    if (patch.showFooterFreshnessHint !== undefined) {
+      this.lookAndFeel.showFooterFreshnessHint = patch.showFooterFreshnessHint;
+    }
+    if (patch.useOfficialFonts !== undefined) {
+      this.lookAndFeel.useOfficialFonts = patch.useOfficialFonts;
+    }
+    if (flavourChanged) this.loadFlavour();
   }
 
   public setGfx(patch: GfxRuntimeConfig) {
     if (!patch || typeof patch !== "object") return;
     this.gfx = {
+      displayAspectRatio:
+        patch.displayAspectRatio !== undefined
+          ? this.normalizeDisplayAspectRatio(patch.displayAspectRatio)
+          : (this.gfx?.displayAspectRatio ?? DEFAULT_GFX.displayAspectRatio),
+      displayResolution:
+        patch.displayResolution !== undefined
+          ? this.normalizeDisplayResolution(patch.displayResolution)
+          : (this.gfx?.displayResolution ?? DEFAULT_GFX.displayResolution),
       features: { ...DEFAULT_GFX.features, ...(this.gfx?.features ?? {}), ...(patch.features ?? {}) },
       safeArea: { ...DEFAULT_GFX.safeArea, ...(this.gfx?.safeArea ?? {}), ...(patch.safeArea ?? {}) },
       retro: { ...DEFAULT_GFX.retro, ...(this.gfx?.retro ?? {}), ...(patch.retro ?? {}) },
     };
+    this.clampGfxRetro(this.gfx.retro);
+    if (patch.features?.authenticRefreshEnabled !== undefined) {
+      this.authenticRefresh = this.normalizeAuthenticRefresh({
+        ...this.authenticRefresh,
+        enabled: !!patch.features.authenticRefreshEnabled,
+      });
+    }
+  }
+
+  public setAuthenticRefresh(patch: Partial<AuthenticRefreshConfig>) {
+    if (!patch || typeof patch !== "object") return;
+    this.authenticRefresh = this.normalizeAuthenticRefresh({ ...this.authenticRefresh, ...patch });
+  }
+
+  private normalizeDisplayAspectRatio(raw: unknown): GfxDisplayAspectRatio {
+    return raw === "16:9" ? "16:9" : "4:3";
+  }
+
+  private normalizeDisplayResolution(raw: unknown): GfxDisplayResolution {
+    return raw === "hd" ? "hd" : "sd";
+  }
+
+  private normalizeAuthenticRefresh(next: AuthenticRefreshConfig): AuthenticRefreshConfig {
+    const cps = Math.round(Number(next.charsPerSecond ?? DEFAULT_AUTHENTIC_REFRESH.charsPerSecond));
+    const clearHold = Math.round(Number(next.clearHoldMs ?? DEFAULT_AUTHENTIC_REFRESH.clearHoldMs));
+    const jitter = Math.round(Number(next.jitterMsPerCharMax ?? DEFAULT_AUTHENTIC_REFRESH.jitterMsPerCharMax));
+    const cs = next.clearStyle;
+    const clearStyle =
+      cs === "fill" || cs === "inverse" || cs === "blank" ? cs : DEFAULT_AUTHENTIC_REFRESH.clearStyle;
+    return {
+      enabled: !!next.enabled,
+      charsPerSecond: Number.isFinite(cps) ? Math.min(120, Math.max(1, cps)) : 10,
+      clearHoldMs: Number.isFinite(clearHold) ? Math.min(500, Math.max(0, clearHold)) : 120,
+      clearStyle,
+      jitterMsPerCharMax: Number.isFinite(jitter) ? Math.min(100, Math.max(0, jitter)) : 12,
+      secondaryPageStreaming: !!next.secondaryPageStreaming,
+      respectReducedMotion: next.respectReducedMotion !== false,
+      streamUnit: next.streamUnit === "word" ? "word" : "grapheme",
+    };
+  }
+
+  /** Normalize `retro.reloadLineMs` and booleans after merge from disk or POST /config/gfx. */
+  private clampGfxRetro(retro: GfxRuntimeConfig["retro"]): void {
+    if (!retro) return;
+    const raw = retro.reloadLineMs;
+    const n = Math.round(Number(raw));
+    retro.reloadLineMs = Number.isFinite(n)
+      ? Math.min(GFX_RELOAD_LINE_MS_MAX, Math.max(GFX_RELOAD_LINE_MS_MIN, n))
+      : GFX_RELOAD_LINE_MS_DEFAULT;
+    if (retro.vhsAnalogLayerEnabled === undefined) retro.vhsAnalogLayerEnabled = false;
   }
 
   public setAirQualityStation(station: string) {

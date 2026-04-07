@@ -1,8 +1,17 @@
 import { useLayoutEffect } from "react";
-import type { GfxRuntimeConfig } from "types";
+import { clampReloadLineMs, SCREEN_BACKGROUND_BLUE } from "consts";
+import type { GfxRetroColourPreset, GfxRuntimeConfig } from "types";
+
+const GFX_RETRO_PRESET_CLASSES: GfxRetroColourPreset[] = ["none", "nes", "c64", "green", "amber"];
+
+type GfxRetroApplyProps = {
+  gfx?: GfxRuntimeConfig;
+  /** Widescreen frame only applies with REC-era official fonts (new look & feel). */
+  useOfficialFonts?: boolean;
+};
 
 /** Applies `gfx` to `#weather_channel` (host div) via CSS variables + classes. */
-export function GfxRetroApply({ gfx }: { gfx?: GfxRuntimeConfig }) {
+export function GfxRetroApply({ gfx, useOfficialFonts = true }: GfxRetroApplyProps) {
   useLayoutEffect(() => {
     const el = document.getElementById("weather_channel");
     if (!el) return;
@@ -14,11 +23,26 @@ export function GfxRetroApply({ gfx }: { gfx?: GfxRuntimeConfig }) {
     el.style.setProperty("--gfx-safe-bottom", String(sa?.bottom ?? 0.06));
     el.style.setProperty("--gfx-safe-left", String(sa?.left ?? 0.02));
     el.style.setProperty("--gfx-safe-right", String(sa?.right ?? 0.02));
+    el.style.setProperty("--gfx-reload-line-ms", String(clampReloadLineMs(r?.reloadLineMs)));
     const tint = r?.phosphorTint ?? "none";
-    el.classList.remove("gfx-phosphor-none", "gfx-phosphor-green", "gfx-phosphor-amber");
-    el.classList.add(`gfx-phosphor-${tint}`);
+    const safeTint = GFX_RETRO_PRESET_CLASSES.includes(tint as GfxRetroColourPreset) ? tint : "none";
+    GFX_RETRO_PRESET_CLASSES.forEach((p) => el.classList.remove(`gfx-phosphor-${p}`));
+    el.classList.add(`gfx-phosphor-${safeTint}`);
     if (r?.scanlinesOpacity && r.scanlinesOpacity > 0.001) el.classList.add("gfx-scanlines-on");
     else el.classList.remove("gfx-scanlines-on");
-  }, [gfx]);
+    if (r?.vhsAnalogLayerEnabled) el.classList.add("gfx-vhs-analog-on");
+    else el.classList.remove("gfx-vhs-analog-on");
+
+    const aspectWide = useOfficialFonts && gfx?.displayAspectRatio === "16:9";
+    el.classList.remove("rwc-aspect-4-3", "rwc-aspect-16-9");
+    el.classList.add(aspectWide ? "rwc-aspect-16-9" : "rwc-aspect-4-3");
+
+    const res = gfx?.displayResolution === "hd" ? "hd" : "sd";
+    el.classList.remove("rwc-resolution-sd", "rwc-resolution-hd");
+    el.classList.add(res === "hd" ? "rwc-resolution-hd" : "rwc-resolution-sd");
+    el.style.setProperty("--rwc-ui-scale", res === "hd" ? "2" : "1");
+
+    el.style.setProperty("--rwc-pillar-color", SCREEN_BACKGROUND_BLUE);
+  }, [gfx, useOfficialFonts]);
   return null;
 }

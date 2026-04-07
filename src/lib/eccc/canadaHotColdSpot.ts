@@ -2,6 +2,7 @@ import { ElementCompact, xml2js } from "xml-js";
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
 import axios from "lib/backendAxios";
+import { axiosGetWithMscMirror, MSC_HPFX_ORIGIN } from "lib/eccc/mscHttpMirror";
 import { ECCCHotColdSpotElement, HotColdSpot } from "types";
 
 const logger = new Logger("Canada_Hot_Cold_Spots");
@@ -32,11 +33,10 @@ class CanadaProvincialHotColdSpots {
       .toString()
       .padStart(2, "0")}${currentDate.getUTCDate().toString().padStart(2, "0")}`;
 
-    this._apiURL = `https://dd.weather.gc.ca/today/observations/xml/${province.toUpperCase()}/today/today_${province.toLowerCase()}_${date}_e.xml`;
+    this._apiURL = `${MSC_HPFX_ORIGIN}/today/observations/xml/${province.toUpperCase()}/today/today_${province.toLowerCase()}_${date}_e.xml`;
 
     logger.log("Updating canada/provincial hot/cold spots");
-    axios
-      .get(this._apiURL)
+    axiosGetWithMscMirror(axios, this._apiURL)
       .then((resp) => {
         const data = resp.data;
         if (!data) return;

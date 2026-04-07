@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { initializeConfig } from "./config";
 import { getECCCWeatherStations } from "lib/eccc/weatherStations";
-import { GfxRuntimeConfig } from "types";
+import { AuthenticRefreshConfig, GfxRuntimeConfig } from "types";
 
 const config = initializeConfig();
 
@@ -19,8 +19,11 @@ export function getInitHandler(req: Request, res: Response) {
       font: config.lookAndFeel.font,
       provinceHighLowEnabled: config.provinceHighLowEnabled,
       configVersion: config.configVersion,
+      showFooterFreshnessHint: config.lookAndFeel.showFooterFreshnessHint ?? true,
+      useOfficialFonts: config.lookAndFeel.useOfficialFonts ?? true,
     },
     gfx: config.gfx,
+    authenticRefresh: config.authenticRefresh,
     crawler: config.crawlerMessages,
     flavour: config.flavour,
     music: config.musicPlaylist ?? [],
@@ -121,14 +124,31 @@ export function postMisc(req: Request, res: Response) {
 
 export function postLookAndFeel(req: Request, res: Response) {
   const {
-    body: { flavour },
+    body: { flavour, showFooterFreshnessHint, useOfficialFonts },
   } = req ?? {};
 
   try {
-    if (typeof flavour !== "string") throw "`flavour` must be a string";
+    if (flavour !== undefined && typeof flavour !== "string") throw "`flavour` must be a string";
     if (flavour && !config.flavours.includes(flavour)) throw "Provided `flavour` doesn't exist";
+    if (showFooterFreshnessHint !== undefined && typeof showFooterFreshnessHint !== "boolean") {
+      throw "`showFooterFreshnessHint` must be a boolean";
+    }
+    if (useOfficialFonts !== undefined && typeof useOfficialFonts !== "boolean") {
+      throw "`useOfficialFonts` must be a boolean";
+    }
 
-    config.updateAndSaveConfigOption(() => config.setLookAndFeelSettings(flavour));
+    const patch: Partial<{
+      flavour: string;
+      showFooterFreshnessHint: boolean;
+      useOfficialFonts: boolean;
+    }> = {};
+    if (flavour !== undefined) patch.flavour = flavour;
+    if (showFooterFreshnessHint !== undefined) patch.showFooterFreshnessHint = showFooterFreshnessHint;
+    if (useOfficialFonts !== undefined) patch.useOfficialFonts = useOfficialFonts;
+
+    if (Object.keys(patch).length === 0) throw "No valid fields to update";
+
+    config.updateAndSaveConfigOption(() => config.setLookAndFeelSettings(patch));
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: e });
@@ -175,10 +195,16 @@ export async function postPlaylist(req: Request, res: Response) {
 }
 
 export function postGfx(req: Request, res: Response) {
-  const body = req.body as GfxRuntimeConfig;
+  const body = req.body as GfxRuntimeConfig & { authenticRefresh?: AuthenticRefreshConfig };
   try {
     if (!body || typeof body !== "object") throw new Error("Invalid gfx body");
-    config.updateAndSaveConfigOption(() => config.setGfx(body));
+    const { authenticRefresh, ...gfxPatch } = body;
+    config.updateAndSaveConfigOption(() => {
+      config.setGfx(gfxPatch);
+      if (authenticRefresh && typeof authenticRefresh === "object") {
+        config.setAuthenticRefresh(authenticRefresh);
+      }
+    });
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: String(e) });

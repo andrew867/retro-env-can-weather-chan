@@ -1,7 +1,9 @@
 {
   "config": {
     "font": "vt323",
-    "provinceHighLowEnabled": true
+    "provinceHighLowEnabled": true,
+    "showFooterFreshnessHint": true,
+    "useOfficialFonts": true
   },
   "gfx": {
     "features": {
@@ -13,6 +15,13 @@
       "bottom": 0.06,
       "left": 0.02,
       "right": 0.02
+    },
+    "retro": {
+      "scanlinesOpacity": 0,
+      "phosphorTint": "none",
+      "vignetteStrength": 0,
+      "vhsAnalogLayerEnabled": false,
+      "reloadLineMs": 100
     }
   },
   "crawler": ["this is a crawler message", "matt is awesome, look at this config page", "wow"],

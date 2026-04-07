@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { DEFAULT_WEATHER_STATION_ID, SCREEN_BACKGROUND_BLUE, SCREEN_BACKGROUND_RED, Screens } from "consts";
 import { isAutomaticScreen } from "lib/flavour/utils";
 import {
   AQHIObservationResponse,
+  AuthenticRefreshConfig,
   CAPObject,
   FlavourScreen,
+  GfxFeatureFlags,
   HotColdSpots,
   LastMonth,
   NationalWeather,
@@ -45,6 +47,10 @@ type ScreenRotatorProps = {
   sunspots: SunspotStationObservations;
   airQuality: AQHIObservationResponse;
   configVersion: string;
+  /** Matches `gfx.retro.reloadLineMs` / `--gfx-reload-line-ms` for forecast reload line timing. */
+  reloadLineMs?: number;
+  authenticRefresh?: AuthenticRefreshConfig;
+  gfxFeatures?: GfxFeatureFlags;
 };
 
 export function ScreenRotator(props: ScreenRotatorProps) {
@@ -61,22 +67,19 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     sunspots,
     airQuality,
     configVersion,
+    reloadLineMs,
   } = props ?? {};
 
   const [displayedScreenIx, setDisplayedScreenIx] = useState(-1);
   const [conditionsOrConfigUpdated, setConditionsOrConfigUpdated] = useState(false);
   const [backgroundColour, setBackgroundColour] = useState(SCREEN_BACKGROUND_BLUE);
 
-  let forecastScreenIx = -1;
   const screenRotatorTimeout = useRef<NodeJS.Timeout>(null);
   const backgroundRotatorTimeout = useRef<NodeJS.Timeout>(null);
 
   // basic rotation of screens
   useEffect(() => {
     if (!screens?.length) return;
-
-    // store what index the forecast screen is at
-    forecastScreenIx = screens?.findIndex((screen) => screen.id === Screens.FORECAST);
 
     // displayed screen is set to -1 so we need to start displaying something
     if (displayedScreenIx === -1) setDisplayedScreenIx(0);
@@ -95,8 +98,10 @@ export function ScreenRotator(props: ScreenRotatorProps) {
   useEffect(() => {
     screenRotatorTimeout.current && clearTimeout(screenRotatorTimeout.current);
 
+    const forecastIx = screens.findIndex((screen) => screen.id === Screens.FORECAST);
+
     setConditionsOrConfigUpdated(true);
-    setDisplayedScreenIx(forecastScreenIx !== -1 ? forecastScreenIx : 0);
+    setDisplayedScreenIx(forecastIx !== -1 ? forecastIx : 0);
     setBackgroundColour(SCREEN_BACKGROUND_BLUE);
   }, [weatherStationResponse?.observationID, configVersion]);
 
@@ -134,9 +139,16 @@ export function ScreenRotator(props: ScreenRotatorProps) {
   };
 
   const switchToNextScreen = () => {
-    setDisplayedScreenIx((displayedScreenIx + 1) % screens.length);
-    if (conditionsOrConfigUpdated) setConditionsOrConfigUpdated(false);
+    setDisplayedScreenIx((prev) => (prev + 1) % screens.length);
+    setConditionsOrConfigUpdated(false);
   };
+
+  /** Widescreen pillar fill: match the active screen background outside the 4:3 raster. */
+  useLayoutEffect(() => {
+    const host = document.getElementById("weather_channel");
+    if (!host) return;
+    host.style.setProperty("--rwc-pillar-color", backgroundColour);
+  }, [backgroundColour]);
 
   const getComponentForDisplayedScreen = () => {
     const screen = screens[displayedScreenIx];
@@ -153,6 +165,10 @@ export function ScreenRotator(props: ScreenRotatorProps) {
             alert={alerts?.mostImportantAlert}
             isReload={conditionsOrConfigUpdated}
             airQuality={airQuality}
+            reloadLineMs={reloadLineMs}
+            authenticRefresh={authenticRefresh}
+            authenticRefreshEnabled={gfxFeatures?.authenticRefreshEnabled}
+            configVersion={configVersion}
             onComplete={switchToNextScreen}
           />
         );

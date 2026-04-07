@@ -1,50 +1,42 @@
-@keyframes reloadscreen {
-  to {
-    visibility: visible;
-  }
+/** Forecast reload line visibility is driven in JS (ForecastScreen) so reveals stay strictly ordered. */
+
+.forecast-authentic-wrap {
+  min-height: 1em;
+  position: relative;
+  width: 100%;
 }
 
-#forecast_screen {
-  &.has-reloaded {
-    .reload-animation {
-      visibility: hidden;
-      animation: reloadscreen 222ms forwards;
+.authentic-forecast-pending {
+  min-height: 1em;
+  visibility: hidden;
+}
 
-      &.step-1 {
-        animation-delay: 222ms;
-      }
+.authentic-forecast-stream {
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  margin: 0;
+  position: relative;
+  text-transform: inherit;
+  white-space: pre-wrap;
+  z-index: 1;
+}
 
-      &.step-2 {
-        animation-delay: 444ms;
-      }
+.authentic-clear {
+  inset: 0;
+  position: absolute;
+  z-index: 2;
+}
 
-      &.step-3 {
-        animation-delay: 666ms;
-      }
+.authentic-clear--blank {
+  background: #000;
+}
 
-      &.step-4 {
-        animation-delay: 888ms;
-      }
+.authentic-clear--fill {
+  background: #fff;
+}
 
-      &.step-5 {
-        animation-delay: 1100ms;
-      }
-
-      &.step-6 {
-        animation-delay: 1332ms;
-      }
-
-      &.step-7 {
-        animation-delay: 1554ms;
-      }
-
-      &.step-8 {
-        animation-delay: 1776ms;
-      }
-
-      &.step-9 {
-        animation-delay: 1998ms;
-      }
-    }
-  }
+.authentic-clear--inverse {
+  background: #fff;
+  filter: invert(1);
 }

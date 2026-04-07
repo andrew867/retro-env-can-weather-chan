@@ -1,14 +1,15 @@
 import { subHours } from "date-fns";
 import axios from "lib/backendAxios";
 import Logger from "lib/logger";
+import { axiosGetWithMscMirror, MSC_HPFX_ORIGIN } from "lib/eccc/mscHttpMirror";
 
 const logger = new Logger("Datamart");
 async function GetWeatherFileFromECCC(province: string, stationID: string): Promise<string | null> {
   // ECCC has massively changed the format of the data structure now so as of June 2025, the new format is as follows:
-  // https://dd.weather.gc.ca/citypage_weather/PROVINCE/UTC_HOUR/TIMEDATE_STAMP_MSC_CitypageWeather_STATION_CODE_en.xml
-  // https://dd.weather.gc.ca/citypage_weather/MB/18/20250627T180206.714Z_MSC_CitypageWeather_s0000193_en.xml
+  // https://hpfx.collab.science.gc.ca/today/citypage_weather/PROVINCE/UTC_HOUR/TIMEDATE_STAMP_MSC_CitypageWeather_STATION_CODE_en.xml
+  // (Datamart mirror: https://dd.weather.gc.ca/... — used automatically on HPFX failure.)
 
-  // as of October 2025 there is now `/today` after the base url https://dd.weather.gc.ca/today/
+  // as of October 2025 there is now `/today` after the MSC base URL.
 
   // due to this, what we're gonna do is get the current UTC hour, or the previous UTC hour
   const currentUTCHour = new Date().getUTCHours();
@@ -16,10 +17,10 @@ async function GetWeatherFileFromECCC(province: string, stationID: string): Prom
 
   const parser = async (utcHour: number) => {
     const paddedUTCHour = `${utcHour}`.padStart(2, "0");
-    const baseURL = `https://dd.weather.gc.ca/today/citypage_weather/${province}/${paddedUTCHour}/`;
+    const baseURL = `${MSC_HPFX_ORIGIN}/today/citypage_weather/${province}/${paddedUTCHour}/`;
     try {
       // first we check if the directory exists
-      const resp = await axios.get(baseURL);
+      const resp = await axiosGetWithMscMirror(axios, baseURL);
       const rawData = resp && (resp.data as string);
       if (!rawData) return null;
 

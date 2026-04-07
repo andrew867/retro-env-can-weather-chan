@@ -18,6 +18,8 @@ import { FlavourNames, LookAndFeel, MiscConfig } from "types";
 type DisplayConfigProps = {
   flavour: string;
   flavours: FlavourNames;
+  showFooterFreshnessHint: boolean;
+  useOfficialFonts: boolean;
   rejectInHourConditionUpdates: boolean;
   alternateRecordsSource: string;
   playlist: string[];
@@ -30,6 +32,8 @@ const exampleRecordsJSON = `{"records": [{"hi": {"value": 4.4,"year": 1880},"lo"
 export function DisplayConfig({
   flavour,
   flavours,
+  showFooterFreshnessHint,
+  useOfficialFonts,
   rejectInHourConditionUpdates,
   alternateRecordsSource,
   playlist,
@@ -39,6 +43,8 @@ export function DisplayConfig({
     useState(rejectInHourConditionUpdates);
   const [mutableAlternateRecordsSource, setMutableAlternateRecordsSource] = useState(alternateRecordsSource ?? "");
   const [mutableFlavour, setMutableFlavour] = useState(flavour ?? "");
+  const [mutableShowFooterFreshnessHint, setMutableShowFooterFreshnessHint] = useState(showFooterFreshnessHint);
+  const [mutableUseOfficialFonts, setMutableUseOfficialFonts] = useState(useOfficialFonts);
   const [mutablePlaylist, setMutablePlaylist] = useState(playlist);
 
   const miscSaveConfigOption = useSaveConfigOption<MiscConfigOptionResponse>("misc");
@@ -73,6 +79,8 @@ export function DisplayConfig({
 
     await lookAndFeelSaveConfigOption.saveConfigOption({
       flavour: mutableFlavour,
+      showFooterFreshnessHint: mutableShowFooterFreshnessHint,
+      useOfficialFonts: mutableUseOfficialFonts,
     });
 
     if (lookAndFeelSaveConfigOption.wasError)
@@ -89,6 +97,11 @@ export function DisplayConfig({
         status: "success",
       });
   };
+
+  useEffect(() => {
+    setMutableShowFooterFreshnessHint(showFooterFreshnessHint);
+    setMutableUseOfficialFonts(useOfficialFonts);
+  }, [showFooterFreshnessHint, useOfficialFonts]);
 
   useEffect(() => {
     if (regeneratePlaylist.wasError)
@@ -182,6 +195,33 @@ export function DisplayConfig({
               ))}
             </Select>
             <FormHelperText>See the "Flavours" tab for more info about flavours</FormHelperText>
+          </FormControl>
+
+          <FormControl mt={4}>
+            <FormLabel htmlFor="footerFreshnessHint">Show footer “snapshot may be outdated” line</FormLabel>
+            <Switch
+              isDisabled={lookAndFeelSaveConfigOption.isSaving}
+              id="footerFreshnessHint"
+              isChecked={mutableShowFooterFreshnessHint}
+              onChange={() => setMutableShowFooterFreshnessHint(!mutableShowFooterFreshnessHint)}
+            />
+            <FormHelperText>
+              When off, the bottom freshness hint is hidden even if polled data is stale.
+            </FormHelperText>
+          </FormControl>
+
+          <FormControl mt={4}>
+            <FormLabel htmlFor="officialFonts">ECWC / GWCV official fonts</FormLabel>
+            <Switch
+              isDisabled={lookAndFeelSaveConfigOption.isSaving}
+              id="officialFonts"
+              isChecked={mutableUseOfficialFonts}
+              onChange={() => setMutableUseOfficialFonts(!mutableUseOfficialFonts)}
+            />
+            <FormHelperText>
+              On (default): recw/GWCV webfonts. Off: legacy consolas + ws4000 crawler — useful when comparing with older
+              builds or tracking upstream typography changes.
+            </FormHelperText>
           </FormControl>
 
           <Button type="submit" mt={4} colorScheme="teal" isLoading={lookAndFeelSaveConfigOption.isSaving}>

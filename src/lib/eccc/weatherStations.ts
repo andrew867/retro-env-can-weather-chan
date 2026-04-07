@@ -1,4 +1,5 @@
 import axios from "lib/backendAxios";
+import { axiosGetWithMscMirror, MSC_HPFX_ORIGIN } from "lib/eccc/mscHttpMirror";
 import { ECCCWeatherStation } from "types";
 import { ElementCompact, xml2js } from "xml-js";
 
@@ -10,7 +11,7 @@ import { ElementCompact, xml2js } from "xml-js";
 
 export async function getECCCWeatherStations(searchTerm: string) {
   const stations = [];
-  const { data } = await axios.get("https://dd.weather.gc.ca/today/citypage_weather/siteList.xml");
+  const { data } = await axiosGetWithMscMirror(axios, `${MSC_HPFX_ORIGIN}/today/citypage_weather/siteList.xml`);
   const parsedData: ElementCompact = xml2js(data, { compact: true });
   if (!parsedData || !parsedData["siteList"] || !parsedData["siteList"]["site"]) {
     throw "Unable to parse weather stations";

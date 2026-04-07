@@ -1,16 +1,22 @@
 import type { AxiosError } from "axios";
 import axios from "axios";
+import { getClientMetricsReport } from "lib/clientMetricsLastReport";
+
+export type OutboundAxiosMetricsBucket = {
+  requestCount: number;
+  successCount: number;
+  errorCount: number;
+  timeoutCount: number;
+  status4xx: number;
+  status5xx: number;
+  networkError: number;
+};
 
 export type UpstreamMetricSnapshot = {
-  backendAxios: {
-    requestCount: number;
-    successCount: number;
-    errorCount: number;
-    timeoutCount: number;
-    status4xx: number;
-    status5xx: number;
-    networkError: number;
-  };
+  backendAxios: OutboundAxiosMetricsBucket;
+  /** Last display-bundle axios counters POSTed from a browser session (see POST /api/v1/metrics/client). */
+  displayAxiosFromClient: OutboundAxiosMetricsBucket | null;
+  displayAxiosReportedAt: string | null;
   since: string;
 };
 
@@ -67,8 +73,11 @@ export function attachBackendAxiosMetrics(client: typeof axios): void {
 }
 
 export function getUpstreamMetricsSnapshot(): UpstreamMetricSnapshot {
+  const client = getClientMetricsReport();
   return {
     backendAxios: { ...backend },
+    displayAxiosFromClient: client.displayAxiosFromClient,
+    displayAxiosReportedAt: client.displayAxiosReportedAt,
     since: startedAt,
   };
 }

@@ -11,6 +11,7 @@ import {
 import { NationalStationConfig, NationalStationObservation, NationalStationObservations } from "types";
 import Logger from "lib/logger";
 import axios from "lib/backendAxios";
+import { axiosGetWithMscMirror } from "lib/eccc/mscHttpMirror";
 import { harshTruncateConditions } from "lib/conditions";
 import { generateConditionsUUID } from "lib/eccc/utils";
 import { initializeConfig } from "lib/config";
@@ -108,8 +109,7 @@ class NationalWeather {
     GetWeatherFileFromECCC(province, stationID).then((url) => {
       if (batchId !== this._nationalBatchId) return;
       url &&
-        axios
-          .get(url)
+        axiosGetWithMscMirror(axios, url)
           .then((resp) => {
             if (batchId !== this._nationalBatchId) return;
             const data = resp && resp.data;

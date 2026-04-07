@@ -35,12 +35,13 @@ describe("AQHI Observation", () => {
 
   it("handles a 4xx response", (done) => {
     moxios.wait(() => {
-      const mostRecent = moxios.requests.mostRecent();
-      if (!mostRecent) return;
-
-      mostRecent.respondWith({ status: 404 }).then(() => {
-        expect(airQuality.observation).toBeNull();
-        done();
+      void moxios.requests.at(0).respondWith({ status: 404 });
+      moxios.wait(() => {
+        void moxios.requests.at(1).respondWith({ status: 404 });
+        setImmediate(() => {
+          expect(airQuality.observation).toBeNull();
+          done();
+        });
       });
     });
 
@@ -49,12 +50,13 @@ describe("AQHI Observation", () => {
 
   it("handles a 5xx response", (done) => {
     moxios.wait(() => {
-      const mostRecent = moxios.requests.mostRecent();
-      if (!mostRecent) return;
-
-      mostRecent.respondWith({ status: 500 }).then(() => {
-        expect(airQuality.observation).toBeNull();
-        done();
+      void moxios.requests.at(0).respondWith({ status: 500 });
+      moxios.wait(() => {
+        void moxios.requests.at(1).respondWith({ status: 500 });
+        setImmediate(() => {
+          expect(airQuality.observation).toBeNull();
+          done();
+        });
       });
     });
 

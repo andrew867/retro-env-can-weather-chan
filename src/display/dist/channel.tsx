@@ -1,6 +1,8 @@
 import { CrawlerMessages } from "display/components/crawler";
+import { FontModeApply } from "display/components/fontModeApply";
 import { FooterBar } from "display/components/footerbar";
 import { GfxRetroApply } from "display/components/gfxRetroApply";
+import { NextGenGfxLayer } from "display/components/nextGenGfxLayer";
 import { PlaylistComponent } from "display/components/playlist";
 import { ScreenRotator } from "display/components/screenrotator";
 import {
@@ -16,6 +18,9 @@ import {
 } from "hooks";
 import { useAirQuality } from "hooks/airQuality";
 import { useConfig } from "hooks/init";
+import axios from "lib/axios";
+import { getDisplayAxiosSnapshot } from "lib/displayUpstreamMetrics";
+import { CLIENT_METRICS_POST_INTERVAL_MS } from "consts";
 import React, { useCallback, useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 
@@ -61,6 +66,15 @@ function WeatherChannel() {
     onStreamConnected: refetchAllFeedsForFreshness,
   });
 
+  useEffect(() => {
+    const post = () => {
+      axios.post("metrics/client", { displayAxios: getDisplayAxiosSnapshot() }).catch(() => {});
+    };
+    post();
+    const timer = setInterval(post, CLIENT_METRICS_POST_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, []);
+
   const lastRecoveryKey = useRef<string | null>(null);
   useEffect(() => {
     const obs = currentConditions?.observationID ?? "";
@@ -87,37 +101,45 @@ function WeatherChannel() {
 
   return (
     <>
-      <GfxRetroApply gfx={config?.gfx} />
-      <CrawlerMessages crawler={config?.crawler} />
-      <ScreenRotator
-        screens={config?.flavour?.screens}
-        weatherStationResponse={currentConditions}
-        alerts={alertsHook}
-        nationalWeather={nationalWeather}
-        provinceTracking={provinceTracking}
-        season={season}
-        hotColdSpots={hotColdSpots}
-        lastMonth={lastMonth}
-        usaWeather={usaWeather}
-        sunspots={sunspots}
-        airQuality={airQuality}
-        configVersion={config?.config.configVersion}
-      />
-      <FooterBar
-        timeOffset={currentConditions?.stationTime?.stationOffsetMinutesFromLocal ?? 0}
-        snapshotFreshnessIsos={[
-          currentConditions?.fetchedAt,
-          nationalDataFetchedAt,
-          usaDataFetchedAt,
-          alertsHook.alertsDataFetchedAt,
-          provinceDataFetchedAt,
-          seasonDataFetchedAt,
-          lastMonthDataFetchedAt,
-          hotColdDataFetchedAt,
-          sunspotsDataFetchedAt,
-          airQualityDataFetchedAt,
-        ]}
-      />
+      <GfxRetroApply gfx={config?.gfx} useOfficialFonts={config?.config.useOfficialFonts ?? true} />
+      <FontModeApply useOfficialFonts={config?.config.useOfficialFonts ?? true} />
+      <div className="rwc-channel-frame">
+        <NextGenGfxLayer enabled={!!config?.gfx?.features?.nextGenVisualLayersEnabled} />
+        <CrawlerMessages crawler={config?.crawler} />
+        <ScreenRotator
+          screens={config?.flavour?.screens}
+          weatherStationResponse={currentConditions}
+          alerts={alertsHook}
+          nationalWeather={nationalWeather}
+          provinceTracking={provinceTracking}
+          season={season}
+          hotColdSpots={hotColdSpots}
+          lastMonth={lastMonth}
+          usaWeather={usaWeather}
+          sunspots={sunspots}
+          airQuality={airQuality}
+          configVersion={config?.config.configVersion}
+          reloadLineMs={config?.gfx?.retro?.reloadLineMs}
+          authenticRefresh={config?.authenticRefresh}
+          gfxFeatures={config?.gfx?.features}
+        />
+        <FooterBar
+          timeOffset={currentConditions?.stationTime?.stationOffsetMinutesFromLocal ?? 0}
+          showFooterFreshnessHint={config?.config.showFooterFreshnessHint ?? true}
+          snapshotFreshnessIsos={[
+            currentConditions?.fetchedAt,
+            nationalDataFetchedAt,
+            usaDataFetchedAt,
+            alertsHook.alertsDataFetchedAt,
+            provinceDataFetchedAt,
+            seasonDataFetchedAt,
+            lastMonthDataFetchedAt,
+            hotColdDataFetchedAt,
+            sunspotsDataFetchedAt,
+            airQualityDataFetchedAt,
+          ]}
+        />
+      </div>
       <PlaylistComponent playlist={config?.music} />
     </>
   );

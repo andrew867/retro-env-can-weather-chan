@@ -1,7 +1,7 @@
 import { useChannelCurrentConfig } from "hooks";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ChakraProvider, Heading, Tabs, TabList, TabPanels, Tab, TabPanel } from "@chakra-ui/react";
+import { ChakraProvider, Heading, Tabs, TabList, TabPanels, Tab, TabPanel, Text } from "@chakra-ui/react";
 import {
   AirQualityConfig,
   ClimateNormalsConfig,
@@ -21,7 +21,12 @@ const ConfigScreen = () => {
     <>
       <Heading>Weather Simulator Config</Heading>
       {!fetched && <>Fetching config...</>}
-      {fetched && (
+      {fetched && !config && (
+        <Text mt={4} color="red.500">
+          Could not load configuration from the API. Check that the simulator is running and try refreshing this page.
+        </Text>
+      )}
+      {fetched && config && (
         <>
           <Tabs>
             <TabList>
@@ -39,23 +44,29 @@ const ConfigScreen = () => {
             <TabPanels>
               <TabPanel>
                 <DisplayConfig
-                  alternateRecordsSource={config.misc.alternateRecordsSource}
-                  rejectInHourConditionUpdates={config.misc.rejectInHourConditionUpdates}
-                  flavour={config.lookAndFeel.flavour}
+                  alternateRecordsSource={config.misc?.alternateRecordsSource ?? ""}
+                  rejectInHourConditionUpdates={config.misc?.rejectInHourConditionUpdates ?? false}
+                  flavour={config.lookAndFeel?.flavour ?? ""}
+                  showFooterFreshnessHint={config.lookAndFeel?.showFooterFreshnessHint ?? true}
+                  useOfficialFonts={config.lookAndFeel?.useOfficialFonts ?? true}
                   flavours={config.flavours}
-                  playlist={config.music}
+                  playlist={config.music ?? []}
                 />
               </TabPanel>
               <TabPanel>
-                <GfxConfig gfx={config.gfx ?? {}} />
+                <GfxConfig
+                  gfx={config.gfx ?? {}}
+                  authenticRefresh={config.authenticRefresh}
+                  useOfficialFonts={config.lookAndFeel?.useOfficialFonts ?? true}
+                />
               </TabPanel>
               <TabPanel>
                 <WeatherStationConfig weatherStation={config.primaryLocation} />
               </TabPanel>
               <TabPanel>
                 <ProvinceTempPrecipConfig
-                  isEnabled={config.provinceHighLowEnabled}
-                  stations={config.provinceStations}
+                  isEnabled={config.provinceHighLowEnabled ?? true}
+                  stations={config.provinceStations ?? []}
                 />
               </TabPanel>
               <TabPanel>
@@ -75,7 +86,7 @@ const ConfigScreen = () => {
               </TabPanel>
 
               <TabPanel>
-                <CrawlerConfig crawler={config.crawler} />
+                <CrawlerConfig crawler={config.crawler ?? []} />
               </TabPanel>
             </TabPanels>
           </Tabs>

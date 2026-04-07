@@ -1,5 +1,6 @@
 import { EVENT_BUS_CONFIG_CHANGE_AIR_QUALITY_STATION } from "consts";
 import axios from "lib/backendAxios";
+import { axiosGetWithMscMirror, MSC_HPFX_ORIGIN } from "lib/eccc/mscHttpMirror";
 import { initializeConfig } from "lib/config";
 import eventbus from "lib/eventbus";
 import Logger from "lib/logger";
@@ -39,7 +40,7 @@ class AirQuality {
       return;
     }
 
-    this._apiURL = `http://dd.weather.gc.ca/today/air_quality/aqhi/${area}/observation/realtime/xml/AQ_OBS_${stationCode}_CURRENT.xml`;
+    this._apiURL = `${MSC_HPFX_ORIGIN}/today/air_quality/aqhi/${area}/observation/realtime/xml/AQ_OBS_${stationCode}_CURRENT.xml`;
     logger.log("Air quality will be tracked");
 
     this.fetchAirQuality();
@@ -55,8 +56,7 @@ class AirQuality {
     // clear the observation incase data no longer exists on eccc
     this.clearAirQualityObservation();
 
-    axios
-      .get(url)
+    axiosGetWithMscMirror(axios, url)
       .then((resp) => {
         const { data } = resp;
         if (!data) throw "Invalid response";
