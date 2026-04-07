@@ -33,3 +33,6 @@ db*
 cfg*
 alerts.txt
 build*
+
+# Local-only engineering / ops notes (not published to GitHub)
+/docs/
