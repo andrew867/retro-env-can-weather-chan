@@ -112,13 +112,7 @@ Implement behind a **config flag** (e.g. `authenticRefresh: boolean` or baud pre
 
 ## Formal spec, tests, and implementation plans
 
-The following live in the **MusicZone** monorepo (relative to this file: `../../../.cursor/plans/`):
-
-| Document | Purpose |
-|----------|---------|
-| [retro_weather_authentic_refresh_spec.md](../../../.cursor/plans/retro_weather_authentic_refresh_spec.md) | Normative requirements, config shape (`clearStyle`, top-level init), state machine, timing |
-| [retro_weather_authentic_refresh_test_plan.md](../../../.cursor/plans/retro_weather_authentic_refresh_test_plan.md) | Jest/RTL cases, fixtures, manual matrix |
-| [retro_weather_authentic_refresh_implementation_plan.md](../../../.cursor/plans/retro_weather_authentic_refresh_implementation_plan.md) | Phased delivery, file touch list, ADR summary, risks |
+Detailed authentic-refresh specifications and phased plans are maintained in the operator’s **private workspace** (for example under `.cursor/plans/` in a full checkout). They are not part of the public GitHub tree; release notes and code remain the source of truth for what shipped.
 
 ---
 

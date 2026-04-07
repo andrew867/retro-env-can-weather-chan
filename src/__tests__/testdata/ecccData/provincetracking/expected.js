@@ -2,17 +2,17 @@ export default {
   tracking: [
     {
       station: { name: "Toronto", code: "ON/s0000458" },
-      minTemp: Math.min(),
+      minTemp: 26.4,
       maxTemp: 26.4,
-      displayTemp: "M",
+      displayTemp: 26.4,
       yesterdayPrecip: 23.5,
       yesterdayPrecipUnit: "mm",
     },
     {
       station: { name: "Ottawa", code: "ON/s0000623" },
-      minTemp: Math.min(),
+      minTemp: 25.8,
       maxTemp: 25.8,
-      displayTemp: "M",
+      displayTemp: 25.8,
       yesterdayPrecip: 0,
       yesterdayPrecipUnit: "mm",
     },

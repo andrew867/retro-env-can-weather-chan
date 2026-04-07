@@ -119,11 +119,14 @@ class NationalWeather {
             const stationIx = observations.findIndex((observationStation) => observationStation.code === station.code);
             if (stationIx === -1) return;
 
-            const {
-              condition,
-              temperature: { value: temperature },
-              dateTime: [utc],
-            } = weather.current;
+            const current = weather.current;
+            if (!current) return;
+
+            const utc = current.dateTime?.[0];
+            if (!utc?.timeStamp) return;
+
+            const condition = current.condition;
+            const temperature = current.temperature?.value;
 
             // handle rejecting in-hour updates for these stations too
             const conditionUUID = generateConditionsUUID(utc.timeStamp);
@@ -136,7 +139,7 @@ class NationalWeather {
             observations.splice(stationIx, 1, {
               ...station,
               condition: condition ?? null,
-              abbreviatedCondition: condition ? harshTruncateConditions(weather.current?.condition) : null,
+              abbreviatedCondition: condition ? harshTruncateConditions(current.condition) : null,
               temperature: temperature && !isNaN(temperature) ? Number(temperature) : null,
               conditionUUID,
             });

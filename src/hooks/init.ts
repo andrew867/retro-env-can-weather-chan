@@ -5,8 +5,13 @@ import { usePollingFetch } from "./usePollingFetch";
 const FETCH_CONFIG_INTERVAL = 5 * 1000;
 
 export function useConfig() {
-  const { data: config, refetch } = usePollingFetch<InitChannel>("init", FETCH_CONFIG_INTERVAL, "init", {
-    trackFetchedAt: false,
-  });
-  return { config, refetchConfig: refetch };
+  const { data: config, refetch, hasAttempted: initAttempted } = usePollingFetch<InitChannel>(
+    "init",
+    FETCH_CONFIG_INTERVAL,
+    "init",
+    {
+      trackFetchedAt: false,
+    }
+  );
+  return { config, refetchConfig: refetch, initAttempted };
 }

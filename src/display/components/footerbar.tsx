@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 type FooterBarProps = {
   timeOffset: number;
-  /** Any ISO timestamps from polled feeds; stale if the oldest relevant snapshot is too old. */
+  /** ISO timestamps from higher-cadence feeds; stale if any is past threshold (see channel snapshot list). */
   snapshotFreshnessIsos?: (string | null | undefined)[];
   /** When false, never show the bottom “snapshot may be outdated” line (Look and Feel). */
   showFooterFreshnessHint?: boolean;

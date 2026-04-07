@@ -271,7 +271,15 @@ ol {
     --crawler-font: "ws4000", monospace;
   }
 
-  box-shadow: inset 0 0 min(120px, 18vw) rgba(0, 0, 0, var(--gfx-vignette, 0));
+  /** Inset shadow on the host was invisible under opaque child rasters; overlay sits above the frame (see channel.tsx). */
+  > .gfx-vignette-layer {
+    border-radius: inherit;
+    box-shadow: inset 0 0 min(140px, 22vw) rgba(0, 0, 0, var(--gfx-vignette, 0));
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 650;
+  }
 }
 
 @keyframes gfx-vhs-grain-jitter {

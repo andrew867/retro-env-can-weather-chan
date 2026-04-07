@@ -181,10 +181,10 @@ describe("Provincial temp/precip tracking", () => {
       expect(isOvernight).toBe(false);
 
       expect(tracking[0].displayTemp).toBe(26.4);
-      expect(tracking[0].minTemp).toBe(Math.min());
+      expect(tracking[0].minTemp).toBeNull();
 
       expect(tracking[1].displayTemp).toBe(25.8);
-      expect(tracking[1].minTemp).toBe(Math.min());
+      expect(tracking[1].minTemp).toBeNull();
     });
   });
 
@@ -207,10 +207,10 @@ describe("Provincial temp/precip tracking", () => {
       expect(isOvernight).toBe(true);
 
       expect(tracking[0].displayTemp).toBe("M");
-      expect(tracking[0].maxTemp).toBe(Math.max());
+      expect(tracking[0].maxTemp).toBeNull();
 
       expect(tracking[1].displayTemp).toBe("M");
-      expect(tracking[1].maxTemp).toBe(Math.max());
+      expect(tracking[1].maxTemp).toBeNull();
     });
   });
 

@@ -19,7 +19,7 @@
     "retro": {
       "scanlinesOpacity": 0,
       "phosphorTint": "none",
-      "vignetteStrength": 0,
+      "vignetteStrength": 0.12,
       "vhsAnalogLayerEnabled": false,
       "reloadLineMs": 100
     }

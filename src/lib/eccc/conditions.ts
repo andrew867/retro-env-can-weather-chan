@@ -2,6 +2,7 @@ const Weather = require("ec-weather-js");
 import { isAxiosError } from "axios";
 import backendAxios from "lib/backendAxios";
 import { listen } from "lib/amqp";
+import { mscAmqpListenOptionsFromEnv } from "lib/amqp/mscAmqpEnv";
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
 import { Connection } from "types/amqp.types";
@@ -101,6 +102,7 @@ class CurrentConditions {
 
     // hook up the amqp listener
     const { connection, emitter: listener } = listen({
+      ...mscAmqpListenOptionsFromEnv(),
       amqp_subtopic: `*.WXO-DD.citypage_weather.${config.primaryLocation.province}.#`,
     });
 

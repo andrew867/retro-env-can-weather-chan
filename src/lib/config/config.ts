@@ -70,7 +70,7 @@ const DEFAULT_GFX: GfxRuntimeConfig = {
   retro: {
     scanlinesOpacity: 0,
     phosphorTint: "none",
-    vignetteStrength: 0,
+    vignetteStrength: 0.12,
     vhsAnalogLayerEnabled: false,
     reloadLineMs: GFX_RELOAD_LINE_MS_DEFAULT,
   },

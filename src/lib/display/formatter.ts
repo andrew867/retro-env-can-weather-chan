@@ -1,26 +1,67 @@
 import { DISPLAY_MAX_CHARACTERS_PER_LINE } from "consts";
 
-export function formatStringTo8x32(text: string, maxLines: number) {
-  // if the entire forecast is less than DISPLAY_MAX_CHARACTERS_PER_LINE, we can skip this
-  if (text.length < DISPLAY_MAX_CHARACTERS_PER_LINE) return text;
-
-  // we should follow the maxLinesx32 format here
-  let formattedText = text;
-  for (let line = 1, startPoint = 0; line <= maxLines; line++) {
-    // before we do anything, we can just run to the end of the string if we'll past it
-    if (startPoint + DISPLAY_MAX_CHARACTERS_PER_LINE >= text.length) {
-      formattedText = `${formattedText.slice(0).trim()}\n`;
+/**
+ * Fills up to `maxLines` rows of at most `width` characters (default 32).
+ * Breaks at spaces when possible; otherwise hard-breaks within a word.
+ */
+export function wrapTextToLineBudget(
+  text: string,
+  maxLines: number,
+  width: number = DISPLAY_MAX_CHARACTERS_PER_LINE
+): { lines: string[]; remainder: string } {
+  let remainder = text.replace(/\s+/g, " ").trim();
+  const lines: string[] = [];
+  while (lines.length < maxLines && remainder.length > 0) {
+    if (remainder.length <= width) {
+      lines.push(remainder);
+      remainder = "";
       break;
     }
-
-    // get the last space on this line and replace it with a line break (put -1 here because if the last space is on the endpoint, it gets confused)
-    const ixOfLastSpace = formattedText.lastIndexOf(" ", startPoint + DISPLAY_MAX_CHARACTERS_PER_LINE);
-    formattedText = formattedText.slice(0, ixOfLastSpace).trim() + "\n" + formattedText.slice(ixOfLastSpace).trim();
-
-    // move the cursor forward to the end of this line
-    startPoint = ixOfLastSpace;
+    const slice = remainder.slice(0, width);
+    const lastSpace = slice.lastIndexOf(" ");
+    if (lastSpace > 0) {
+      lines.push(remainder.slice(0, lastSpace).trimEnd());
+      remainder = remainder.slice(lastSpace).trimStart();
+    } else {
+      lines.push(remainder.slice(0, width));
+      remainder = remainder.slice(width).trimStart();
+    }
   }
+  return { lines, remainder };
+}
 
-  // truncate the string at the last line break and do some trimming
-  return formattedText.slice(0, formattedText.lastIndexOf("\n", maxLines * DISPLAY_MAX_CHARACTERS_PER_LINE)).trim();
+/**
+ * Word-wraps `text` into one or more pages; each page is newline-separated lines.
+ * First page allows `linesFirstPage` rows; later pages use `linesContinuationPage` rows.
+ */
+export function paginateText8x32(
+  text: string,
+  linesFirstPage: number,
+  linesContinuationPage: number,
+  width: number = DISPLAY_MAX_CHARACTERS_PER_LINE
+): string[] {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return [];
+
+  const pages: string[] = [];
+  let remainder = normalized;
+
+  const first = wrapTextToLineBudget(remainder, linesFirstPage, width);
+  pages.push(first.lines.join("\n"));
+  remainder = first.remainder;
+  while (remainder.length > 0) {
+    const chunk = wrapTextToLineBudget(remainder, linesContinuationPage, width);
+    pages.push(chunk.lines.join("\n"));
+    remainder = chunk.remainder;
+  }
+  return pages.filter((p) => p.length > 0);
+}
+
+export function formatStringTo8x32(text: string, maxLines: number) {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (!normalized) return "";
+  if (normalized.length <= DISPLAY_MAX_CHARACTERS_PER_LINE) return normalized;
+
+  const { lines } = wrapTextToLineBudget(normalized, maxLines);
+  return lines.join("\n").trimEnd();
 }

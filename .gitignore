@@ -37,4 +37,6 @@ alerts.txt
 build*
 
 # Local-only engineering / ops notes (not published to GitHub)
-/docs/
+/docs/**
+!/docs/specs/
+!/docs/specs/**

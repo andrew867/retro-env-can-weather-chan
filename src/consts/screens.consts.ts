@@ -37,7 +37,7 @@ export const SCREEN_NAMES = {
 export const SCREEN_DESCRIPTIONS = {
   [Screens.ALERTS]: "Paginated alerts/warnings/watches/etc.",
   [Screens.FORECAST]:
-    "Current conditions (without pressure) with the most immediate forecast (including relevant warning/watch) and two more forecast only pages",
+    "Current conditions (without pressure) with the immediate forecast; long text uses forecast cont.. pages; additional forecast periods each paginate as needed",
   [Screens.OUTLOOK]: "Long-term forecast for the current city - displays high/low temps and expected conditions",
   [Screens.ALMANAC]: "Current conditions and high/low temperature info for last year, normal, and the record",
   [Screens.AQHI_WARNING]: "Relevant warning screen if AQHI for the current weather station is above 3",

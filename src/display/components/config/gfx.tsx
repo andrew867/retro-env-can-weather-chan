@@ -241,8 +241,7 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
 
           <Heading size="md">Timing &amp; broadcast analog</Heading>
           <Text fontSize="sm" color="gray.600">
-            Same idea as the Musiczone site’s CRT layers: optional overlays on top of full-colour graphics—no
-            terminal/mono mode.
+            Optional CRT-style overlays on top of full-colour graphics—no terminal/mono mode.
           </Text>
           <FormControl>
             <FormLabel htmlFor="gfx-reload-line-ms">Line reveal interval (ms)</FormLabel>

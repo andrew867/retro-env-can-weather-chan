@@ -25,11 +25,11 @@ import React, { useCallback, useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 
 function WeatherChannel() {
-  const { config, refetchConfig } = useConfig();
+  const { config, refetchConfig, initAttempted } = useConfig();
   const { nationalWeather, nationalDataFetchedAt, fetchNationalWeather } = useNationalWeather();
   const { provinceTracking, provinceDataFetchedAt, refetchProvinceTracking } = useProvinceTracking();
   const { season, seasonDataFetchedAt, fetchSeason } = useSeason();
-  const { hotColdSpots, hotColdDataFetchedAt, refetchHotColdSpots } = useCanadaHotColdSpots();
+  const { hotColdSpots, refetchHotColdSpots } = useCanadaHotColdSpots();
   const { lastMonth, lastMonthDataFetchedAt, fetchLastMonth } = useLastMonth();
   const { usaWeather, usaDataFetchedAt, fetchUSAWeather } = useUSAWeather();
   const { sunspots, sunspotsDataFetchedAt, refetchSunspots } = useSunspots();
@@ -85,19 +85,18 @@ function WeatherChannel() {
     refetchAllFeedsForFreshness();
   }, [currentConditions?.observationID, currentConditions?.fetchedAt, refetchAllFeedsForFreshness]);
 
-  if (
-    !config &&
-    !currentConditions &&
-    !alertsHook.alerts &&
-    !nationalWeather &&
-    !provinceTracking &&
-    !season &&
-    !hotColdSpots &&
-    !lastMonth &&
-    !usaWeather &&
-    !sunspots
-  )
-    return <>Channel offline</>;
+  /**
+   * Do not render the rotator until we have init + at least one SSE payload.
+   * `useAlerts` defaults `alerts` to `[]`, which is truthy — that used to skip this gate after the first
+   * successful (possibly empty) alerts response while init/SSE were still failing, yielding an empty
+   * display on a dark blue background.
+   */
+  if (!config) {
+    return <>{initAttempted ? "Channel offline" : "Connecting…"}</>;
+  }
+  if (!currentConditions) {
+    return <>Connecting…</>;
+  }
 
   return (
     <>
@@ -134,12 +133,13 @@ function WeatherChannel() {
             provinceDataFetchedAt,
             seasonDataFetchedAt,
             lastMonthDataFetchedAt,
-            hotColdDataFetchedAt,
+            // Hot/cold polls every 30m; stale hint threshold is 25m — would false-positive.
             sunspotsDataFetchedAt,
             airQualityDataFetchedAt,
           ]}
         />
       </div>
+      <div className="gfx-vignette-layer" aria-hidden />
       <PlaylistComponent playlist={config?.music} />
     </>
   );

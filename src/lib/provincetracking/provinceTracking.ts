@@ -21,7 +21,6 @@ class ProvinceTracking {
   private _stations: ProvinceStations;
   private _tracking: ProvinceStationTracking[];
   private _displayTemp: string;
-  private _tempToTrack: string;
   private _yesterdayPrecipDate: string = "";
   private _periodicBusy = false;
   private _fetchedAt: string | null = null;
@@ -66,8 +65,8 @@ class ProvinceTracking {
         (provinceStation) =>
           ({
             station: provinceStation,
-            minTemp: Math.min(),
-            maxTemp: Math.max(),
+            minTemp: null,
+            maxTemp: null,
             displayTemp: null,
             yesterdayPrecip: null,
             yesterdayPrecipUnit: "mm",
@@ -78,9 +77,8 @@ class ProvinceTracking {
     // check what temps to track/display
     const displayTemp = this._displayTemp;
     this.setTempScaleToDisplay();
-    this.setTempScaleToTrack();
 
-    // if the tracking temp changed from min->max or vice versa we need to reset some tracking
+    // if the display mode (min vs max column) changed, reset the opposite accumulator
     if (displayTemp !== this._displayTemp) this.resetTracking(!!displayTemp);
 
     logger.log("Updating data for stations");
@@ -90,10 +88,30 @@ class ProvinceTracking {
     this._tracking.forEach((station) => promises.push(this.fetchWeatherForStation(station)));
 
     Promise.allSettled(promises).then(() => {
+      this.applyDisplayTempsFromTrackers();
       this._fetchedAt = new Date().toISOString();
       this.save();
       this._periodicBusy = false;
     });
+  }
+
+  /** After each fetch batch, materialize `displayTemp` from running min/max so the grid is never stuck on "M" after a cold start. */
+  private applyDisplayTempsFromTrackers() {
+    if (!this._tracking?.length) return;
+    for (let i = 0; i < this._tracking.length; i++) {
+      const station = this._tracking[i];
+      if (this._displayTemp === PROVINCE_TRACKING_TEMP_TO_TRACK.MIN_TEMP) {
+        const v = station.minTemp;
+        station.displayTemp = this.isValidTrackedTemp(v) ? v : "M";
+      } else if (this._displayTemp === PROVINCE_TRACKING_TEMP_TO_TRACK.MAX_TEMP) {
+        const v = station.maxTemp;
+        station.displayTemp = this.isValidTrackedTemp(v) ? v : "M";
+      }
+    }
+  }
+
+  private isValidTrackedTemp(v: number | null | undefined): v is number {
+    return typeof v === "number" && Number.isFinite(v);
   }
 
   public getLastFetchIso(): string | null {
@@ -140,16 +158,16 @@ class ProvinceTracking {
           );
         }
 
-        // get the temperature reading
+        // Running min/max from each observation so a cold start (no prior night) still fills the grid on first successful fetch.
         const temp = weather.current?.temperature?.value;
         if (temp === null || temp === undefined || isNaN(temp)) return;
 
-        // update corresponding value
         const tempAsNumber = Number(temp);
-        if (this._tempToTrack === PROVINCE_TRACKING_TEMP_TO_TRACK.MIN_TEMP) {
-          if (station.minTemp === null || tempAsNumber < station.minTemp) station.minTemp = tempAsNumber;
-        } else if (this._tempToTrack === PROVINCE_TRACKING_TEMP_TO_TRACK.MAX_TEMP) {
-          if (station.maxTemp === null || tempAsNumber > station.maxTemp) station.maxTemp = tempAsNumber;
+        if (!this.isValidTrackedTemp(station.minTemp) || tempAsNumber < station.minTemp!) {
+          station.minTemp = tempAsNumber;
+        }
+        if (!this.isValidTrackedTemp(station.maxTemp) || tempAsNumber > station.maxTemp!) {
+          station.maxTemp = tempAsNumber;
         }
       })
       .catch((err) => logger.error(name, url, "failed to fetch data", err));
@@ -159,35 +177,20 @@ class ProvinceTracking {
     logger.log("Switching over tracking and setting display value");
 
     this._tracking.forEach((station, ix, arr) => {
-      // if min temp is now being displayed, reset the max and show min
       if (this._displayTemp === PROVINCE_TRACKING_TEMP_TO_TRACK.MIN_TEMP) {
         arr[ix] = {
           ...arr[ix],
-          // set display value as min
-          displayTemp: station.minTemp !== null && station.minTemp !== Math.min() ? station.minTemp : "M",
-          // reset the max tracker
-          maxTemp: resetTemps ? Math.max() : station.maxTemp,
+          displayTemp: this.isValidTrackedTemp(station.minTemp) ? station.minTemp : "M",
+          maxTemp: resetTemps ? null : station.maxTemp,
         };
       } else if (this._displayTemp === PROVINCE_TRACKING_TEMP_TO_TRACK.MAX_TEMP) {
         arr[ix] = {
           ...arr[ix],
-          // set display value as min
-          displayTemp: station.maxTemp !== null && station.maxTemp !== Math.max() ? station.maxTemp : "M",
-          // reset the min tracker
-          minTemp: resetTemps ? Math.min() : station.minTemp,
+          displayTemp: this.isValidTrackedTemp(station.maxTemp) ? station.maxTemp : "M",
+          minTemp: resetTemps ? null : station.minTemp,
         };
       }
     });
-  }
-
-  private setTempScaleToTrack() {
-    const time = conditions?.observedDateTimeAtStation();
-    const hour = time.getHours();
-
-    // from 8pm to 8am we need to track the min temp
-    // from 8am to 8pm we need to track the max temp
-    if (hour >= 20 || hour < 8) this._tempToTrack = PROVINCE_TRACKING_TEMP_TO_TRACK.MIN_TEMP;
-    else this._tempToTrack = PROVINCE_TRACKING_TEMP_TO_TRACK.MAX_TEMP;
   }
 
   private setTempScaleToDisplay() {

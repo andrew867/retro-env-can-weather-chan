@@ -1,6 +1,7 @@
 import fs from "fs";
 import { initializeCurrentConditions } from "./conditions";
 import { listen } from "lib/amqp";
+import { mscAmqpListenOptionsFromEnv } from "lib/amqp/mscAmqpEnv";
 import { Connection } from "types/amqp.types";
 import Logger from "lib/logger";
 import { CAPCPFile } from "lib/cap-cp";
@@ -33,6 +34,7 @@ class AlertMonitor {
 
     // hook up the amqp listener
     const { connection, emitter: listener } = listen({
+      ...mscAmqpListenOptionsFromEnv(),
       amqp_subtopic: `*.WXO-DD.alerts.cap.#`,
     });
 

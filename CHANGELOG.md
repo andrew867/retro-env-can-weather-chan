@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.4.0] - 2026-04-07
+
+### Province high/low grid (cold start)
+
+- **Running min and max** per station from each successful citypage fetch, so **temperatures fill on the first cycle** after install or restart—no dependency on a prior “overnight only” tracking window.
+- **`displayTemp`** is recomputed after every batch (`applyDisplayTempsFromTrackers`) so the UI does not stay on **`M`** while trackers are valid.
+- **Sentinels** use **`null`** instead of `Math.min()` / `Math.max()` for cleared trackers (clearer JSON on disk).
+
+### GFX vignette
+
+- **Visible vignette**: inset shadow on `#weather_channel` sat **under** opaque child layers; a **`gfx-vignette-layer`** div now sits **above** `.rwc-channel-frame` with the same `box-shadow` driven by **`--gfx-vignette`**.
+- **Default** `gfx.retro.vignetteStrength` raised to **0.12** so a fresh install shows a subtle edge without config UI tweaks.
+
+### AMQP / Sarracenia Phase 0
+
+- **`RWC_AMQP_HOST`**, **`RWC_AMQP_PORT`**, **`RWC_AMQP_USER`**, **`RWC_AMQP_PASSWORD`** override MSC broker connection for **`listen()`** (conditions + CAP alerts). Defaults unchanged.
+- **ADR**: [docs/specs/ADR-002-sarracenia-amqp-and-phase0.md](./docs/specs/ADR-002-sarracenia-amqp-and-phase0.md).
+
+### Docs & repo hygiene
+
+- **`docs/specs/`** is tracked (gitignore exception) for ADRs and Sarracenia plans.
+
+---
+
 ## [2.3.0] - 2026-04-07
 
 ### Broadcast reliability & on-air operations

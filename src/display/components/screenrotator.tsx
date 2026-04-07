@@ -68,6 +68,8 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     airQuality,
     configVersion,
     reloadLineMs,
+    authenticRefresh,
+    gfxFeatures,
   } = props ?? {};
 
   const [displayedScreenIx, setDisplayedScreenIx] = useState(-1);
