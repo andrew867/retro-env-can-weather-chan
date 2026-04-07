@@ -6,14 +6,17 @@ import { AQHIObservationResponse } from "types";
 const FETCH_AIR_QUALITY_INTERVAL = 60 * 1000 * 15;
 
 export function useAirQuality() {
-  const [airQuality, setAirQuality] = useState<AQHIObservationResponse>();
+  const [airQuality, setAirQuality] = useState<AQHIObservationResponse | null>();
 
   const fetchAirQuality = () => {
     axios
       .get("airQuality")
       .then((resp) => {
-        const { data }: { data: AQHIObservationResponse } = resp;
-        if (!data) return;
+        const { data }: { data: AQHIObservationResponse | null } = resp;
+        if (data == null) {
+          setAirQuality(null);
+          return;
+        }
 
         if (data.value == null || Number.isNaN(Number(data.value))) setAirQuality(null);
         else setAirQuality(data);
