@@ -2,9 +2,9 @@ import axios from "lib/axios";
 import { useEffect, useState } from "react";
 import { InitChannel } from "types";
 
-const FETCH_CONFIG_INTERVAL = 5 * 60 * 1000;
+/** How often the display refetches crawler / flavour / playlist from `GET /api/v1/init`. */
+const FETCH_CONFIG_INTERVAL = 5 * 1000;
 
-// tell the channel to fetch the config once every 5mins
 export function useConfig() {
   const [config, setConfig] = useState<InitChannel>();
 
@@ -22,7 +22,8 @@ export function useConfig() {
 
   useEffect(() => {
     fetchConfig();
-    setInterval(() => fetchConfig(), FETCH_CONFIG_INTERVAL);
+    const id = setInterval(() => fetchConfig(), FETCH_CONFIG_INTERVAL);
+    return () => clearInterval(id);
   }, []);
 
   return { config };
