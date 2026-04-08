@@ -55,7 +55,7 @@ export function ProvinceTrackingScreen(props: ProvinceTrackingProps) {
 
   /** Same column widths as each `<li>` row so headers line up (10 + 10 + gap + precip). */
   const tempColW = 10;
-  const gapColW = 4;
+  const gapColW = 3;
   const headHighLow = isOvernight ? "Overnight" : "High";
   const headYesterdayToday = isOvernight
     ? "Low:"

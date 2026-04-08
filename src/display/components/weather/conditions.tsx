@@ -134,7 +134,7 @@ export function Conditions(props: ConditionsProp) {
           <span>Temp&nbsp;</span>
           <span>{formattedTemperature}</span>
         </span>
-        <span>{"".padEnd(6)}</span>
+        <span>{"".padEnd(3)}</span>
         <span className="reload-animation" style={rv(3)}>
           <span>Wind&nbsp;</span>
           <span>{formattedWind}</span>
@@ -145,7 +145,7 @@ export function Conditions(props: ConditionsProp) {
           <span>Hum&nbsp;&nbsp;</span>
           <span>{formattedHumidity}</span>
         </span>
-        <span>{"".padEnd(6)}</span>
+        <span>{"".padEnd(3)}</span>
         <span className="reload-animation" style={rv(5)}>
           <span>{abbreviatedCondition ?? ""}</span>
         </span>
@@ -157,7 +157,7 @@ export function Conditions(props: ConditionsProp) {
               <span>Vsby&nbsp;</span>
               <span>{formattedVisibility.padStart(6)}</span>
             </span>
-            <span>{"".padEnd(5)}</span>
+            <span>{"".padEnd(2)}</span>
             <span className="reload-animation" style={rv(7)}>
               {windchill > 0 && <span>Wind Chill {windchill}</span>}
               {!windchill && airQuality?.value != null && (

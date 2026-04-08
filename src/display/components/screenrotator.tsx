@@ -1,11 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { SCREEN_BACKGROUND_BLUE, SCREEN_BACKGROUND_RED, SCREEN_NAMES, Screens } from "consts";
+import { SCREEN_BACKGROUND_BLUE, SCREEN_BACKGROUND_RED, Screens } from "consts";
 import { getAqhiCityAbbreviation } from "lib/display/outlookRegionalLabel";
-import {
-  buildChannelPlaylist,
-  getChannelPlaylistStructureKey,
-  type ChannelPlaylistEntry,
-} from "lib/display/channelPlaylist";
+import { buildChannelPlaylist, getChannelPlaylistStructureKey } from "lib/display/channelPlaylist";
 import { isAutomaticScreen, resolveScreenDwellSeconds } from "lib/flavour/utils";
 import {
   AQHIObservationResponse,
@@ -69,16 +65,6 @@ type ScreenRotatorProps = {
   /** Shown when the flavour includes {@link Screens.INFO} (`infoScreen` in init). */
   infoScreenLines?: string[];
 };
-
-function getPlaylistEntryTitle(entry: ChannelPlaylistEntry | undefined, city: string | undefined): string {
-  if (!entry) return "";
-  const cityTrim = city?.trim();
-  const cityTag = cityTrim ? ` — ${cityTrim.slice(0, 22).toUpperCase()}` : "";
-  if (entry.kind === "forecast_page") return `${SCREEN_NAMES[Screens.FORECAST]}${cityTag}`;
-  if (entry.kind === "outlook_page") return `${SCREEN_NAMES[Screens.OUTLOOK]}${cityTag}`;
-  const name = SCREEN_NAMES[entry.screen.id as Screens] ?? "";
-  return `${name}${cityTag}`.trim();
-}
 
 export function ScreenRotator(props: ScreenRotatorProps) {
   const {
@@ -389,9 +375,6 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     return <></>;
   };
 
-  const activeEntry = channelPlaylist[displayedPlaylistIx];
-  const screenTitle = getPlaylistEntryTitle(activeEntry, weatherStationResponse?.city);
-
   return (
     <div
       id="display"
@@ -399,7 +382,6 @@ export function ScreenRotator(props: ScreenRotatorProps) {
         backgroundColor: backgroundColour,
       }}
     >
-      {screenTitle ? <div id="rwc-screen-title">{screenTitle}</div> : null}
       <div id="rwc-screen-body">{getComponentForDisplayedScreen()}</div>
     </div>
   );

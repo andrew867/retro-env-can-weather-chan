@@ -12,7 +12,7 @@
  */
 .forecast-hardware-text-column {
   margin-inline: auto;
-  max-width: 32ch;
+  max-width: 32.5ch;
   text-align: left;
   width: 100%;
 }
@@ -33,8 +33,17 @@
   width: 100%;
 }
 
+/** The original plates did not add a separate screen header; fit the real conditions block inside the raster. */
+#forecast_screen #conditions,
+#almanac_screen #conditions {
+  font-size: 0.97em;
+  margin-inline: auto;
+  max-width: 35ch;
+}
+
 #almanac_screen .forecast-hardware-text-column--almanac-records {
-  margin-top: 0.5em;
+  font-size: 0.93em;
+  margin-top: 0.34em;
 }
 
 .forecast-continuation-screen {
@@ -45,9 +54,14 @@
 }
 
 .forecast-continuation-head {
-  margin-bottom: 0.4em;
+  margin-bottom: 0.12em;
   text-align: center;
   width: 100%;
+}
+
+.forecast-continuation-body {
+  font-size: 0.91em;
+  line-height: 1;
 }
 
 #forecast_screen .forecast {
@@ -76,13 +90,13 @@
 
 /** Regional outlook: centered plate title, body in same hardware column as forecast copy. */
 .outlook-screen-title {
-  margin-bottom: 0.35em;
+  margin-bottom: 0.22em;
   text-align: center;
   width: 100%;
 }
 
 #outlook_screen .outlook-screen-body {
-  line-height: 1.15;
+  line-height: 1.08;
 }
 
 .outlook-body-line {
@@ -94,11 +108,12 @@
 /** Province temp/precip: header rows use the same span column grid as `<li>` rows (avoids padStart(19)+mixed gaps jumbling). */
 #province_tracking_screen {
   /** ~35 monospace columns; at default 30px body size this exceeds the 10%+safe padded width — scale so rows stay inside `#display`. */
-  font-size: 0.71em;
-  line-height: 1;
-  max-width: 100%;
+  font-size: 0.8em;
+  line-height: 1.02;
+  margin-inline: auto;
+  max-width: 34ch;
   min-width: 0;
   text-align: left;
   white-space: pre;
-  width: 100%;
+  width: min(100%, 34ch);
 }
