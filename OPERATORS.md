@@ -85,6 +85,19 @@ Saving from the config UI persists these files; the display picks up changes via
 
 The **public** GitHub project must contain **only** this app’s directory—never the whole parent repository. If this tree lives inside a larger **private** repo (for example on self-hosted Git), use **`git subtree split`** from the **parent repository root** and push **only** that split branch to GitHub.
 
+### If GitHub shows “hundreds/thousands of commits behind” another `retro-env-can-weather-chan` fork
+
+That banner compares your **`main`** to the **upstream repository GitHub still treats as this repo’s parent** (often **Forceh91/retro-env-can-weather-chan** if the public repo was originally created with **Fork**).
+
+**`git subtree split` does not produce the same Git history as that upstream.** The split rewrites commits from your **private monorepo path only**. The trees may look similar, but the **commit graph is unrelated**, so GitHub’s “X ahead / Y behind” is **misleading** and will look worse after **every** subtree push—not because you forgot to merge, but because the comparison itself is the wrong metric.
+
+**What to do (pick one):**
+
+1. **Detach the fork (recommended if you own the repo):** On GitHub open **Settings → General**, scroll to **Danger Zone**, use **Leave fork network** / **Detach fork** / **Remove parent fork** (wording varies). The repository becomes a **standalone** project; GitHub **stops** comparing it to Forceh91’s `main`, so the embarrassing “1263 behind” line goes away. Your **`git subtree split` workflow stays the same.**
+2. **New standalone repo:** Create a **new** repository **without** choosing “Fork” anywhere, add it as `github`, push the subtree there, and (optionally) archive or delete the old fork-linked copy.
+
+**Do not** try to “fix” the banner by merging **Forceh91/main** into your subtree **`main`** unless you deliberately want to reconcile two unrelated histories—that is a separate, heavy integration project, not part of normal subtree publishing.
+
 ### Hygiene (public mirror)
 
 - Do **not** mention private parent-repo names, internal hostnames, or proprietary codenames in this tree, in commit messages you intend to appear on GitHub, or in public issues.

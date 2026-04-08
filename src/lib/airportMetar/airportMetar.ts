@@ -4,7 +4,7 @@ import {
   MAX_AIRPORT_METAR_STATIONS,
 } from "consts";
 import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
-import { USAStationObservation, USAStationObservations } from "types";
+import { USAStationObservations } from "types";
 import { LastKnownGood } from "lib/reliability/lastKnownGood";
 import Logger from "lib/logger";
 import axios from "lib/backendAxios";

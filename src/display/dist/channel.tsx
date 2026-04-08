@@ -29,12 +29,12 @@ function WeatherChannel() {
   const { config, refetchConfig, initAttempted } = useConfig();
   const { nationalWeather, nationalDataFetchedAt, fetchNationalWeather } = useNationalWeather();
   const { provinceTracking, provinceDataFetchedAt, refetchProvinceTracking } = useProvinceTracking();
-  const { season, seasonDataFetchedAt, fetchSeason } = useSeason();
+  const { season, fetchSeason } = useSeason();
   const { hotColdSpots, refetchHotColdSpots } = useCanadaHotColdSpots();
-  const { lastMonth, lastMonthDataFetchedAt, fetchLastMonth, lastMonthFetchAttempted } = useLastMonth();
-  const { usaWeather, usaDataFetchedAt, fetchUSAWeather } = useUSAWeather();
+  const { lastMonth, fetchLastMonth, lastMonthFetchAttempted } = useLastMonth();
+  const { usaWeather, fetchUSAWeather } = useUSAWeather();
   const { airportMetar, fetchAirportMetar } = useAirportMetar();
-  const { sunspots, sunspotsDataFetchedAt, refetchSunspots, sunspotsFetchAttempted } = useSunspots();
+  const { sunspots, refetchSunspots, sunspotsFetchAttempted } = useSunspots();
   const { airQuality, airQualityDataFetchedAt, refetchAirQuality } = useAirQuality();
 
   const alertsHook = useAlerts();

@@ -216,7 +216,7 @@ class ClimateNormals {
     return this._normalPrecipForSeason;
   }
 
-  public getNormalsForLastMonth(_date: Date = new Date()) {
+  public getNormalsForLastMonth() {
     return this._normalsForLastMonth;
   }
 }

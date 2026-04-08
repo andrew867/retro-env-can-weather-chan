@@ -11,7 +11,7 @@ export function WindchillEffectScreen(props: WindchillEffectScreenProps) {
 
   useEffect(() => {
     if (!isWindchillSeason()) onCompleteRef.current();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: out-of-season skips this beat; season won’t flip mid-slot in practice
+    /* Intentionally mount-only: out-of-season skips this beat; season does not flip mid-slot in practice. */
   }, []);
 
   if (!isWindchillSeason()) return <></>;

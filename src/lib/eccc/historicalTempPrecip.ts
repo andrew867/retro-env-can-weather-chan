@@ -25,7 +25,7 @@ function xmlText(el: unknown): string | undefined {
 
 /** ECCC bulk row: mm liquid equivalent — prefer `totalprecipitation`, else `totalrain`; trace/missing → 0. */
 function dailyPrecipitationMm(row: { totalprecipitation?: unknown; totalrain?: unknown }): number {
-  let raw = xmlText(row.totalprecipitation) ?? xmlText(row.totalrain);
+  const raw = xmlText(row.totalprecipitation) ?? xmlText(row.totalrain);
   if (raw == null || raw === "") return 0;
   const u = raw.toUpperCase();
   if (u === "T" || u === "M") return 0;
@@ -220,10 +220,10 @@ class HistoricalTempPrecip {
     logger.log("Calculated precip data for the season/yesterday");
 
     // process last month's stats
-    this.processLastMonthsStats(lastMonthData, currentDate);
+    this.processLastMonthsStats(lastMonthData);
   }
 
-  private processLastMonthsStats(lastMonthData: HistoricalDataStats, _currentDate: Date) {
+  private processLastMonthsStats(lastMonthData: HistoricalDataStats) {
     if (!lastMonthData?.length) {
       this._lastMonthSummary = null;
       return;

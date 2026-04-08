@@ -12,7 +12,8 @@ type SunspotScreenProps = {
 } & AutomaticScreenProps;
 
 export function SunspotScreen(props: SunspotScreenProps) {
-  const { sunspots, sunspotsFetchAttempted, weatherStationTime, onComplete } = props ?? {};
+  const { sunspots: sunspotsRaw, sunspotsFetchAttempted, weatherStationTime, onComplete } = props ?? {};
+  const sunspots = coerceArray(sunspotsRaw);
   const onCompleteRef = useStableOnCompleteRef(onComplete);
   const inSeason = isSunSpotSeason();
 
@@ -22,10 +23,10 @@ export function SunspotScreen(props: SunspotScreenProps) {
       return;
     }
     if (!sunspotsFetchAttempted) return;
-    if (!sunspots?.length) onCompleteRef.current();
+    if (!sunspots.length) onCompleteRef.current();
   }, [inSeason, sunspotsFetchAttempted, sunspots]);
 
-  if (!inSeason || !sunspots?.length) return <></>;
+  if (!inSeason || !sunspots.length) return <></>;
 
   const sunspotDate = useMemo(
     () => weatherStationTime?.observedDateTime && formatSunspotDate(weatherStationTime).padEnd(9),
