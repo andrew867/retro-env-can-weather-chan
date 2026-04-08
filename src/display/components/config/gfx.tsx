@@ -16,6 +16,7 @@ import {
   useToast,
 } from "@chakra-ui/react";
 import {
+  GFX_DEFAULT_SCANLINES_OPACITY,
   GFX_RELOAD_LINE_MS_DEFAULT,
   GFX_RELOAD_LINE_MS_MAX,
   GFX_RELOAD_LINE_MS_MIN,
@@ -44,8 +45,8 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
 
   const [authenticRefresh, setAuthenticRefresh] = useState(!!gfx?.features?.authenticRefreshEnabled);
   const [nextGenLayers, setNextGenLayers] = useState(!!gfx?.features?.nextGenVisualLayersEnabled);
-  const [scanlines, setScanlines] = useState(gfx?.retro?.scanlinesOpacity ?? 0);
-  const [vignette, setVignette] = useState(gfx?.retro?.vignetteStrength ?? 0);
+  const [scanlines, setScanlines] = useState(gfx?.retro?.scanlinesOpacity ?? GFX_DEFAULT_SCANLINES_OPACITY);
+  const [vignette, setVignette] = useState(gfx?.retro?.vignetteStrength ?? 0.12);
   const [colourPreset, setColourPreset] = useState<GfxRetroColourPreset>(gfx?.retro?.phosphorTint ?? "none");
   const [safeTop, setSafeTop] = useState(gfx?.safeArea?.top ?? 0.02);
   const [safeBottom, setSafeBottom] = useState(gfx?.safeArea?.bottom ?? 0.06);
@@ -55,15 +56,17 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
   const [reloadLineMs, setReloadLineMs] = useState(gfx?.retro?.reloadLineMs ?? GFX_RELOAD_LINE_MS_DEFAULT);
   const [displayAspect, setDisplayAspect] = useState<GfxDisplayAspectRatio>(gfx?.displayAspectRatio ?? "4:3");
   const [displayResolution, setDisplayResolution] = useState<GfxDisplayResolution>(gfx?.displayResolution ?? "sd");
-  const [arCps, setArCps] = useState(initAuthentic?.charsPerSecond ?? 10);
-  const [arClearMs, setArClearMs] = useState(initAuthentic?.clearHoldMs ?? 120);
+  const [arCps, setArCps] = useState(initAuthentic?.charsPerSecond ?? 100);
   const [arJitter, setArJitter] = useState(initAuthentic?.jitterMsPerCharMax ?? 12);
+  const [continuationGraphemeReveal, setContinuationGraphemeReveal] = useState(
+    initAuthentic?.continuationGraphemeReveal !== false
+  );
 
   useEffect(() => {
     setAuthenticRefresh(!!gfx?.features?.authenticRefreshEnabled);
     setNextGenLayers(!!gfx?.features?.nextGenVisualLayersEnabled);
-    setScanlines(gfx?.retro?.scanlinesOpacity ?? 0);
-    setVignette(gfx?.retro?.vignetteStrength ?? 0);
+    setScanlines(gfx?.retro?.scanlinesOpacity ?? GFX_DEFAULT_SCANLINES_OPACITY);
+    setVignette(gfx?.retro?.vignetteStrength ?? 0.12);
     setColourPreset(gfx?.retro?.phosphorTint ?? "none");
     setSafeTop(gfx?.safeArea?.top ?? 0.02);
     setSafeBottom(gfx?.safeArea?.bottom ?? 0.06);
@@ -73,9 +76,9 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
     setReloadLineMs(gfx?.retro?.reloadLineMs ?? GFX_RELOAD_LINE_MS_DEFAULT);
     setDisplayAspect(gfx?.displayAspectRatio === "16:9" ? "16:9" : "4:3");
     setDisplayResolution(gfx?.displayResolution === "hd" ? "hd" : "sd");
-    setArCps(initAuthentic?.charsPerSecond ?? 10);
-    setArClearMs(initAuthentic?.clearHoldMs ?? 120);
+    setArCps(initAuthentic?.charsPerSecond ?? 100);
     setArJitter(initAuthentic?.jitterMsPerCharMax ?? 12);
+    setContinuationGraphemeReveal(initAuthentic?.continuationGraphemeReveal !== false);
   }, [gfx, initAuthentic]);
 
   const onSubmit = async (e: FormEvent<HTMLFormElement>) => {
@@ -105,13 +108,11 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
       },
       authenticRefresh: {
         enabled: authenticRefresh,
-        charsPerSecond: Math.min(120, Math.max(1, Math.round(Number(arCps)) || 10)),
-        clearHoldMs: Math.min(500, Math.max(0, Math.round(Number(arClearMs)) || 120)),
+        charsPerSecond: Math.min(120, Math.max(1, Math.round(Number(arCps)) || 100)),
         jitterMsPerCharMax: Math.min(100, Math.max(0, Math.round(Number(arJitter)) || 12)),
         respectReducedMotion: initAuthentic?.respectReducedMotion !== false,
-        clearStyle: initAuthentic?.clearStyle ?? "blank",
         streamUnit: initAuthentic?.streamUnit === "word" ? "word" : "grapheme",
-        secondaryPageStreaming: !!initAuthentic?.secondaryPageStreaming,
+        continuationGraphemeReveal,
       },
     };
     await saveGfx.saveConfigOption(payload);
@@ -120,25 +121,18 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
     if (saveGfx.wasSuccess)
       return toast({
         title: "Graphics saved",
-        description: "Display will pick this up on the next init poll.",
         status: "success",
       });
   };
 
   return (
     <Stack spacing={6}>
-      <Text>
-        The simulator is <strong>full broadcast colour</strong> by default (REC-era layout and fonts). Use the controls
-        below for a <strong>RetroArch-style</strong> presentation: TV-style scanlines and vignette, optional 8-bit–inspired
-        colour grading, or CRT-style monochrome—without changing the underlying graphics pipeline. Changes apply after the
-        display polls <code>/api/v1/init</code> (a few seconds).
-      </Text>
-
       <form onSubmit={onSubmit}>
         <Stack spacing={6}>
-          <Heading size="md">Experimental features</Heading>
+          <Heading size="md">Motion & layers</Heading>
           <Text fontSize="sm" color="gray.600">
-            Off by default. Reserved for future motion/refresh behaviour and overlay layers.
+            Authentic refresh and next-gen layers are <strong>on</strong> in fresh installs; turn off here if you need
+            legacy line-only reloads or a minimal raster.
           </Text>
           <FormControl>
             <FormLabel htmlFor="gfx-auth-refresh">Authentic refresh</FormLabel>
@@ -148,8 +142,7 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
               onChange={(e) => setAuthenticRefresh(e.target.checked)}
             />
             <FormHelperText>
-              Serial grapheme-style forecast reveal (clear beat + streaming). Respects reduced-motion when enabled in
-              config.
+              Grapheme-by-grapheme forecast typing reveal on reload. Respects reduced-motion when enabled in config.
             </FormHelperText>
           </FormControl>
 
@@ -168,18 +161,6 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
                 />
               </FormControl>
               <FormControl>
-                <FormLabel htmlFor="gfx-ar-clear">Clear hold (ms)</FormLabel>
-                <Input
-                  id="gfx-ar-clear"
-                  type="number"
-                  maxW="xs"
-                  min={0}
-                  max={500}
-                  value={arClearMs}
-                  onChange={(e) => setArClearMs(Number(e.target.value))}
-                />
-              </FormControl>
-              <FormControl>
                 <FormLabel htmlFor="gfx-ar-jitter">Jitter max (ms / char)</FormLabel>
                 <Input
                   id="gfx-ar-jitter"
@@ -190,6 +171,18 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
                   value={arJitter}
                   onChange={(e) => setArJitter(Number(e.target.value))}
                 />
+              </FormControl>
+              <FormControl>
+                <FormLabel htmlFor="gfx-ar-cont-grapheme">Continuation grapheme reveal</FormLabel>
+                <Switch
+                  id="gfx-ar-cont-grapheme"
+                  isChecked={continuationGraphemeReveal}
+                  onChange={(e) => setContinuationGraphemeReveal(e.target.checked)}
+                />
+                <FormHelperText>
+                  When on, “forecast cont..” pages type out character-by-character like the first forecast page; the
+                  playlist waits until the reveal finishes before advancing.
+                </FormHelperText>
               </FormControl>
             </Stack>
           )}

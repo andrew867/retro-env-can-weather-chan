@@ -1,6 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { DEFAULT_WEATHER_STATION_ID, SCREEN_BACKGROUND_BLUE, SCREEN_BACKGROUND_RED, Screens } from "consts";
-import { isAutomaticScreen } from "lib/flavour/utils";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { SCREEN_BACKGROUND_BLUE, SCREEN_BACKGROUND_RED, Screens } from "consts";
+import { getAqhiCityAbbreviation } from "lib/display/outlookRegionalLabel";
+import { buildChannelPlaylist, getChannelPlaylistStructureKey } from "lib/display/channelPlaylist";
+import { isAutomaticScreen, resolveScreenDwellSeconds } from "lib/flavour/utils";
 import {
   AQHIObservationResponse,
   AuthenticRefreshConfig,
@@ -13,6 +15,7 @@ import {
   ProvinceTracking,
   Season,
   SunspotStationObservations,
+  NationalStationObservations,
   USAStationObservations,
   WeatherStation,
 } from "types";
@@ -28,6 +31,8 @@ import {
   SunspotScreen,
   WindchillEffectScreen,
   AQHIWarningScreen,
+  InfoScreen,
+  AirportMetarScreen,
 } from "./screens";
 
 type ScreenRotatorProps = {
@@ -42,15 +47,23 @@ type ScreenRotatorProps = {
   provinceTracking: ProvinceTracking;
   season: Season;
   hotColdSpots: HotColdSpots;
-  lastMonth: LastMonth;
+  lastMonth: LastMonth | undefined;
+  /** After first `season/lastmonth` round-trip; avoids skipping the screen before data arrives. */
+  lastMonthFetchAttempted: boolean;
   usaWeather: USAStationObservations;
+  /** ICAO METAR rows when `airportMetarStations` is set in config. */
+  airportMetar: NationalStationObservations;
   sunspots: SunspotStationObservations;
+  /** After first sunspots poll; avoids skipping before the list loads in sunspot season. */
+  sunspotsFetchAttempted: boolean;
   airQuality: AQHIObservationResponse;
   configVersion: string;
   /** Matches `gfx.retro.reloadLineMs` / `--gfx-reload-line-ms` for forecast reload line timing. */
   reloadLineMs?: number;
   authenticRefresh?: AuthenticRefreshConfig;
   gfxFeatures?: GfxFeatureFlags;
+  /** Shown when the flavour includes {@link Screens.INFO} (`infoScreen` in init). */
+  infoScreenLines?: string[];
 };
 
 export function ScreenRotator(props: ScreenRotatorProps) {
@@ -63,30 +76,54 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     season,
     hotColdSpots,
     lastMonth,
+    lastMonthFetchAttempted,
     usaWeather,
+    airportMetar,
     sunspots,
+    sunspotsFetchAttempted,
     airQuality,
     configVersion,
     reloadLineMs,
     authenticRefresh,
     gfxFeatures,
+    infoScreenLines,
   } = props ?? {};
 
-  const [displayedScreenIx, setDisplayedScreenIx] = useState(-1);
+  const { channelPlaylist, playlistStructureKey } = useMemo(() => {
+    const pl = buildChannelPlaylist(screens ?? [], {
+      weatherStationResponse,
+      alert: alerts?.mostImportantAlert,
+    });
+    return { channelPlaylist: pl, playlistStructureKey: getChannelPlaylistStructureKey(pl) };
+  }, [screens, weatherStationResponse, alerts?.mostImportantAlert]);
+
+  /** Bumps when observation/config changes or playlist topology changes (e.g. alert clears → fewer forecast pages). */
+  const playlistGenerationKey = useMemo(
+    () =>
+      `${weatherStationResponse?.observationID ?? "na"}|${configVersion}|${playlistStructureKey}`,
+    [weatherStationResponse?.observationID, configVersion, playlistStructureKey]
+  );
+
+  const [displayedPlaylistIx, setDisplayedPlaylistIx] = useState(-1);
   const [conditionsOrConfigUpdated, setConditionsOrConfigUpdated] = useState(false);
   const [backgroundColour, setBackgroundColour] = useState(SCREEN_BACKGROUND_BLUE);
 
   const screenRotatorTimeout = useRef<NodeJS.Timeout>(null);
   const backgroundRotatorTimeout = useRef<NodeJS.Timeout>(null);
+  /** Coalesce rapid playlist steps so each still flips blue/red (debounced timer used to drop toggles). */
+  const pendingBackgroundToggles = useRef(0);
+
+  const playlistInputRef = useRef({ screens, weatherStationResponse, alerts });
+  playlistInputRef.current = { screens, weatherStationResponse, alerts };
 
   // basic rotation of screens
   useEffect(() => {
-    if (!screens?.length) return;
+    if (!channelPlaylist?.length) return;
 
     // displayed screen is set to -1 so we need to start displaying something
-    if (displayedScreenIx === -1) setDisplayedScreenIx(0);
+    if (displayedPlaylistIx === -1) setDisplayedPlaylistIx(0);
     else prepareSwitchToNextScreen();
-  }, [displayedScreenIx, screens.length, configVersion]);
+  }, [displayedPlaylistIx, channelPlaylist.length, configVersion]);
 
   // used to clear the screen switching timeout
   useEffect(() => {
@@ -96,28 +133,44 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     };
   }, []);
 
-  // handle the conditions updating and needing to do a reload animation
+  // Full playlist reset + reload styling when observation/config changes or playlist shape changes.
   useEffect(() => {
     screenRotatorTimeout.current && clearTimeout(screenRotatorTimeout.current);
 
-    const forecastIx = screens.findIndex((screen) => screen.id === Screens.FORECAST);
+    const { screens: s, weatherStationResponse: w, alerts: a } = playlistInputRef.current;
+    const playlist = buildChannelPlaylist(s ?? [], {
+      weatherStationResponse: w,
+      alert: a?.mostImportantAlert,
+    });
 
     setConditionsOrConfigUpdated(true);
-    setDisplayedScreenIx(forecastIx !== -1 ? forecastIx : 0);
     setBackgroundColour(SCREEN_BACKGROUND_BLUE);
-  }, [weatherStationResponse?.observationID, configVersion]);
+
+    if (!playlist.length) {
+      setDisplayedPlaylistIx(-1);
+      return;
+    }
+
+    const forecastHeadIx = playlist.findIndex((e) => e.kind === "forecast_page" && e.pageIndex === 0);
+    setDisplayedPlaylistIx(forecastHeadIx !== -1 ? forecastHeadIx : 0);
+  }, [playlistGenerationKey]);
 
   const switchBackgroundColour = () => {
-    // if we have a timer don't do anything
+    pendingBackgroundToggles.current += 1;
     if (backgroundRotatorTimeout.current) return;
 
-    // create 20ms timer to switch background
     backgroundRotatorTimeout.current = setTimeout(() => {
-      // alternate between blue/red
-      if (backgroundColour !== SCREEN_BACKGROUND_BLUE) setBackgroundColour(SCREEN_BACKGROUND_BLUE);
-      else setBackgroundColour(SCREEN_BACKGROUND_RED);
-
-      // clear the existing timer we knew about
+      const steps = pendingBackgroundToggles.current;
+      pendingBackgroundToggles.current = 0;
+      if (steps > 0) {
+        setBackgroundColour((c) => {
+          let next = c;
+          for (let i = 0; i < steps; i++) {
+            next = next === SCREEN_BACKGROUND_BLUE ? SCREEN_BACKGROUND_RED : SCREEN_BACKGROUND_BLUE;
+          }
+          return next;
+        });
+      }
       backgroundRotatorTimeout.current = null;
     }, 20);
   };
@@ -126,14 +179,18 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     // clear the timeout if a timed screen got skipped due to lack of content
     screenRotatorTimeout.current && clearTimeout(screenRotatorTimeout.current);
 
-    // get the data for the screen we want to go to
-    const screen = screens[displayedScreenIx];
-    if (!screen) return prepareSwitchToNextScreen();
+    const entry = channelPlaylist[displayedPlaylistIx];
+    if (!entry) return;
 
-    // if it's not an automatic screen (generally have 0s as duration, we need to switch after its duration time)
-    if (!isAutomaticScreen(screen.id)) {
-      screenRotatorTimeout.current = setTimeout(() => switchToNextScreen(), screen.duration * 1000);
-    } else screenRotatorTimeout.current = null;
+    if (entry.kind === "forecast_page") {
+      screenRotatorTimeout.current = null;
+    } else {
+      const screen = entry.screen;
+      if (!isAutomaticScreen(screen.id)) {
+        const dwellMs = resolveScreenDwellSeconds(screen) * 1000;
+        screenRotatorTimeout.current = setTimeout(() => switchToNextScreen(), dwellMs);
+      } else screenRotatorTimeout.current = null;
+    }
 
     // 20ms after index changes, switch the background colour. should be enough time for screens that
     // decide if they show or not to complete that action
@@ -141,7 +198,11 @@ export function ScreenRotator(props: ScreenRotatorProps) {
   };
 
   const switchToNextScreen = () => {
-    setDisplayedScreenIx((prev) => (prev + 1) % screens.length);
+    setDisplayedPlaylistIx((prev) => {
+      const len = channelPlaylist.length;
+      if (len === 0) return -1;
+      return (prev + 1) % len;
+    });
     setConditionsOrConfigUpdated(false);
   };
 
@@ -153,30 +214,51 @@ export function ScreenRotator(props: ScreenRotatorProps) {
   }, [backgroundColour]);
 
   const getComponentForDisplayedScreen = () => {
-    const screen = screens[displayedScreenIx];
-    if (!screen) return <></>;
+    const entry = channelPlaylist[displayedPlaylistIx];
+    if (!entry) return <></>;
+
+    if (entry.kind === "forecast_page") {
+      return (
+        <ForecastScreen
+          key={`${weatherStationResponse?.observationID ?? "na"}-fc-${entry.pageIndex}`}
+          weatherStationResponse={weatherStationResponse}
+          forecastBodies={entry.bodies}
+          forecastPageIndex={entry.pageIndex}
+          alert={alerts?.mostImportantAlert}
+          isReload={conditionsOrConfigUpdated}
+          airQuality={airQuality}
+          reloadLineMs={reloadLineMs}
+          authenticRefresh={authenticRefresh}
+          authenticRefreshEnabled={gfxFeatures?.authenticRefreshEnabled}
+          configVersion={configVersion}
+          secondsPerPage={resolveScreenDwellSeconds(entry.screen)}
+          onComplete={switchToNextScreen}
+        />
+      );
+    }
+
+    if (entry.kind === "outlook_page") {
+      return (
+        <OutlookScreen
+          key={`${weatherStationResponse?.observationID ?? "na"}-ol-${entry.pageIndex}`}
+          weatherStationResponse={weatherStationResponse}
+          outlookBodies={entry.bodies}
+          outlookPageIndex={entry.pageIndex}
+        />
+      );
+    }
+
+    const screen = entry.screen;
 
     switch (screen.id as Screens) {
       case Screens.ALERTS:
-        return <AlertScreen onComplete={switchToNextScreen} {...alerts} />;
-
-      case Screens.FORECAST:
         return (
-          <ForecastScreen
-            weatherStationResponse={weatherStationResponse}
-            alert={alerts?.mostImportantAlert}
-            isReload={conditionsOrConfigUpdated}
-            airQuality={airQuality}
-            reloadLineMs={reloadLineMs}
-            authenticRefresh={authenticRefresh}
-            authenticRefreshEnabled={gfxFeatures?.authenticRefreshEnabled}
-            configVersion={configVersion}
+          <AlertScreen
+            secondsPerPage={resolveScreenDwellSeconds(screen)}
             onComplete={switchToNextScreen}
+            {...alerts}
           />
         );
-
-      case Screens.OUTLOOK:
-        return <OutlookScreen weatherStationResponse={weatherStationResponse} />;
 
       case Screens.ALMANAC:
         return <AlmanacScreen weatherStationResponse={weatherStationResponse} airQuality={airQuality} />;
@@ -184,9 +266,10 @@ export function ScreenRotator(props: ScreenRotatorProps) {
       case Screens.AQHI_WARNING:
         return (
           <AQHIWarningScreen
-            city={
-              weatherStationResponse?.stationID === DEFAULT_WEATHER_STATION_ID ? "WPG" : weatherStationResponse?.city
-            }
+            city={getAqhiCityAbbreviation(
+              weatherStationResponse?.stationID ?? "",
+              weatherStationResponse?.city
+            )}
             airQuality={airQuality}
             onComplete={switchToNextScreen}
           />
@@ -242,6 +325,15 @@ export function ScreenRotator(props: ScreenRotatorProps) {
           />
         );
 
+      case Screens.AIRPORT_METAR:
+        return (
+          <AirportMetarScreen
+            weatherStationTime={weatherStationResponse?.stationTime}
+            observations={airportMetar ?? []}
+            onComplete={switchToNextScreen}
+          />
+        );
+
       case Screens.STATS:
         return (
           <StatsScreen
@@ -255,13 +347,19 @@ export function ScreenRotator(props: ScreenRotatorProps) {
 
       case Screens.LAST_MONTH_STATS:
         return (
-          <LastMonthScreen city={weatherStationResponse?.city} lastMonth={lastMonth} onComplete={switchToNextScreen} />
+          <LastMonthScreen
+            city={weatherStationResponse?.city}
+            lastMonth={lastMonth}
+            lastMonthFetchAttempted={lastMonthFetchAttempted}
+            onComplete={switchToNextScreen}
+          />
         );
 
       case Screens.SUNSPOTS:
         return (
           <SunspotScreen
             sunspots={sunspots}
+            sunspotsFetchAttempted={sunspotsFetchAttempted}
             weatherStationTime={weatherStationResponse?.stationTime}
             onComplete={switchToNextScreen}
           />
@@ -269,6 +367,9 @@ export function ScreenRotator(props: ScreenRotatorProps) {
 
       case Screens.WINDCHILL:
         return <WindchillEffectScreen onComplete={switchToNextScreen} />;
+
+      case Screens.INFO:
+        return <InfoScreen lines={infoScreenLines ?? []} />;
     }
 
     return <></>;

@@ -1,5 +1,10 @@
 import { DISPLAY_MAX_CHARACTERS_PER_LINE } from "consts";
 
+/** Collapse ECCC / XML whitespace (incl. newlines) into single spaces for one continuous forecast paragraph. */
+export function normalizeForecastPlaintext(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
 /**
  * Fills up to `maxLines` rows of at most `width` characters (default 32).
  * Breaks at spaces when possible; otherwise hard-breaks within a word.
@@ -40,7 +45,7 @@ export function paginateText8x32(
   linesContinuationPage: number,
   width: number = DISPLAY_MAX_CHARACTERS_PER_LINE
 ): string[] {
-  const normalized = text.replace(/\s+/g, " ").trim();
+  const normalized = normalizeForecastPlaintext(text);
   if (!normalized) return [];
 
   const pages: string[] = [];

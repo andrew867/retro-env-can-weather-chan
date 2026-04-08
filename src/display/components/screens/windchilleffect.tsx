@@ -1,4 +1,5 @@
 import { isWindchillSeason } from "lib/date";
+import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect } from "react";
 import { AutomaticScreenProps } from "types";
 
@@ -6,9 +7,11 @@ type WindchillEffectScreenProps = AutomaticScreenProps;
 
 export function WindchillEffectScreen(props: WindchillEffectScreenProps) {
   const { onComplete } = props ?? {};
+  const onCompleteRef = useStableOnCompleteRef(onComplete);
 
   useEffect(() => {
-    if (!isWindchillSeason()) onComplete();
+    if (!isWindchillSeason()) onCompleteRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: out-of-season skips this beat; season won’t flip mid-slot in practice
   }, []);
 
   if (!isWindchillSeason()) return <></>;

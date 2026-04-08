@@ -1,19 +1,49 @@
-import { FLAVOUR_DIRECTORY, FLAVOUR_NAME_MAX_LENGTH, SCREENS_WITH_AUTO_DURATION, Screens } from "consts";
+import {
+  FLAVOUR_DEFAULT,
+  FLAVOUR_DIRECTORY,
+  FLAVOUR_NAME_MAX_LENGTH,
+  SCREENS_WITH_AUTO_DURATION,
+  SCREEN_DEFAULT_DISPLAY_LENGTH,
+  SCREEN_MIN_DISPLAY_LENGTH,
+  Screens,
+} from "consts";
 import { Flavour } from "types";
 import uuid4 from "uuid4";
 import fs from "fs";
 
+/** Rotator does not set an outer dwell timer — the screen advances itself (per-page timers inside the component). */
 export function isAutomaticScreen(screenID: Screens) {
-  // automatic screens are generally paginated and will handle when it has finished displaying, rather than a set duration
   return SCREENS_WITH_AUTO_DURATION.includes(screenID);
 }
 
+/**
+ * Flavour `duration` is interpreted as **seconds per page** for these screens (total time ≈ pages × duration).
+ * Shown in the config UI with a “per page” hint.
+ */
+export function usesPerPageDwellInFlavourConfig(screenID: Screens): boolean {
+  return (
+    screenID === Screens.FORECAST || screenID === Screens.OUTLOOK || screenID === Screens.ALERTS
+  );
+}
+
+/**
+ * Coerce flavour JSON (`0`, missing, too small) for playout: missing/0 → default full step; 1–9 → {@link SCREEN_MIN_DISPLAY_LENGTH}.
+ */
+export function resolveScreenDwellSeconds(screen: { duration?: number }): number {
+  const d = Number(screen.duration);
+  if (!Number.isFinite(d) || d <= 0) return SCREEN_DEFAULT_DISPLAY_LENGTH;
+  if (d < SCREEN_MIN_DISPLAY_LENGTH) return SCREEN_MIN_DISPLAY_LENGTH;
+  return d;
+}
+
+/** New flavours start from the built-in default screen list (same as loading `default`). */
 export function generateNewFlavour() {
+  const now = new Date();
   return {
     name: "",
-    created: new Date(),
-    modified: new Date(),
-    screens: [],
+    created: now,
+    modified: now,
+    screens: FLAVOUR_DEFAULT.screens.map((s) => ({ ...s })),
   } as Flavour;
 }
 

@@ -1,4 +1,4 @@
-import { SCREEN_DEFAULT_DISPLAY_LENGTH, SCREEN_FORECAST_DISPLAY_LENGTH, Screens } from "./screens.consts";
+import { SCREEN_DEFAULT_DISPLAY_LENGTH, Screens } from "./screens.consts";
 
 export const FLAVOUR_DIRECTORY = "cfg/flavours";
 export const FLAVOUR_NAME_MAX_LENGTH = 32;
@@ -10,7 +10,7 @@ export const FLAVOUR_DEFAULT = {
   screens: [
     {
       id: Screens.FORECAST,
-      duration: SCREEN_FORECAST_DISPLAY_LENGTH,
+      duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
     },
     {
       id: Screens.OUTLOOK,
@@ -22,7 +22,7 @@ export const FLAVOUR_DEFAULT = {
     },
     {
       id: Screens.ALERTS,
-      duration: 0,
+      duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
     },
     {
       id: Screens.AQHI_WARNING,
@@ -49,6 +49,10 @@ export const FLAVOUR_DEFAULT = {
       duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
     },
     {
+      id: Screens.AIRPORT_METAR,
+      duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
+    },
+    {
       id: Screens.SUNSPOTS,
       duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
     },
@@ -70,7 +74,7 @@ export const FLAVOUR_DEFAULT = {
     // },
     {
       id: Screens.ALERTS,
-      duration: 0,
+      duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
     },
   ],
 };

@@ -152,7 +152,11 @@ ol {
     flex-wrap: nowrap;
     height: $display_area_height;
     overflow: hidden;
-    padding: 0 10%;
+    /** Legacy ~10% inset plus gfx “safe area” (fraction of 640×480) from `GfxRetroApply`. */
+    padding-top: calc(var(--gfx-safe-top, 0.02) * var(--channel-max-height, 480px));
+    padding-bottom: calc(var(--gfx-safe-bottom, 0.06) * var(--channel-max-height, 480px));
+    padding-left: calc(10% + var(--gfx-safe-left, 0.02) * var(--channel-max-width, 640px));
+    padding-right: calc(10% + var(--gfx-safe-right, 0.02) * var(--channel-max-width, 640px));
     width: 100%;
 
     .centre-align {
@@ -164,7 +168,9 @@ ol {
     background: $footer_bar_background_col;
     height: $footer_bar_height;
     overflow: hidden;
-    padding: 0 10%;
+    padding: 0.4em calc(10% + var(--gfx-safe-right, 0.02) * var(--channel-max-width, 640px))
+      calc(0.55em + var(--gfx-safe-bottom, 0.06) * var(--channel-max-height, 480px) * 0.25)
+      calc(10% + var(--gfx-safe-left, 0.02) * var(--channel-max-width, 640px));
     text-align: center;
     width: 100%;
 

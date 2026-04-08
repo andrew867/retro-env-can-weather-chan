@@ -1,8 +1,9 @@
 const Weather = require("ec-weather-js");
-import { isAxiosError } from "axios";
+import { isAxiosError, type AxiosResponse } from "axios";
 import backendAxios from "lib/backendAxios";
 import { listen } from "lib/amqp";
 import { mscAmqpListenOptionsFromEnv } from "lib/amqp/mscAmqpEnv";
+import { recordMscAmqpErrorEvent, recordMscAmqpMessage } from "lib/amqp/mscAmqpStats";
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
 import { Connection } from "types/amqp.types";
@@ -43,21 +44,28 @@ import { initializeClimateNormals } from "./climateNormals";
 import { generateConditionsUUID } from "./utils";
 import eventbus from "lib/eventbus";
 import { getTempRecordForDate } from "lib/temprecords";
-import { GetWeatherFileFromECCC } from "./datamart";
+import { GetWeatherFileFromECCC, legacyHpfxCitypageEnglishXmlUrl } from "./datamart";
 import { isLooseNull } from "lib/isnull";
-import { axiosGetWithMscMirror, MSC_HPFX_ORIGIN } from "lib/eccc/mscHttpMirror";
-
-const ECCC_BASE_API_URL = `${MSC_HPFX_ORIGIN}/today/citypage_weather/xml/`;
-const ECCC_API_ENGLISH_SUFFIX = "_e.xml";
+import { axiosGetWithMscMirror, normalizeMscHttpUrl } from "lib/eccc/mscHttpMirror";
+import {
+  citypageStaleFallbackAfterMs,
+  citypageStaleFallbackCheckIntervalMs,
+  isCitypageStaleFallbackDisabled,
+  shouldRunCitypageStaleHttpPoll,
+} from "lib/eccc/citypageStaleFallback";
 
 const logger = new Logger("conditions");
 const config = initializeConfig();
 const historicalData = initializeHistoricalTempPrecip();
 const climateNormals = initializeClimateNormals();
 
+/** `forecastGroup.regionalNormals` after ec-weather-js restructure (on `weather.all`). */
+type RegionalNormalsFromFeed = {
+  temperature?: ECCCAlmanacTemp | ECCCAlmanacTemp[];
+};
+
 class CurrentConditions {
   private _amqpConnection: Connection;
-  private _apiUrl: string;
   private _conditionUUID: string;
   private _weatherStationTimeData: WeatherStationTimeData;
   private _weatherStationCityName: string;
@@ -82,6 +90,7 @@ class CurrentConditions {
   private _conditionsFetchedAt: string | null = null;
   private _conditionsApplyGen = 0;
   private _conditionsInFlightAbort: AbortController | null = null;
+  private _staleHttpFallbackTimer: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
     this.initialize();
@@ -92,8 +101,47 @@ class CurrentConditions {
     this._weatherStationID = config?.primaryLocation?.location;
     this._conditionUUID = "";
 
+    this.clearStaleHttpFallbackWatcher();
     this.startAMQPConnection();
-    this._apiUrl = `${ECCC_BASE_API_URL}${config.primaryLocation.province}/${this._weatherStationID}${ECCC_API_ENGLISH_SUFFIX}`;
+    this.requestConditionsFetch();
+    this.startStaleHttpFallbackWatcher();
+  }
+
+  private clearStaleHttpFallbackWatcher(): void {
+    if (this._staleHttpFallbackTimer !== null) {
+      clearInterval(this._staleHttpFallbackTimer);
+      this._staleHttpFallbackTimer = null;
+    }
+  }
+
+  /**
+   * If MSC AMQP is silent for a long time, still re-fetch citypage XML via the same datamart/HPFX path
+   * as bootstrap so the display can advance when ECCC publishes without us seeing a broker notification.
+   */
+  private startStaleHttpFallbackWatcher(): void {
+    this.clearStaleHttpFallbackWatcher();
+    if (process.env.NODE_ENV === "test" || isCitypageStaleFallbackDisabled()) return;
+
+    const intervalMs = citypageStaleFallbackCheckIntervalMs();
+    const staleAfterMs = citypageStaleFallbackAfterMs();
+    this._staleHttpFallbackTimer = setInterval(() => this.tickStaleHttpFallback(), intervalMs);
+    logger.log(
+      "Citypage stale HTTP fallback: check every",
+      Math.round(intervalMs / 60000),
+      "min if last successful parse older than",
+      Math.round(staleAfterMs / 3600000),
+      "h"
+    );
+  }
+
+  private tickStaleHttpFallback(): void {
+    if (this._conditionsFetchBusy) return;
+    const staleAfterMs = citypageStaleFallbackAfterMs();
+    if (!shouldRunCitypageStaleHttpPoll(this._conditionsFetchedAt, Date.now(), staleAfterMs)) return;
+
+    logger.log(
+      "Citypage stale HTTP fallback: requesting datamart resolve + fetch (last successful parse exceeded threshold)"
+    );
     this.requestConditionsFetch();
   }
 
@@ -108,8 +156,12 @@ class CurrentConditions {
 
     // handle errors and messages
     listener
-      .on("error", (...error) => logger.error("AMQP error:", error))
+      .on("error", (...error) => {
+        recordMscAmqpErrorEvent("citypage");
+        logger.error("AMQP error:", error);
+      })
       .on("message", (date: string, url: string) => {
+        recordMscAmqpMessage("citypage");
         // make sure its relevant to us
         if (!url.endsWith(`${this._weatherStationID}_en.xml`)) return;
 
@@ -141,62 +193,112 @@ class CurrentConditions {
     return this._conditionsFetchedAt;
   }
 
+  /**
+   * Parse citypage GET response into live conditions. `unparsed` means try another URL (bad body).
+   */
+  private applyCitypageHttpResponse(resp: AxiosResponse, applyGen: number): "applied" | "stale" | "unparsed" {
+    if (applyGen !== this._conditionsApplyGen) return "stale";
+
+    const weather = new Weather(resp.data);
+    if (!weather) return "unparsed";
+
+    const { all: allWeather } = weather;
+    if (!allWeather) return "unparsed";
+
+    this.parseStationLatLong(allWeather.location.name);
+
+    const conditionUUID = generateConditionsUUID(weather.current?.dateTime[1].timeStamp ?? "");
+    if (config.misc.rejectInHourConditionUpdates && conditionUUID === this._conditionUUID) {
+      logger.log("Rejecting in-hour conditions update as", conditionUUID, "was already parsed");
+      return "applied";
+    }
+
+    this._conditionUUID = conditionUUID;
+    this.generateWeatherStationTimeData(weather.current?.dateTime[1] ?? {});
+
+    const observedDateTime: Date = this.observedDateTimeAtStation();
+    historicalData.fetchLastTwoYearsOfData(observedDateTime);
+    climateNormals.fetchClimateNormals(observedDateTime);
+
+    this._weatherStationCityName = allWeather.location.name.value;
+    this.parseRelevantConditions(weather.current);
+    this.parseSunriseSunset(allWeather.riseSet);
+    this.generateAlmanac(allWeather.almanac);
+    this.fillAlmanacNormalsFromRegional(
+      (allWeather as { regionalNormals?: RegionalNormalsFromFeed }).regionalNormals
+    );
+    this.generateWindchill(weather.current);
+    this.generateForecast(weather.weekly);
+    this.getTempRecordsForDay();
+
+    this._conditionsFetchedAt = new Date().toISOString();
+
+    eventbus.emit(EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS, weather.current?.dateTime[0].timeStamp);
+
+    logger.log("Parsed new conditions with UUID of", conditionUUID);
+    return "applied";
+  }
+
+  private async tryCitypageFetchCandidate(
+    fetchUrl: string,
+    applyGen: number,
+    signal: AbortSignal,
+    label: string
+  ): Promise<"ok" | "stale" | "continue"> {
+    try {
+      const resp = await axiosGetWithMscMirror(backendAxios, fetchUrl, { signal });
+      const applied = this.applyCitypageHttpResponse(resp, applyGen);
+      if (applied === "stale") return "stale";
+      if (applied === "applied") return "ok";
+      logger.warn(`${label}: response was not usable; trying next citypage source`);
+      return "continue";
+    } catch (err) {
+      if (isAxiosError(err) && err.code === "ERR_CANCELED") return "stale";
+      logger.warn(`${label}: fetch failed; trying next citypage source`, err);
+      return "continue";
+    }
+  }
+
+  /**
+   * Citypage load order: AMQP URL (fast path) → hourly bucket URL (HPFX/Datamart-safe) → legacy HPFX `/xml/…_e.xml`.
+   */
   private async runConditionsFetch(url?: string): Promise<void> {
     this._conditionsFetchBusy = true;
     const controller = new AbortController();
     this._conditionsInFlightAbort = controller;
     const { signal } = controller;
     const applyGen = ++this._conditionsApplyGen;
+    const province = config.primaryLocation.province;
+    const stationId = config.primaryLocation.location;
+
     try {
-      const searchedURL =
-        url !== undefined
-          ? url
-          : await GetWeatherFileFromECCC(config.primaryLocation.province, config.primaryLocation.location);
-
-      if (!searchedURL) return;
-
-      try {
-        const resp = await axiosGetWithMscMirror(backendAxios, searchedURL, { signal });
-        if (applyGen !== this._conditionsApplyGen) return;
-
-        const weather = new Weather(resp.data);
-        if (!weather) return;
-
-        const { all: allWeather } = weather;
-        if (!allWeather) return;
-
-        this.parseStationLatLong(allWeather.location.name);
-
-        const conditionUUID = generateConditionsUUID(weather.current?.dateTime[1].timeStamp ?? "");
-        if (config.misc.rejectInHourConditionUpdates && conditionUUID === this._conditionUUID) {
-          logger.log("Rejecting in-hour conditions update as", conditionUUID, "was already parsed");
-          return;
-        }
-
-        this._conditionUUID = conditionUUID;
-        this.generateWeatherStationTimeData(weather.current?.dateTime[1] ?? {});
-
-        const observedDateTime: Date = this.observedDateTimeAtStation();
-        historicalData.fetchLastTwoYearsOfData(observedDateTime);
-        climateNormals.fetchClimateNormals(observedDateTime);
-
-        this._weatherStationCityName = allWeather.location.name.value;
-        this.parseRelevantConditions(weather.current);
-        this.parseSunriseSunset(allWeather.riseSet);
-        this.generateAlmanac(allWeather.almanac);
-        this.generateWindchill(weather.current);
-        this.generateForecast(weather.weekly);
-        this.getTempRecordsForDay();
-
-        this._conditionsFetchedAt = new Date().toISOString();
-
-        eventbus.emit(EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS, weather.current?.dateTime[0].timeStamp);
-
-        logger.log("Parsed new conditions with UUID of", conditionUUID);
-      } catch (err) {
-        if (isAxiosError(err) && err.code === "ERR_CANCELED") return;
-        logger.error("Unable to retrieve update to conditions from ECCC API", err);
+      if (url !== undefined) {
+        const amqp = await this.tryCitypageFetchCandidate(
+          normalizeMscHttpUrl(url),
+          applyGen,
+          signal,
+          "AMQP citypage"
+        );
+        if (amqp === "ok" || amqp === "stale") return;
       }
+
+      if (applyGen !== this._conditionsApplyGen) return;
+
+      const hourly = await GetWeatherFileFromECCC(province, stationId);
+      if (applyGen !== this._conditionsApplyGen) return;
+
+      if (hourly) {
+        const h = await this.tryCitypageFetchCandidate(hourly, applyGen, signal, "Hourly citypage (datamart resolve)");
+        if (h === "ok" || h === "stale") return;
+      }
+
+      if (applyGen !== this._conditionsApplyGen) return;
+
+      const legacy = legacyHpfxCitypageEnglishXmlUrl(province, stationId);
+      const leg = await this.tryCitypageFetchCandidate(legacy, applyGen, signal, "Legacy HPFX xml citypage");
+      if (leg === "ok" || leg === "stale") return;
+
+      logger.error("Unable to retrieve update to conditions from ECCC API (all citypage sources exhausted)");
     } finally {
       if (this._conditionsInFlightAbort === controller) {
         this._conditionsInFlightAbort = null;
@@ -316,21 +418,21 @@ class CurrentConditions {
   private generateAlmanac(almanac: ECCCAlmanac) {
     // TODO: fetch records from alternate source
 
-    // get the extreme min temp
     const retrieveAlmanacTemp = (tempClass: string, parseYear: boolean = true) => {
-      if (!almanac) return null;
+      if (!almanac?.temperature?.length || !tempClass) return null;
 
-      // fetch from the almanac temperatures list
-      const extremeTemp: ECCCAlmanacTemp = almanac.temperature.find(
-        (temp: ECCCAlmanacTemp) => temp.class === tempClass
-      );
+      const entry = almanac.temperature.find((temp: ECCCAlmanacTemp) => temp.class === tempClass);
+      if (!entry) return null;
 
-      // if nothing return null
-      if (!tempClass) return null;
+      const num = Number(entry.value);
+      if (!Number.isFinite(num)) return null;
 
-      // otherwise parse it out and return
-      const { value, year, units } = extremeTemp;
-      return { value: Number(value), year: parseYear ? parseInt(year) : undefined, unit: units };
+      const y = entry.year != null ? parseInt(String(entry.year), 10) : NaN;
+      return {
+        value: num,
+        year: parseYear && Number.isFinite(y) ? y : undefined,
+        unit: entry.units ?? "C",
+      };
     };
 
     // extreme min/max
@@ -342,6 +444,31 @@ class CurrentConditions {
     this._almanac.temperatures.normalMax = retrieveAlmanacTemp("normalMax", false);
 
     // last year min/max is done at request time for observed to make sure we have that data
+  }
+
+  /**
+   * Many citypages still omit normalMin/normalMax from `<almanac>` but include the same values under
+   * `<forecastGroup><regionalNormals>` (class low / high). Fill gaps so Outlook and Almanac screens
+   * can show regional normals.
+   */
+  private fillAlmanacNormalsFromRegional(regionalNormals: RegionalNormalsFromFeed | null | undefined) {
+    if (!regionalNormals) return;
+    if (this._almanac.temperatures.normalMin != null && this._almanac.temperatures.normalMax != null) return;
+
+    const raw = regionalNormals.temperature;
+    const list: ECCCAlmanacTemp[] = !raw ? [] : Array.isArray(raw) ? raw : [raw];
+
+    for (const t of list) {
+      const v = Number(t.value);
+      if (!Number.isFinite(v)) continue;
+      const unit = t.units ?? "C";
+      if (t.class === "low" && this._almanac.temperatures.normalMin == null) {
+        this._almanac.temperatures.normalMin = { value: v, unit };
+      }
+      if (t.class === "high" && this._almanac.temperatures.normalMax == null) {
+        this._almanac.temperatures.normalMax = { value: v, unit };
+      }
+    }
   }
 
   private generateWindchill(conditions: ECCCConditions) {

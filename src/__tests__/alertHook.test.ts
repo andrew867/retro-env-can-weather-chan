@@ -21,11 +21,11 @@ describe("Alerts hook", () => {
     expect(mostImportantAlert).toBeNull();
   });
 
-  it("fetches at every interval", () => {
-    jest.useFakeTimers();
+  it("requests alerts over HTTP on mount (SSE is optional in test env)", () => {
     initializeHook();
-    jest.advanceTimersToNextTimer();
-    expect(moxios.requests.count()).toBeGreaterThan(1);
+    return moxios.wait(() => {
+      expect(moxios.requests.count()).toBeGreaterThanOrEqual(1);
+    });
   });
 
   it("stores the init response in state", () => {

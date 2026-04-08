@@ -1,4 +1,7 @@
-import { CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT } from "consts";
+import {
+  CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT,
+  CONDITIONS_EVENT_STREAM_FORECAST_UPDATE_EVENT,
+} from "consts";
 import { useEffect, useRef, useState } from "react";
 import { WeatherStation } from "types";
 
@@ -58,6 +61,27 @@ export function useWeatherEventStream(options?: WeatherEventStreamOptions) {
               return { ...prev, ...parsed };
             }
             return parsed;
+          });
+        } catch {
+          /* ignore malformed payload */
+        }
+      });
+
+      es.addEventListener(CONDITIONS_EVENT_STREAM_FORECAST_UPDATE_EVENT, (ev) => {
+        try {
+          const parsed = JSON.parse(ev.data) as Partial<WeatherStation> & {
+            forecast?: WeatherStation["forecast"];
+            fetchedAt?: string | null;
+          };
+          setCurrentConditions((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              observationID: parsed.observationID ?? prev.observationID,
+              stationTime: parsed.stationTime ?? prev.stationTime,
+              forecast: parsed.forecast ?? prev.forecast,
+              fetchedAt: parsed.fetchedAt ?? prev.fetchedAt,
+            };
           });
         } catch {
           /* ignore malformed payload */

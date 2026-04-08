@@ -55,7 +55,14 @@ export function StatsScreen(props: StatsScreenProps) {
   const generateDotsForPrecipLine = (dataName: string, usedChars = PRECIP_CHARS_USED_OUTSIDE_OF_DOTS) =>
     "".padEnd(DISPLAY_MAX_CHARACTERS_PER_LINE - (dataName.length + usedChars), ".");
 
-  const seasonStartMonth = getIsWinterSeason() ? "October" : "April";
+  /** Match server-side seasonal precip window to the station’s observed calendar month (not only the browser clock). */
+  const seasonStartMonth = useMemo(() => {
+    if (!weatherStationTime?.observedDateTime) return getIsWinterSeason() ? "October" : "April";
+    const d = parseISO(weatherStationTime.observedDateTime);
+    if (!isValid(d)) return getIsWinterSeason() ? "October" : "April";
+    return getIsWinterSeason(d.getMonth() + 1) ? "October" : "April";
+  }, [weatherStationTime?.observedDateTime]);
+
   const actualPrecip = generatePrecip(seasonPrecip?.amount || 0);
   const normalPrecip = generatePrecip(seasonPrecip?.normal || 0);
 
@@ -69,7 +76,7 @@ export function StatsScreen(props: StatsScreenProps) {
   const formatTempForHotColdSpotLine = (temperature?: number | null) =>
     (!isNaN(temperature) && temperature != null ? Math.round(temperature) : "N/A").toString().padStart(3);
 
-  if (!city || !weatherStationTime?.observedDateTime || !season || !hotColdSpots) return <></>;
+  if (!city || !weatherStationTime?.observedDateTime || !season) return <></>;
 
   return (
     <div id="stats_screen">
@@ -91,24 +98,20 @@ export function StatsScreen(props: StatsScreenProps) {
         Normal {generateDotsForPrecipLine("Normal", NORMAL_PRECIP_CHARS_USED_OUTSIDE_OF_DOTS)}
         {normalPrecip} mm
       </div>
-      {hotColdSpots && (
+      {hotColdSpots ? (
         <>
           <div>Canadian Hot/Cold Spot - {formattedHotColdSpotDate}</div>
-          {hotSpot && (
-            <div>
-              {truncatedHotSpotName}, {hotSpot.province} {generateDotsForHotColdSpotLine(truncatedHotSpotName)}
-              {formatTempForHotColdSpotLine(hotSpot.temperature)}
-            </div>
-          )}
-          {coldSpot && (
-            <div>
-              {truncatedColdSpotName}, {coldSpot.province ?? "N/A"}{" "}
-              {generateDotsForHotColdSpotLine(truncatedColdSpotName)}
-              {formatTempForHotColdSpotLine(coldSpot.temperature)}
-            </div>
-          )}
+          <div>
+            {truncatedHotSpotName}, {hotSpot?.province ?? ""} {generateDotsForHotColdSpotLine(truncatedHotSpotName)}
+            {formatTempForHotColdSpotLine(hotSpot?.temperature)}
+          </div>
+          <div>
+            {truncatedColdSpotName}, {coldSpot?.province ?? "N/A"}{" "}
+            {generateDotsForHotColdSpotLine(truncatedColdSpotName)}
+            {formatTempForHotColdSpotLine(coldSpot?.temperature)}
+          </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 }

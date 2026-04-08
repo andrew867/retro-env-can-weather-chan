@@ -1,6 +1,5 @@
 import {
   baseMsPerGrapheme,
-  clearStyleClass,
   computeStepDelayMs,
   isStreamablePlaintext,
   segmentGraphemes,
@@ -29,12 +28,5 @@ describe("authenticRefreshScheduler", () => {
     expect(isStreamablePlaintext("")).toBe(false);
     expect(isStreamablePlaintext("   ")).toBe(false);
     expect(isStreamablePlaintext("a")).toBe(true);
-  });
-
-  it("clearStyleClass", () => {
-    expect(clearStyleClass("blank")).toBe("authentic-clear--blank");
-    expect(clearStyleClass("fill")).toBe("authentic-clear--fill");
-    expect(clearStyleClass("inverse")).toBe("authentic-clear--inverse");
-    expect(clearStyleClass(undefined)).toBe("authentic-clear--blank");
   });
 });

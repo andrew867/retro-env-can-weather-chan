@@ -1,4 +1,9 @@
-import { shouldAlertFlash, cleanupAlertHeadline, isWarningSevereThunderstormWatch } from "lib/cap-cp/cap-cp-display";
+import {
+  shouldAlertFlash,
+  cleanupAlertHeadline,
+  compactContinuationBannerHeadline,
+  isWarningSevereThunderstormWatch,
+} from "lib/cap-cp/cap-cp-display";
 import { CAPObject, CAPSeverity, CAPUrgency } from "types/cap-cp.types";
 
 const baseCAPObject = {
@@ -41,6 +46,11 @@ describe("alert display helpers", () => {
     expect(cleanupAlertHeadline("weather alert in effect")).toBe("weather alert");
     expect(cleanupAlertHeadline("weather alert ended")).toBe("weather alert ended");
     expect(cleanupAlertHeadline("special weather statement in effect")).toBe("special weather statement");
+  });
+
+  it("shortens continuation banners to severity + CONT.", () => {
+    expect(compactContinuationBannerHeadline("yellow warning - snow squall - in effect")).toBe("YELLOW WARNING CONT.");
+    expect(compactContinuationBannerHeadline("red warning for tornado in effect")).toBe("RED WARNING CONT.");
   });
 
   it("detect that a severe thunderstorm watch is in effect correctly", () => {

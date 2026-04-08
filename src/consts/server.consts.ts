@@ -1,8 +1,15 @@
+import { RWC_DATA_FETCHED_AT_HEADER } from "./http.consts";
+
 const cliArgumentPortIx = process.argv.indexOf("--port");
 
 export const API_PORT = cliArgumentPortIx > -1 ? Number(process.argv[cliArgumentPortIx + 1]) : 8600;
+
+/** Browsers only expose custom response headers to JS on cross-origin requests if listed here. */
 export const CORS_OPTIONS = {
-  origin: "http://localhost:3000",
+  /** Local dev: any localhost / 127.0.0.1 port (display + API often differ from :3000). */
+  origin:
+    /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i,
+  exposedHeaders: [RWC_DATA_FETCHED_AT_HEADER],
   optionsSuccessStatus: 200,
 };
 

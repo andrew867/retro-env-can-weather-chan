@@ -10,6 +10,7 @@ import {
   useCanadaHotColdSpots,
   useLastMonth,
   useUSAWeather,
+  useAirportMetar,
   useProvinceTracking,
   useSeason,
   useWeatherEventStream,
@@ -30,9 +31,10 @@ function WeatherChannel() {
   const { provinceTracking, provinceDataFetchedAt, refetchProvinceTracking } = useProvinceTracking();
   const { season, seasonDataFetchedAt, fetchSeason } = useSeason();
   const { hotColdSpots, refetchHotColdSpots } = useCanadaHotColdSpots();
-  const { lastMonth, lastMonthDataFetchedAt, fetchLastMonth } = useLastMonth();
+  const { lastMonth, lastMonthDataFetchedAt, fetchLastMonth, lastMonthFetchAttempted } = useLastMonth();
   const { usaWeather, usaDataFetchedAt, fetchUSAWeather } = useUSAWeather();
-  const { sunspots, sunspotsDataFetchedAt, refetchSunspots } = useSunspots();
+  const { airportMetar, fetchAirportMetar } = useAirportMetar();
+  const { sunspots, sunspotsDataFetchedAt, refetchSunspots, sunspotsFetchAttempted } = useSunspots();
   const { airQuality, airQualityDataFetchedAt, refetchAirQuality } = useAirQuality();
 
   const alertsHook = useAlerts();
@@ -43,6 +45,7 @@ function WeatherChannel() {
     fetchLastMonth();
     fetchNationalWeather();
     fetchUSAWeather();
+    fetchAirportMetar();
     refetchProvinceTracking();
     refetchHotColdSpots();
     refetchSunspots();
@@ -54,6 +57,7 @@ function WeatherChannel() {
     fetchLastMonth,
     fetchNationalWeather,
     fetchUSAWeather,
+    fetchAirportMetar,
     refetchProvinceTracking,
     refetchHotColdSpots,
     refetchSunspots,
@@ -114,13 +118,17 @@ function WeatherChannel() {
           season={season}
           hotColdSpots={hotColdSpots}
           lastMonth={lastMonth}
+          lastMonthFetchAttempted={lastMonthFetchAttempted}
           usaWeather={usaWeather}
+          airportMetar={airportMetar ?? []}
           sunspots={sunspots}
+          sunspotsFetchAttempted={sunspotsFetchAttempted}
           airQuality={airQuality}
           configVersion={config?.config.configVersion}
           reloadLineMs={config?.gfx?.retro?.reloadLineMs}
           authenticRefresh={config?.authenticRefresh}
           gfxFeatures={config?.gfx?.features}
+          infoScreenLines={config?.infoScreen}
         />
         <FooterBar
           timeOffset={currentConditions?.stationTime?.stationOffsetMinutesFromLocal ?? 0}
@@ -128,14 +136,11 @@ function WeatherChannel() {
           snapshotFreshnessIsos={[
             currentConditions?.fetchedAt,
             nationalDataFetchedAt,
-            usaDataFetchedAt,
-            alertsHook.alertsDataFetchedAt,
             provinceDataFetchedAt,
-            seasonDataFetchedAt,
-            lastMonthDataFetchedAt,
-            // Hot/cold polls every 30m; stale hint threshold is 25m — would false-positive.
-            sunspotsDataFetchedAt,
+            alertsHook.alertsDataFetchedAt,
             airQualityDataFetchedAt,
+            // Omit: USA (non-ECCC), season/last-month (server-computed cadence), sunspots (5m poll vs hourly ECCC),
+            // hot/cold (6h server poll) — they should not drive “ECCC snapshot” wording.
           ]}
         />
       </div>

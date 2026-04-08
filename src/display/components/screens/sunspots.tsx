@@ -1,22 +1,30 @@
 import { MAX_SUNSPOT_CITY_NAME_LENGTH } from "consts";
 import { formatSunspotDate, isSunSpotSeason } from "lib/date";
+import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo } from "react";
 import { SunspotStationObservations, WeatherStationTimeData, AutomaticScreenProps } from "types";
 
 type SunspotScreenProps = {
-  sunspots: SunspotStationObservations;
+  sunspots: SunspotStationObservations | undefined;
+  sunspotsFetchAttempted: boolean;
   weatherStationTime: WeatherStationTimeData;
 } & AutomaticScreenProps;
 
 export function SunspotScreen(props: SunspotScreenProps) {
-  const { sunspots, weatherStationTime, onComplete } = props ?? {};
-  const screenShouldDisplay = isSunSpotSeason() && sunspots?.length;
+  const { sunspots, sunspotsFetchAttempted, weatherStationTime, onComplete } = props ?? {};
+  const onCompleteRef = useStableOnCompleteRef(onComplete);
+  const inSeason = isSunSpotSeason();
 
   useEffect(() => {
-    if (!screenShouldDisplay) onComplete();
-  }, []);
+    if (!inSeason) {
+      onCompleteRef.current();
+      return;
+    }
+    if (!sunspotsFetchAttempted) return;
+    if (!sunspots?.length) onCompleteRef.current();
+  }, [inSeason, sunspotsFetchAttempted, sunspots]);
 
-  if (!screenShouldDisplay) return <></>;
+  if (!inSeason || !sunspots?.length) return <></>;
 
   const sunspotDate = useMemo(
     () => weatherStationTime?.observedDateTime && formatSunspotDate(weatherStationTime).padEnd(9),

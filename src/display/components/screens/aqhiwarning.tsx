@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { getAQHIRisk, getAQHIWarningMessage } from "lib/airquality/utils";
+import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo } from "react";
 import { AQHIObservationResponse, AutomaticScreenProps } from "types";
 
@@ -9,18 +10,21 @@ type AQHIWarningScreenProps = {
 } & AutomaticScreenProps;
 
 export function AQHIWarningScreen({ city, airQuality, onComplete }: AQHIWarningScreenProps) {
+  const onCompleteRef = useStableOnCompleteRef(onComplete);
   const observedDateTime = useMemo(() => {
-    if (!airQuality) return;
+    if (!airQuality || airQuality.month == null || airQuality.day == null || airQuality.hour == null) return;
 
-    return format(
-      new Date(2023, airQuality?.month - 1, airQuality?.day, airQuality.hour + (airQuality.isPM ? 12 : 0)),
-      "hh aa MMM dd"
-    ).replace(/0(\d)/g, " $1");
-  }, [airQuality, airQuality?.day, airQuality?.month, airQuality?.hour]);
+    const y = new Date().getFullYear();
+    const hour24 = airQuality.hour + (airQuality.isPM ? 12 : 0);
+    let dt = new Date(y, airQuality.month - 1, airQuality.day, hour24);
+    if (dt.getTime() > Date.now()) dt = new Date(y - 1, airQuality.month - 1, airQuality.day, hour24);
+
+    return format(dt, "hh aa MMM dd").replace(/0(\d)/g, " $1");
+  }, [airQuality, airQuality?.day, airQuality?.month, airQuality?.hour, airQuality?.isPM]);
 
   useEffect(() => {
-    if (!airQuality || !airQuality.value || !airQuality.showWarning) return onComplete();
-  }, [airQuality]);
+    if (!airQuality || !airQuality.value || !airQuality.showWarning) onCompleteRef.current();
+  }, [airQuality, airQuality?.value, airQuality?.showWarning]);
 
   if (!airQuality?.value || !airQuality?.showWarning) return <></>;
 

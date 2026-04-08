@@ -3,6 +3,12 @@ import type { AuthenticRefreshConfig } from "./authenticRefresh.types";
 import type { GfxRuntimeConfig } from "./gfx.types";
 import { ProvinceStation } from "./provincetracking.types";
 
+/** ICAO codes for the Airport METAR rotator screen — NOAA AWC (see `cfg/rwc-config.json`). */
+export type AirportMetarStation = {
+  name: string;
+  code: string;
+};
+
 export type ConfigFields = {
   primaryLocation: PrimaryLocation;
   provinceHighLowEnabled?: boolean;
@@ -14,6 +20,8 @@ export type ConfigFields = {
   flavours: FlavourNames;
   provinceStations: ProvinceStation[];
   airQualityStation: string;
+  /** ICAO METAR screen; max 4 stations (see `MAX_AIRPORT_METAR_STATIONS`). */
+  airportMetarStations?: AirportMetarStation[];
   crawler: string[];
   music: string[];
   gfx?: GfxRuntimeConfig;
@@ -64,6 +72,8 @@ export type InitChannel = {
   crawler: CrawlerMessages;
   flavour: Flavour;
   music: string[];
+  /** Lines for `Screens.INFO` (optional; see `cfg/rwc-config.json` key `infoScreen`). */
+  infoScreen?: string[];
 };
 
 export type CrawlerMessages = string[];

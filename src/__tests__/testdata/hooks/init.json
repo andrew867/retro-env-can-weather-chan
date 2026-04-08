@@ -6,9 +6,11 @@
     "useOfficialFonts": true
   },
   "gfx": {
+    "displayAspectRatio": "4:3",
+    "displayResolution": "sd",
     "features": {
-      "authenticRefreshEnabled": false,
-      "nextGenVisualLayersEnabled": false
+      "authenticRefreshEnabled": true,
+      "nextGenVisualLayersEnabled": true
     },
     "safeArea": {
       "top": 0.02,
@@ -17,12 +19,20 @@
       "right": 0.02
     },
     "retro": {
-      "scanlinesOpacity": 0,
+      "scanlinesOpacity": 0.07,
       "phosphorTint": "none",
       "vignetteStrength": 0.12,
-      "vhsAnalogLayerEnabled": false,
+      "vhsAnalogLayerEnabled": true,
       "reloadLineMs": 100
     }
+  },
+  "authenticRefresh": {
+    "enabled": true,
+    "charsPerSecond": 100,
+    "jitterMsPerCharMax": 12,
+    "continuationGraphemeReveal": true,
+    "respectReducedMotion": true,
+    "streamUnit": "grapheme"
   },
   "crawler": ["this is a crawler message", "matt is awesome, look at this config page", "wow"],
   "flavour": {

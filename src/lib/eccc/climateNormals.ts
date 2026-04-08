@@ -2,11 +2,11 @@ import axios from "lib/backendAxios";
 import { formatFetchError, looksLikeClimateNormalsCsv } from "lib/eccc/fetchErrors";
 import { format, getDaysInMonth, isValid, subMonths } from "date-fns";
 import { initializeConfig } from "lib/config";
-import { getShorthandMonthNamesForSeason, isStartOfMonth } from "lib/date";
+import { getShorthandMonthNamesForSeason } from "lib/date";
 import Logger from "lib/logger";
 import { ClimateNormalSeasonPrecip, ClimateNormalsForMonth } from "types";
 import eventbus from "lib/eventbus";
-import { EVENT_BUS_CONFIG_CHANGE_CLIMATE_NORMALS } from "consts";
+import { EVENT_BUS_AUXILIARY_WEATHER_DATA_READY, EVENT_BUS_CONFIG_CHANGE_CLIMATE_NORMALS } from "consts";
 
 /** MSC climate normals CSV: English element codes (NORMAL_ID) for 1981–2010 monthly normals. */
 const NORMAL_ID = {
@@ -154,6 +154,7 @@ class ClimateNormals {
 
         this.applyPrecipNormals(currentDate, values);
         this.applyTempNormals(values);
+        eventbus.emit(EVENT_BUS_AUXILIARY_WEATHER_DATA_READY);
       })
       .catch((err) => logger.warn(`Climate normals fetch skipped: ${formatFetchError(err)}`))
       .finally(() => logger.log("Climate normals request finished"));
@@ -215,9 +216,8 @@ class ClimateNormals {
     return this._normalPrecipForSeason;
   }
 
-  public getNormalsForLastMonth(date: Date = new Date()) {
-    if (isStartOfMonth(date)) return this._normalsForLastMonth;
-    return null;
+  public getNormalsForLastMonth(_date: Date = new Date()) {
+    return this._normalsForLastMonth;
   }
 }
 

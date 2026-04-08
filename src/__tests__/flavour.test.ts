@@ -3,10 +3,14 @@ import testFlavour from "./testdata/flavours/test_flavour.json";
 import fs from "fs";
 import { parseISO } from "date-fns";
 import { FLAVOUR_DEFAULT } from "consts/flavour.consts";
-import { SCREEN_MIN_DISPLAY_LENGTH } from "consts/screens.consts";
+import { SCREEN_DEFAULT_DISPLAY_LENGTH, SCREEN_MIN_DISPLAY_LENGTH } from "consts/screens.consts";
 import { Screens } from "consts/screens.consts";
 import { FS_NO_FILE_FOUND } from "consts/storage.consts";
-import { isAutomaticScreen } from "lib/flavour/utils";
+import {
+  isAutomaticScreen,
+  resolveScreenDwellSeconds,
+  usesPerPageDwellInFlavourConfig,
+} from "lib/flavour/utils";
 jest.mock("fs");
 
 describe("Flavour loading", () => {
@@ -96,5 +100,18 @@ describe("Flavour utils", () => {
 
     autoDurationScreens.forEach((autoScreen) => expect(isAutomaticScreen(autoScreen)).toBeTruthy());
     manualDurationScreens.forEach((manualScreen) => expect(isAutomaticScreen(manualScreen)).toBeFalsy());
+  });
+
+  it("marks forecast, outlook, and alerts as per-page dwell in flavour config", () => {
+    expect(usesPerPageDwellInFlavourConfig(Screens.FORECAST)).toBe(true);
+    expect(usesPerPageDwellInFlavourConfig(Screens.OUTLOOK)).toBe(true);
+    expect(usesPerPageDwellInFlavourConfig(Screens.ALERTS)).toBe(true);
+    expect(usesPerPageDwellInFlavourConfig(Screens.ALMANAC)).toBe(false);
+  });
+
+  it("resolveScreenDwellSeconds coerces flavour JSON", () => {
+    expect(resolveScreenDwellSeconds({ duration: 0 })).toBe(SCREEN_DEFAULT_DISPLAY_LENGTH);
+    expect(resolveScreenDwellSeconds({ duration: 4 })).toBe(SCREEN_MIN_DISPLAY_LENGTH);
+    expect(resolveScreenDwellSeconds({ duration: 20 })).toBe(20);
   });
 });

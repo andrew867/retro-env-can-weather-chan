@@ -4,6 +4,7 @@ import {
   MIN_NATIONAL_STATIONS_NEEDED_TO_DISPLAY,
 } from "consts";
 import { formatObservedLong } from "lib/date";
+import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo, useState } from "react";
 import { NationalStationObservations, WeatherStationTimeData } from "types";
 import { AutomaticScreenProps } from "types/screen.types";
@@ -16,6 +17,7 @@ type NationalWeatherProps = {
 
 export function NationalWeatherScreen(props: NationalWeatherProps) {
   const { observations, area, weatherStationTime, onComplete } = props ?? {};
+  const onCompleteRef = useStableOnCompleteRef(onComplete);
   const title = useMemo(
     () => formatObservedLong(weatherStationTime, true, " "),
     [weatherStationTime?.observedDateTime]
@@ -30,12 +32,14 @@ export function NationalWeatherScreen(props: NationalWeatherProps) {
       !observations ||
       observations.length < MIN_NATIONAL_STATIONS_NEEDED_TO_DISPLAY ||
       !weatherStationTime?.observedDateTime
-    )
-      return onComplete();
+    ) {
+      onCompleteRef.current();
+      return;
+    }
 
     if (area !== areaOnMount || !observationsOnMount?.length) setObservationsOnMount(observations);
     setAreaOnMount(area);
-  }, [observations, area]);
+  }, [observations, area, weatherStationTime?.observedDateTime]);
 
   if (!observationsOnMount || !weatherStationTime?.observedDateTime) return <></>;
 

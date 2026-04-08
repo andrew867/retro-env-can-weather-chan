@@ -28,15 +28,15 @@ export function isSunSpotSeason(month?: number) {
 
 export function isDateInWinterSeason(isoDate: string) {
   const date = parseISO(isoDate);
-  return getIsWinterSeason(date.getMonth());
+  return getIsWinterSeason(date.getMonth() + 1);
 }
 
-export function isDateInCurrentWinterSeason(isoDate: string) {
-  const date = new Date();
-  const currentMonth = date.getMonth() + 1;
-  const currentYear = date.getFullYear();
-  const lastYear = date.getFullYear() - 1;
-  const nextYear = date.getFullYear() + 1;
+/** @param asOf Reference “today” for which winter season window to use (defaults to runtime clock). Pass observed station date when aggregating climate bulk data. */
+export function isDateInCurrentWinterSeason(isoDate: string, asOf: Date = new Date()) {
+  const currentMonth = asOf.getMonth() + 1;
+  const currentYear = asOf.getFullYear();
+  const lastYear = asOf.getFullYear() - 1;
+  const nextYear = asOf.getFullYear() + 1;
 
   let startOfCurrentWinterSeason = null;
   let endOfCurrentWinterSeason = null;
@@ -63,9 +63,9 @@ export function isDateInCurrentWinterSeason(isoDate: string) {
   );
 }
 
-export function isDateInCurrentSummerSeason(isoDate: string) {
-  const date = new Date();
-  const currentYear = date.getFullYear();
+/** @param asOf Reference date for which calendar year’s Apr–Sep window to use (defaults to runtime clock). */
+export function isDateInCurrentSummerSeason(isoDate: string, asOf: Date = new Date()) {
+  const currentYear = asOf.getFullYear();
 
   // winter season is october 1st to march 31st
   const startOfCurrentSummerSeason = parseISO(`${currentYear}-04-01`);

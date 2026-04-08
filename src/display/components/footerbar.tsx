@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 
 type FooterBarProps = {
   timeOffset: number;
-  /** ISO timestamps from higher-cadence feeds; stale if any is past threshold (see channel snapshot list). */
+  /** ISO timestamps for ECCC-aligned feeds; stale if any is past `STALE_SNAPSHOT_THRESHOLD_MINUTES` (~hourly obs + jitter). */
   snapshotFreshnessIsos?: (string | null | undefined)[];
   /** When false, never show the bottom “snapshot may be outdated” line (Look and Feel). */
   showFooterFreshnessHint?: boolean;

@@ -1,19 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { AQHIObservationResponse, CAPObject, WeatherStation, AuthenticRefreshConfig, Forecast } from "types";
+import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { AQHIObservationResponse, CAPObject, WeatherStation, AuthenticRefreshConfig } from "types";
 import { AutomaticScreenProps } from "types/screen.types";
 import { Conditions } from "../weather";
-import { clampReloadLineMs, SCREEN_DEFAULT_DISPLAY_LENGTH } from "consts";
-import { paginateText8x32 } from "lib/display";
-import { shouldAlertFlash } from "lib/cap-cp";
-import {
-  clearStyleClass,
-  computeStepDelayMs,
-  isStreamablePlaintext,
-  segmentGraphemes,
-} from "lib/display/authenticRefreshScheduler";
+import { clampReloadLineMs, SCREEN_DEFAULT_DISPLAY_LENGTH, SCREEN_MIN_DISPLAY_LENGTH } from "consts";
+import { cleanupAlertHeadline, shouldAlertFlash } from "lib/cap-cp";
+import { computeStepDelayMs, isStreamablePlaintext, segmentGraphemes } from "lib/display/authenticRefreshScheduler";
+import { immediateLinesFirstPage } from "lib/display/forecastScreenBodies";
 
 type ForecastScreenProps = {
   weatherStationResponse: WeatherStation;
+  /** Precomputed 8×32 pages from `buildForecastScreenBodies` / channel playlist. */
+  forecastBodies: readonly string[];
+  /** Which forecast page this rotator step shows (`0` = conditions + first page). */
+  forecastPageIndex: number;
   alert?: CAPObject;
   isReload?: boolean;
   airQuality: AQHIObservationResponse;
@@ -22,28 +22,16 @@ type ForecastScreenProps = {
   /** Master switch from `gfx.features.authenticRefreshEnabled` (init); tuning lives in `authenticRefresh`. */
   authenticRefreshEnabled?: boolean;
   configVersion?: string;
+  /** From flavour: seconds each forecast page stays on screen (incl. cont.. pages). */
+  secondsPerPage?: number;
 } & AutomaticScreenProps;
-
-/** Lines for immediate forecast under the conditions block (alert uses one forecast line). */
-function immediateLinesFirstPage(hasAlert: boolean) {
-  return hasAlert ? 3 : 4;
-}
-
-/** Continuation screens have no conditions — fit more lines of 32-col text. */
-const FORECAST_CONTINUATION_LINES = 6;
-/** Later periods (e.g. Alberta clipper) shown full-screen, paginated. */
-const SUPPLEMENTARY_FORECAST_LINES = 6;
-
-function appendForecastPages(bodies: string[], f: Forecast | undefined) {
-  if (!f?.abbreviatedTextSummary?.trim()) return;
-  const raw = `${f.period}..${f.abbreviatedTextSummary}`;
-  bodies.push(...paginateText8x32(raw, SUPPLEMENTARY_FORECAST_LINES, SUPPLEMENTARY_FORECAST_LINES));
-}
 
 export function ForecastScreen(props: ForecastScreenProps) {
   const {
     onComplete,
     weatherStationResponse,
+    forecastBodies,
+    forecastPageIndex,
     alert,
     isReload,
     airQuality,
@@ -51,42 +39,14 @@ export function ForecastScreen(props: ForecastScreenProps) {
     authenticRefresh,
     authenticRefreshEnabled,
     configVersion,
+    secondsPerPage,
   } = props ?? {};
-  const [screenIx, setScreenIx] = useState(0);
+  const dwellSec =
+    secondsPerPage != null && secondsPerPage >= SCREEN_MIN_DISPLAY_LENGTH
+      ? secondsPerPage
+      : SCREEN_DEFAULT_DISPLAY_LENGTH;
   const pageChangeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
-
-  const [immediateForecast, page1Forecast1, page1Forecast2, page2Forecast1, page2Forecast2] =
-    weatherStationResponse?.forecast ?? [];
-
-  const screenBodies = useMemo(() => {
-    const bodies: string[] = [];
-    const hasAlert = !!alert;
-    if (immediateForecast?.abbreviatedTextSummary?.trim()) {
-      const raw = `Forecast for ${immediateForecast.period}..${immediateForecast.abbreviatedTextSummary}`;
-      bodies.push(
-        ...paginateText8x32(raw, immediateLinesFirstPage(hasAlert), FORECAST_CONTINUATION_LINES)
-      );
-    }
-    appendForecastPages(bodies, page1Forecast1);
-    appendForecastPages(bodies, page1Forecast2);
-    appendForecastPages(bodies, page2Forecast1);
-    appendForecastPages(bodies, page2Forecast2);
-    return bodies;
-  }, [
-    alert,
-    immediateForecast?.period,
-    immediateForecast?.abbreviatedTextSummary,
-    page1Forecast1?.period,
-    page1Forecast1?.abbreviatedTextSummary,
-    page1Forecast2?.period,
-    page1Forecast2?.abbreviatedTextSummary,
-    page2Forecast1?.period,
-    page2Forecast1?.abbreviatedTextSummary,
-    page2Forecast2?.period,
-    page2Forecast2?.abbreviatedTextSummary,
-  ]);
+  const onCompleteRef = useStableOnCompleteRef(onComplete);
 
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   useEffect(() => {
@@ -99,39 +59,36 @@ export function ForecastScreen(props: ForecastScreenProps) {
   }, []);
 
   useEffect(() => {
-    if (!weatherStationResponse || screenBodies.length === 0) {
-      const t = setTimeout(() => onCompleteRef.current(), 0);
-      return () => clearTimeout(t);
-    }
-
-    const delayMs = (screenIx === 0 && isReload ? 50 : SCREEN_DEFAULT_DISPLAY_LENGTH) * 1000;
-    const t = setTimeout(() => {
-      if (screenIx < screenBodies.length - 1) setScreenIx(screenIx + 1);
-      else onCompleteRef.current();
-    }, delayMs);
-    pageChangeTimeout.current = t;
-    return () => clearTimeout(t);
-  }, [screenIx, isReload, screenBodies.length, weatherStationResponse]);
-
-  useEffect(() => {
-    setScreenIx(0);
-  }, [weatherStationResponse?.observationID]);
-
-  useEffect(() => {
     return () => {
       pageChangeTimeout.current && clearTimeout(pageChangeTimeout.current);
     };
   }, []);
 
   const formatAlertHeadline = (headline: string) => {
-    const truncated = headline
-      ?.replace(/severe thunderstorm/gi, "severe tstorm")
+    const noInEffect = cleanupAlertHeadline(headline ?? "");
+    const truncated = noInEffect
+      .replace(/severe thunderstorm/gi, "severe tstorm")
       .replace(/statement/gi, "stmnt")
       .replace(/air quality/gi, "air qlty");
     return truncated;
   };
 
-  const firstScreenForecastText = screenBodies[0] ?? "";
+  const firstScreenForecastText = forecastBodies[0] ?? "";
+  const continuationBodyText = forecastBodies[forecastPageIndex] ?? "";
+
+  const prevObs = useRef<string | undefined>();
+  const prevCfg = useRef<string | undefined>();
+  const isConfigOnlyReload =
+    !!isReload &&
+    prevObs.current !== undefined &&
+    prevObs.current === weatherStationResponse?.observationID &&
+    prevCfg.current !== undefined &&
+    prevCfg.current !== configVersion;
+
+  useEffect(() => {
+    prevObs.current = weatherStationResponse?.observationID;
+    prevCfg.current = configVersion;
+  }, [weatherStationResponse?.observationID, configVersion]);
 
   const immediateForecastLines = useMemo(() => {
     if (!firstScreenForecastText.trim()) return [] as string[];
@@ -163,21 +120,16 @@ export function ForecastScreen(props: ForecastScreenProps) {
     authenticFeatureOn &&
     !motionBlocked &&
     isStreamablePlaintext(firstScreenForecastText) &&
-    screenIx === 0;
+    forecastPageIndex === 0;
 
-  const prevObs = useRef<string | undefined>();
-  const prevCfg = useRef<string | undefined>();
-  const isConfigOnlyReload =
-    !!isReload &&
-    prevObs.current !== undefined &&
-    prevObs.current === weatherStationResponse?.observationID &&
-    prevCfg.current !== undefined &&
-    prevCfg.current !== configVersion;
-
-  useEffect(() => {
-    prevObs.current = weatherStationResponse?.observationID;
-    prevCfg.current = configVersion;
-  }, [weatherStationResponse?.observationID, configVersion]);
+  const useAuthenticContinuation =
+    authenticFeatureOn &&
+    !motionBlocked &&
+    !isConfigOnlyReload &&
+    forecastPageIndex > 0 &&
+    authenticRefresh?.continuationGraphemeReveal !== false &&
+    isStreamablePlaintext(continuationBodyText) &&
+    continuationBodyText.trim().length > 0;
 
   const maxReloadSteps = useMemo(() => {
     if (isConfigOnlyReload) return maxReloadStepsFull;
@@ -214,8 +166,14 @@ export function ForecastScreen(props: ForecastScreenProps) {
   }, [isReload, isConfigOnlyReload, maxReloadSteps, maxReloadStepsFull, reloadLineMs, weatherStationResponse?.observationID]);
 
   const graphemes = useMemo(() => segmentGraphemes(firstScreenForecastText), [firstScreenForecastText]);
+  const contGraphemes = useMemo(() => segmentGraphemes(continuationBodyText), [continuationBodyText]);
+  const graphemesRef = useRef(graphemes);
+  graphemesRef.current = graphemes;
+  const contGraphemesRef = useRef(contGraphemes);
+  contGraphemesRef.current = contGraphemes;
 
-  const [authenticPhase, setAuthenticPhase] = useState<"idle" | "clearing" | "streaming" | "done">("done");
+  /** Start `idle` (not `done`) so we never schedule the inter-page timer on the first paint while authentic reload is active. */
+  const [authenticPhase, setAuthenticPhase] = useState<"idle" | "streaming" | "done">("idle");
   const [streamIndex, setStreamIndex] = useState(0);
 
   const useAuthenticForecast =
@@ -236,21 +194,10 @@ export function ForecastScreen(props: ForecastScreenProps) {
   useEffect(() => {
     if (!useAuthenticForecast || !isReload) return;
     if (revealedStep !== forecastStreamTriggerStep) return;
-    setAuthenticPhase("clearing");
-    const clearMs = Math.min(500, Math.max(0, authenticRefresh?.clearHoldMs ?? 120));
-    const t = setTimeout(() => {
-      setAuthenticPhase("streaming");
-      setStreamIndex(graphemes.length > 0 ? 1 : 0);
-    }, clearMs);
-    return () => clearTimeout(t);
-  }, [
-    revealedStep,
-    useAuthenticForecast,
-    isReload,
-    forecastStreamTriggerStep,
-    authenticRefresh?.clearHoldMs,
-    graphemes.length,
-  ]);
+    setAuthenticPhase("streaming");
+    const len = graphemesRef.current.length;
+    setStreamIndex(len > 0 ? 1 : 0);
+  }, [revealedStep, useAuthenticForecast, isReload, forecastStreamTriggerStep]);
 
   useEffect(() => {
     if (!useAuthenticForecast || authenticPhase !== "streaming") return;
@@ -279,6 +226,122 @@ export function ForecastScreen(props: ForecastScreenProps) {
     authenticRefresh?.jitterMsPerCharMax,
   ]);
 
+  const [contPhase, setContPhase] = useState<"idle" | "streaming" | "done">("idle");
+  const [contStreamIndex, setContStreamIndex] = useState(0);
+
+  useLayoutEffect(() => {
+    if (forecastPageIndex === 0) {
+      setContPhase("done");
+      setContStreamIndex(0);
+      return;
+    }
+    if (!useAuthenticContinuation) {
+      setContPhase("done");
+      setContStreamIndex(contGraphemes.length);
+      return;
+    }
+    setContPhase("idle");
+    setContStreamIndex(0);
+  }, [forecastPageIndex, weatherStationResponse?.observationID, useAuthenticContinuation, contGraphemes.length]);
+
+  /** If reload steps never reach the stream trigger (edge case), do not block pagination forever. */
+  useEffect(() => {
+    if (!useAuthenticForecast || !isReload || isConfigOnlyReload) return;
+    if (authenticPhase !== "idle") return;
+    const ms = clampReloadLineMs(reloadLineMs);
+    const fallbackMs = Math.max(15_000, (maxReloadSteps + 3) * (ms + 25));
+    const t = setTimeout(() => {
+      setAuthenticPhase((p) => (p === "idle" ? "done" : p));
+      setStreamIndex(graphemesRef.current.length);
+    }, fallbackMs);
+    return () => clearTimeout(t);
+  }, [
+    useAuthenticForecast,
+    isReload,
+    isConfigOnlyReload,
+    authenticPhase,
+    maxReloadSteps,
+    reloadLineMs,
+  ]);
+
+  useEffect(() => {
+    if (!useAuthenticContinuation || forecastPageIndex === 0) return;
+    setContPhase("streaming");
+    const len = contGraphemesRef.current.length;
+    setContStreamIndex(len > 0 ? 1 : 0);
+  }, [useAuthenticContinuation, forecastPageIndex, weatherStationResponse?.observationID, contGraphemes.length]);
+
+  useEffect(() => {
+    if (!useAuthenticContinuation || contPhase !== "streaming") return;
+    if (contStreamIndex >= contGraphemes.length) {
+      setContPhase("done");
+      return;
+    }
+    const delay = computeStepDelayMs({
+      charsPerSecond: authenticRefresh?.charsPerSecond,
+      jitterMsPerCharMax: authenticRefresh?.jitterMsPerCharMax,
+    });
+    const t = setTimeout(() => {
+      setContStreamIndex((i) => {
+        const next = i + 1;
+        if (next >= contGraphemes.length) setContPhase("done");
+        return next;
+      });
+    }, delay);
+    return () => clearTimeout(t);
+  }, [
+    useAuthenticContinuation,
+    contPhase,
+    contStreamIndex,
+    contGraphemes.length,
+    authenticRefresh?.charsPerSecond,
+    authenticRefresh?.jitterMsPerCharMax,
+  ]);
+
+  useEffect(() => {
+    if (!useAuthenticContinuation || contPhase !== "idle") return;
+    const t = setTimeout(() => {
+      setContPhase((p) => (p === "idle" ? "done" : p));
+      setContStreamIndex(contGraphemesRef.current.length);
+    }, 15_000);
+    return () => clearTimeout(t);
+  }, [useAuthenticContinuation, contPhase]);
+
+  const pageAdvanceBlocked =
+    (forecastPageIndex === 0 && useAuthenticForecast && authenticPhase !== "done") ||
+    (useAuthenticContinuation && contPhase !== "done");
+
+  useEffect(() => {
+    if (!weatherStationResponse || forecastBodies.length === 0) {
+      const t = setTimeout(() => onCompleteRef.current(), 0);
+      return () => clearTimeout(t);
+    }
+
+    if (pageAdvanceBlocked) {
+      return;
+    }
+
+    const delaySec =
+      forecastPageIndex === 0 && isReload && !useAuthenticForecast && forecastBodies.length === 1
+        ? 0.05
+        : dwellSec;
+
+    const delayMs = delaySec * 1000;
+    const t = setTimeout(() => {
+      onCompleteRef.current();
+    }, delayMs);
+    pageChangeTimeout.current = t;
+    return () => clearTimeout(t);
+  }, [
+    forecastPageIndex,
+    isReload,
+    forecastBodies.length,
+    weatherStationResponse,
+    pageAdvanceBlocked,
+    useAuthenticForecast,
+    dwellSec,
+  ]);
+
   const effectiveReveal =
     !isReload || isConfigOnlyReload ? maxReloadStepsFull : revealedStep;
 
@@ -287,6 +350,7 @@ export function ForecastScreen(props: ForecastScreenProps) {
   });
 
   const streamVisible = graphemes.slice(0, streamIndex).join("");
+  const contStreamVisible = contGraphemes.slice(0, contStreamIndex).join("");
 
   const continuationLineNodes = (body: string) =>
     body
@@ -299,13 +363,20 @@ export function ForecastScreen(props: ForecastScreenProps) {
         </div>
       ));
 
+  const firstPageForecastBudget = immediateLinesFirstPage(!!alert);
+  const forecastColumnClass =
+    "forecast forecast-hardware-text-column" +
+    (immediateForecastLines.length > 0 && immediateForecastLines.length < firstPageForecastBudget
+      ? " forecast-hardware-text-column--top-balance"
+      : "");
+
   if (!weatherStationResponse) return <></>;
 
-  if (screenBodies.length === 0) return <></>;
+  if (forecastBodies.length === 0) return <></>;
 
   return (
     <div id="forecast_screen" className={isReload ? "has-reloaded" : ""}>
-      {screenIx === 0 && (
+      {forecastPageIndex === 0 && (
         <>
           <Conditions
             city={weatherStationResponse.city}
@@ -314,12 +385,10 @@ export function ForecastScreen(props: ForecastScreenProps) {
             airQuality={airQuality}
             revealStep={effectiveReveal}
           />
-          <div className="forecast">
+          <div className={forecastColumnClass}>
             {alert && (
               <div
-                className={`centre-align forecast-alert reload-animation ${
-                  shouldAlertFlash(alert) ? "flash" : ""
-                }`}
+                className={`forecast-alert reload-animation ${shouldAlertFlash(alert) ? "flash" : ""}`}
                 style={reloadVis(alertReloadStep)}
               >
                 {formatAlertHeadline(alert.headline)}
@@ -327,16 +396,7 @@ export function ForecastScreen(props: ForecastScreenProps) {
             )}
             {useAuthenticForecast ? (
               <div className="forecast-authentic-wrap">
-                {authenticPhase === "clearing" && (
-                  <div
-                    className={`authentic-clear ${clearStyleClass(authenticRefresh?.clearStyle)}`}
-                    aria-hidden
-                  />
-                )}
-                {(authenticPhase === "streaming" || authenticPhase === "done") && (
-                  <pre className="authentic-forecast-stream">{streamVisible}</pre>
-                )}
-                {authenticPhase === "idle" && <div className="authentic-forecast-pending" aria-hidden />}
+                <pre className="authentic-forecast-stream">{streamVisible}</pre>
               </div>
             ) : (
               immediateForecastLines.map((line, ix) => (
@@ -348,10 +408,18 @@ export function ForecastScreen(props: ForecastScreenProps) {
           </div>
         </>
       )}
-      {screenIx > 0 && screenBodies[screenIx] != null && (
-        <div>
-          <div className="centre-align">{weatherStationResponse.city} forecast cont..</div>
-          {continuationLineNodes(screenBodies[screenIx])}
+      {forecastPageIndex > 0 && forecastBodies[forecastPageIndex] != null && (
+        <div className="forecast-continuation-screen">
+          <div className="forecast-continuation-head">{weatherStationResponse.city} forecast cont..</div>
+          <div className="forecast-continuation-body forecast-hardware-text-column">
+            {useAuthenticContinuation ? (
+              <div className="forecast-authentic-wrap">
+                <pre className="authentic-forecast-stream">{contStreamVisible}</pre>
+              </div>
+            ) : (
+              continuationLineNodes(forecastBodies[forecastPageIndex])
+            )}
+          </div>
         </div>
       )}
     </div>

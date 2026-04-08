@@ -1,27 +1,76 @@
 import { ElementCompact, xml2js } from "xml-js";
+import { EVENT_BUS_CONFIG_CHANGE_PRIMARY_LOCATION } from "consts";
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
 import axios from "lib/backendAxios";
 import { axiosGetWithMscMirror, MSC_HPFX_ORIGIN } from "lib/eccc/mscHttpMirror";
+import eventbus from "lib/eventbus";
 import { ECCCHotColdSpotElement, HotColdSpot } from "types";
 
 const logger = new Logger("Canada_Hot_Cold_Spots");
 const config = initializeConfig();
 
-// fetch this once every 6 hours
 const FETCH_CANADA_HOT_COLD_SPOT_INTERVAL = 60 * 1000 * 60 * 6;
 
+function asArray<T>(x: T | T[] | undefined | null): T[] {
+  if (x == null) return [];
+  return Array.isArray(x) ? x : [x];
+}
+
+function findQualifier(
+  element: ECCCHotColdSpotElement | undefined,
+  qualifierName: string
+): ECCCHotColdSpotElement | undefined {
+  return asArray(element?.qualifier as ECCCHotColdSpotElement | ECCCHotColdSpotElement[] | undefined).find(
+    (q) => q?._attributes?.name === qualifierName
+  );
+}
+
+function applyHotColdFromElements(
+  elements: ECCCHotColdSpotElement[],
+  target: { hotSpot: HotColdSpot; coldSpot: HotColdSpot }
+): void {
+  const hotSpotLocationCanada = elements.find((e) => e?._attributes?.name === "hot_spot_location_canada");
+  if (hotSpotLocationCanada) {
+    const hotTemp = findQualifier(hotSpotLocationCanada, "hot_spot_temperature_canada");
+    const hotProv = findQualifier(hotSpotLocationCanada, "province");
+    const hotLocationName = hotSpotLocationCanada._attributes?.value ?? "";
+    const hotLocationTempValue = hotTemp?._attributes?.value ?? "";
+    const hotLocationProvinceValue = hotProv?._attributes?.uom ?? "";
+    target.hotSpot = {
+      name: hotLocationName,
+      temperature: Number(hotLocationTempValue),
+      province: hotLocationProvinceValue,
+    };
+  }
+
+  const coldSpotLocationCanada = elements.find((e) => e?._attributes?.name === "cold_spot_location_canada");
+  if (coldSpotLocationCanada) {
+    const coldTemp = findQualifier(coldSpotLocationCanada, "cold_spot_temperature_canada");
+    const coldProv = findQualifier(coldSpotLocationCanada, "province");
+    const coldLocationName = coldSpotLocationCanada._attributes?.value ?? "";
+    const coldLocationTempValue = coldTemp?._attributes?.value ?? "";
+    const coldLocationProvinceValue = coldProv?._attributes?.uom ?? "";
+    target.coldSpot = {
+      name: coldLocationName,
+      temperature: Number(coldLocationTempValue),
+      province: coldLocationProvinceValue,
+    };
+  }
+}
+
 class CanadaProvincialHotColdSpots {
-  private _apiURL: string;
-  private _hotColdSpots = {
+  public _hotColdSpots = {
     hotSpot: { name: null, temperature: null, province: null } as HotColdSpot,
     coldSpot: { name: null, temperature: null, province: null } as HotColdSpot,
   };
   private _lastUpdated: Date;
+  private _apiURL = "";
 
   constructor() {
     this.fetchCanadaProvincialHotColdSpot();
     setInterval(() => this.fetchCanadaProvincialHotColdSpot(), FETCH_CANADA_HOT_COLD_SPOT_INTERVAL);
+    eventbus.addListener(EVENT_BUS_CONFIG_CHANGE_PRIMARY_LOCATION, () => this.fetchCanadaProvincialHotColdSpot());
   }
 
   private fetchCanadaProvincialHotColdSpot() {
@@ -41,66 +90,24 @@ class CanadaProvincialHotColdSpots {
         const data = resp.data;
         if (!data) return;
 
-        // convert to js object
         const provinceTodayData: ElementCompact = xml2js(data, { compact: true });
         if (!provinceTodayData) return;
 
-        // check it has hot/cold spot data (this is all we want here)
         const collection = provinceTodayData["om:ObservationCollection"];
         if (!collection) return;
 
-        const hotColdSpotParent = collection["om:member"][0];
-        if (!hotColdSpotParent) return;
+        const memberList = asArray(collection["om:member"]);
+        for (const member of memberList) {
+          const hotColdSpotData = member?.["om:Observation"]?.["om:result"];
+          if (!hotColdSpotData?.elements) continue;
 
-        const hotColdSpotData = hotColdSpotParent["om:Observation"]["om:result"];
-        if (!hotColdSpotData) return;
+          const elements = asArray(hotColdSpotData.elements.element) as ECCCHotColdSpotElement[];
+          if (!elements.length) continue;
 
-        // this presumes that the first element for `hot/cold_spot_location_canada` is the best for the day
-        const hotSpotLocationCanada: ECCCHotColdSpotElement = hotColdSpotData.elements.element.find(
-          (e: ECCCHotColdSpotElement) => e._attributes.name === "hot_spot_location_canada"
-        );
-
-        // pull out the values for the temp and province
-        const [hotLocationTempValueObj, hotLocationProvinceValueObj] = hotSpotLocationCanada?.qualifier ?? [];
-
-        // put all of this data together
-        if (hotSpotLocationCanada) {
-          const hotLocationName = hotSpotLocationCanada._attributes.value ?? "";
-          const hotLocationTempValue = hotLocationTempValueObj?._attributes?.value ?? "";
-          const hotLocationProvinceValue = hotLocationProvinceValueObj?._attributes?.uom ?? "";
-
-          // store for later use
-          this._hotColdSpots.hotSpot = {
-            name: hotLocationName,
-            temperature: Number(hotLocationTempValue),
-            province: hotLocationProvinceValue,
-          };
+          applyHotColdFromElements(elements, this._hotColdSpots);
+          this._lastUpdated = new Date();
+          break;
         }
-
-        // this presumes that the first element for `hot/cold_spot_location_canada` is the best for the day
-        const coldSpotLocationCanada: ECCCHotColdSpotElement = hotColdSpotData.elements.element.find(
-          (e: ECCCHotColdSpotElement) => e._attributes.name === "cold_spot_location_canada"
-        );
-
-        // pull out the values for the temp and province
-        const [coldLocationTempValueObj, coldLocationProvinceValueObj] = coldSpotLocationCanada?.qualifier ?? [];
-
-        // put all of this data together
-        if (coldSpotLocationCanada) {
-          const coldLocationName = coldSpotLocationCanada._attributes.value ?? "";
-          const coldLocationTempValue = coldLocationTempValueObj?._attributes?.value ?? "";
-          const coldLocationProvinceValue = coldLocationProvinceValueObj?._attributes?.uom ?? "";
-
-          // store for later use
-          this._hotColdSpots.coldSpot = {
-            name: coldLocationName,
-            temperature: Number(coldLocationTempValue),
-            province: coldLocationProvinceValue,
-          };
-        }
-
-        // last updated
-        this._lastUpdated = new Date();
       })
       .catch((err) => logger.error("Unable to fetch canada/provincial hot/cold spots", err));
   }
@@ -117,7 +124,7 @@ class CanadaProvincialHotColdSpots {
   }
 }
 
-let canadaProvincialHotColdSpots: CanadaProvincialHotColdSpots = null;
+let canadaProvincialHotColdSpots: CanadaProvincialHotColdSpots | null = null;
 export function initializeCanadaProvincialHotColdSpot(forceNewInstance: boolean = false) {
   if (!forceNewInstance && canadaProvincialHotColdSpots) return canadaProvincialHotColdSpots;
 

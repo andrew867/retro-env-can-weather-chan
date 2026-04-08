@@ -15,8 +15,10 @@ export function AlmanacScreen(props: AlmanacScreenProps) {
   // no response from weather station so whatever
   if (!weatherStationResponse) return <></>;
 
-  const formatTemperature = (temperature: number, length: number = TEMPERATURE_STRING_LENGTH) =>
-    (temperature?.toFixed(1).toString() ?? "N/A").padStart(length);
+  const formatTemperature = (temperature: number | null | undefined, length: number = TEMPERATURE_STRING_LENGTH) => {
+    if (temperature == null || Number.isNaN(Number(temperature))) return "N/A".padStart(length);
+    return Number(temperature).toFixed(1).padStart(length);
+  };
 
   const lastYear = {
     hi: formatTemperature(almanac?.temperatures?.lastYearMax?.value),
@@ -28,26 +30,24 @@ export function AlmanacScreen(props: AlmanacScreenProps) {
     lo: formatTemperature(almanac?.temperatures?.normalMin?.value, 6),
   };
 
-  const record = {
-    hi: `${formatTemperature(almanac?.temperatures?.extremeMax?.value, 6)} in ${
-      almanac?.temperatures?.extremeMax?.year ?? "N/A"
-    }`,
-    lo: `${formatTemperature(almanac?.temperatures?.extremeMin?.value, 6)} in ${
-      almanac?.temperatures?.extremeMin?.year ?? "N/A"
-    }`,
-  };
+  const recordHiVal = formatTemperature(almanac?.temperatures?.extremeMax?.value, 6);
+  const recordHiYr = almanac?.temperatures?.extremeMax?.year;
+  const recordLoVal = formatTemperature(almanac?.temperatures?.extremeMin?.value, 6);
+  const recordLoYr = almanac?.temperatures?.extremeMin?.year;
 
   // the extra spaces in the table below are intentional. Last year is meant to have a space before it.
   return (
-    <div>
+    <div id="almanac_screen">
       <Conditions city={city} conditions={observed} stationTime={stationTime} showPressure airQuality={airQuality} />
 
-      <div> Last Year Normal Records{"".padEnd(2)}Year</div>
-      <div>
-        {"Hi".padStart(3)} {lastYear.hi} {normal.hi} {record.hi}
-      </div>
-      <div>
-        {"Lo".padStart(3)} {lastYear.lo} {normal.lo} {record.lo}
+      <div className="forecast-hardware-text-column forecast-hardware-text-column--almanac-records">
+        <div> Last Year Normal Records{"".padEnd(2)}Year</div>
+        <div>
+          {"Hi".padStart(3)} {lastYear.hi} {normal.hi} {recordHiVal} {String(recordHiYr ?? "N/A").padStart(4)}
+        </div>
+        <div>
+          {"Lo".padStart(3)} {lastYear.lo} {normal.lo} {recordLoVal} {String(recordLoYr ?? "N/A").padStart(4)}
+        </div>
       </div>
     </div>
   );

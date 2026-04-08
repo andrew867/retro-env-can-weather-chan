@@ -16,6 +16,23 @@ export function cleanupAlertHeadline(headline: string) {
   return headline.replace(/\sin effect/gi, "");
 }
 
+/**
+ * Short banner for CAP continuation slides (full-screen alert text pages after the first).
+ * Example: `YELLOW WARNING CONT.`
+ */
+export function compactContinuationBannerHeadline(headline: string) {
+  const stripped = (headline ?? "")
+    .replace(/\s*\(cont\.?\)\s*$/i, "")
+    .trim();
+  const cleaned = cleanupAlertHeadline(stripped);
+  const m = cleaned.match(/^(red|yellow|green)\s+warning\b/i);
+  if (m) return `${m[1].toUpperCase()} WARNING CONT.`;
+  const words = cleaned.replace(/\s+/g, " ").trim();
+  if (!words.length) return "WEATHER ALERT CONT.";
+  const short = words.length > 48 ? `${words.slice(0, 45)}…` : words;
+  return `${short} CONT.`;
+}
+
 export function isWarningSevereThunderstormWatch(headline: string) {
   return (headline ?? "").toLowerCase() === "severe thunderstorm watch in effect";
 }

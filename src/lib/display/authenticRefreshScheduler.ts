@@ -1,4 +1,4 @@
-import type { AuthenticClearStyle, AuthenticRefreshConfig } from "types";
+import type { AuthenticRefreshConfig } from "types";
 
 /** Split text into grapheme clusters when supported; else code-point iteration. */
 export function segmentGraphemes(text: string): string[] {
@@ -33,11 +33,4 @@ export function computeStepDelayMs(config: Pick<AuthenticRefreshConfig, "charsPe
 
 export function isStreamablePlaintext(s: string): boolean {
   return s.trim().length > 0;
-}
-
-export function clearStyleClass(style: AuthenticClearStyle | undefined): string {
-  const s = style ?? "blank";
-  if (s === "fill") return "authentic-clear--fill";
-  if (s === "inverse") return "authentic-clear--inverse";
-  return "authentic-clear--blank";
 }

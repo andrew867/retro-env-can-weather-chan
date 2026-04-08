@@ -1,5 +1,5 @@
 import express from "express";
-import { getInitHandler } from "lib/config";
+import { getInitHandler, getInitStreamHandler } from "lib/config";
 
 /*
  * "/" here represents "/init"
@@ -7,5 +7,6 @@ import { getInitHandler } from "lib/config";
 
 const router = express.Router();
 router.get("/", getInitHandler);
+router.get("/stream", getInitStreamHandler);
 
 export default router;

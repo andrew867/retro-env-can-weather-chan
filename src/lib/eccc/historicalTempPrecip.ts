@@ -11,9 +11,36 @@ import {
   LastMonthSummary,
 } from "types";
 import { isSameMonth, isValid, isYesterday, parseISO, subMonths } from "date-fns";
-import { isDateInCurrentWinterSeason, getIsWinterSeason, isDateInCurrentSummerSeason, isStartOfMonth } from "lib/date";
+import { isDateInCurrentWinterSeason, getIsWinterSeason, isDateInCurrentSummerSeason } from "lib/date";
 import eventbus from "lib/eventbus";
-import { EVENT_BUS_CONFIG_CHANGE_HISTORICAL_TEMP_PRECIP } from "consts";
+import { EVENT_BUS_AUXILIARY_WEATHER_DATA_READY, EVENT_BUS_CONFIG_CHANGE_HISTORICAL_TEMP_PRECIP } from "consts";
+
+function xmlText(el: unknown): string | undefined {
+  if (el == null) return undefined;
+  if (typeof el === "string" || typeof el === "number") return String(el).trim();
+  const o = el as { _text?: string | number };
+  if (o._text !== undefined && o._text !== null) return String(o._text).trim();
+  return undefined;
+}
+
+/** ECCC bulk row: mm liquid equivalent — prefer `totalprecipitation`, else `totalrain`; trace/missing → 0. */
+function dailyPrecipitationMm(row: { totalprecipitation?: unknown; totalrain?: unknown }): number {
+  let raw = xmlText(row.totalprecipitation) ?? xmlText(row.totalrain);
+  if (raw == null || raw === "") return 0;
+  const u = raw.toUpperCase();
+  if (u === "T" || u === "M") return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function dailySnowCm(row: { totalsnow?: unknown }): number {
+  const raw = xmlText(row.totalsnow);
+  if (raw == null || raw === "") return 0;
+  const u = raw.toUpperCase();
+  if (u === "T" || u === "M") return 0;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
 
 const logger = new Logger("Historical_Temp_Precip");
 const config = initializeConfig();
@@ -86,7 +113,8 @@ class HistoricalTempPrecip {
             const stationData = climateData["stationdata"];
             if (!stationData) throw new Error("No station data");
 
-            this._historicalData.push(...stationData);
+            const rows = Array.isArray(stationData) ? stationData : [stationData];
+            this._historicalData.push(...rows);
 
             logger.log("Fetched historical data for", year);
           })
@@ -99,6 +127,7 @@ class HistoricalTempPrecip {
     Promise.allSettled(promises).then(() => {
       this.parseHistoricalStationData(currentDate);
       this._fetchBusy = false;
+      eventbus.emit(EVENT_BUS_AUXILIARY_WEATHER_DATA_READY);
       if (this._fetchPendingDate) {
         const next = this._fetchPendingDate;
         this._fetchPendingDate = null;
@@ -128,8 +157,10 @@ class HistoricalTempPrecip {
     if (!todayLastYear) return;
 
     // and store the highest temp and lowest temp
-    this._lastYearTemperatures.max = { value: Number(todayLastYear.maxtemp?._text), unit: "C" };
-    this._lastYearTemperatures.min = { value: Number(todayLastYear.mintemp?._text), unit: "C" };
+    const maxV = Number(xmlText(todayLastYear.maxtemp) ?? NaN);
+    const minV = Number(xmlText(todayLastYear.mintemp) ?? NaN);
+    this._lastYearTemperatures.max = Number.isFinite(maxV) ? { value: maxV, unit: "C" } : null;
+    this._lastYearTemperatures.min = Number.isFinite(minV) ? { value: minV, unit: "C" } : null;
   }
 
   private parseSeasonalPrecip(currentDate: Date) {
@@ -145,7 +176,7 @@ class HistoricalTempPrecip {
     const lastMonth = subMonths(currentDate, 1);
 
     // precip data can spread across this year and last year during the winter so we need to loop through the entire thing
-    const isWinterSeason = getIsWinterSeason();
+    const isWinterSeason = getIsWinterSeason(currentDate.getMonth() + 1);
     let rainfall = 0;
     let yesterdayRainfall = 0;
     let yesterdaySnowfall = 0;
@@ -156,30 +187,25 @@ class HistoricalTempPrecip {
         _attributes: { year, month, day },
       } = historicalData;
 
-      // date of data we're looking at, and if its from the current year
-      const date = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
-      const isThisYear = Number(year) === currentDate.getFullYear();
+      const y = String(year);
+      const m = String(month).padStart(2, "0");
+      const d = String(day).padStart(2, "0");
+      const date = `${y}-${m}-${d}`;
+      const isThisYear = Number(y) === currentDate.getFullYear();
 
       // if the date is from the last month we'll store this so we can process last month's stats
       if (isSameMonth(parseISO(date), lastMonth)) lastMonthData.push(historicalData);
 
-      // normally if its summer we get rainfall, and if its winter we get snowfall
-      // but eccc isn't accurate with storing snowfall anymore so we just go with rainfall
+      // Use observed `currentDate` for season windows so bulk-data sums match the station’s “today”, not only the server clock.
       if (isWinterSeason) {
-        // back in the day winter season would've fetched snowfall in cm
-        if (isDateInCurrentWinterSeason(date)) rainfall += Number(historicalData.totalprecipitation?._text ?? 0);
-      } else {
-        // summer season fetches rainfall in mm
-        if (isDateInCurrentSummerSeason(date) && isThisYear)
-          rainfall += Number(historicalData.totalprecipitation?._text ?? 0);
+        if (isDateInCurrentWinterSeason(date, currentDate)) rainfall += dailyPrecipitationMm(historicalData);
+      } else if (isDateInCurrentSummerSeason(date, currentDate) && isThisYear) {
+        rainfall += dailyPrecipitationMm(historicalData);
       }
 
-      // also store yesterday's precip data, just for reasons
       if (isYesterday(parseISO(date))) {
-        yesterdayRainfall = Number(
-          Number(historicalData?.totalrain?._text ?? historicalData.totalprecipitation?._text ?? 0).toFixed(1)
-        );
-        yesterdaySnowfall = Number(Number(historicalData?.totalsnow?._text ?? 0).toFixed(1));
+        yesterdayRainfall = Number(dailyPrecipitationMm(historicalData).toFixed(1));
+        yesterdaySnowfall = Number(dailySnowCm(historicalData).toFixed(1));
       }
     });
 
@@ -197,8 +223,8 @@ class HistoricalTempPrecip {
     this.processLastMonthsStats(lastMonthData, currentDate);
   }
 
-  private processLastMonthsStats(lastMonthData: HistoricalDataStats, currentDate: Date) {
-    if (!lastMonthData?.length || !isStartOfMonth(currentDate)) {
+  private processLastMonthsStats(lastMonthData: HistoricalDataStats, _currentDate: Date) {
+    if (!lastMonthData?.length) {
       this._lastMonthSummary = null;
       return;
     }
@@ -212,16 +238,16 @@ class HistoricalTempPrecip {
 
     // loop through and grab all of the high/low temps and precip values
     lastMonthData.forEach((dayOfLastMonth) => {
-      const maxTemp = Number(dayOfLastMonth.maxtemp._text);
-      const minTemp = Number(dayOfLastMonth.mintemp._text);
-      const meanTemp = Number(dayOfLastMonth.meantemp._text);
+      const maxTemp = Number(xmlText(dayOfLastMonth.maxtemp) ?? NaN);
+      const minTemp = Number(xmlText(dayOfLastMonth.mintemp) ?? NaN);
+      const meanTemp = Number(xmlText(dayOfLastMonth.meantemp) ?? NaN);
 
       const day = Number(dayOfLastMonth._attributes.day);
       if (!isNaN(maxTemp)) highTemps.push({ day, value: maxTemp });
       if (!isNaN(minTemp)) lowTemps.push({ day, value: minTemp });
       if (!isNaN(meanTemp)) meanTemps.push({ day, value: meanTemp });
 
-      precipValues.push({ day, value: Number(dayOfLastMonth.totalprecipitation._text ?? 0) });
+      precipValues.push({ day, value: dailyPrecipitationMm(dayOfLastMonth) });
     });
 
     // calculate the average high/low and mean

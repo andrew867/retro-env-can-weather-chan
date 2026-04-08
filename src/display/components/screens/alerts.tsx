@@ -1,6 +1,12 @@
-import { SCREEN_DEFAULT_DISPLAY_LENGTH } from "consts";
-import { cleanupAlertHeadline, isWarningSevereThunderstormWatch, shouldAlertFlash } from "lib/cap-cp";
-import { formatStringTo8x32 } from "lib/display";
+import { SCREEN_DEFAULT_DISPLAY_LENGTH, SCREEN_MIN_DISPLAY_LENGTH } from "consts";
+import {
+  cleanupAlertHeadline,
+  compactContinuationBannerHeadline,
+  isWarningSevereThunderstormWatch,
+  shouldAlertFlash,
+} from "lib/cap-cp";
+import { paginateAlertDescriptionToPages } from "lib/cap-cp/alertDescriptionPages";
+import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useRef, useState } from "react";
 import { CAPObject } from "types";
 import { AutomaticScreenProps } from "types/screen.types";
@@ -8,6 +14,8 @@ import { AutomaticScreenProps } from "types/screen.types";
 type AlertScreenProps = {
   alerts: CAPObject[];
   hasFetched: boolean;
+  /** Flavour: seconds each alert page (incl. CAP continuation slides) stays on screen. */
+  secondsPerPage?: number;
 } & AutomaticScreenProps;
 
 type FakeAlertScreen = {
@@ -30,63 +38,76 @@ function SevereTStormExplanationScreen() {
 }
 
 export function AlertScreen(props: AlertScreenProps) {
-  const { onComplete, alerts, hasFetched } = props ?? {};
+  const { onComplete, alerts, hasFetched, secondsPerPage } = props ?? {};
+  const dwellMs =
+    (secondsPerPage != null && secondsPerPage >= SCREEN_MIN_DISPLAY_LENGTH
+      ? secondsPerPage
+      : SCREEN_DEFAULT_DISPLAY_LENGTH) * 1000;
+  const onCompleteRef = useStableOnCompleteRef(onComplete);
   const [page, setPage] = useState(1);
   const [displayedAlert, setDisplayedAlert] = useState<FakeAlertScreen>();
   const [displayAlerts, setDisplayAlerts] = useState<FakeAlertScreen[]>([]);
-  const pageChangeTimeout = useRef<NodeJS.Timeout>(null);
+  const pageChangeTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // still waiting on alerts to be fetched
     if (!hasFetched) return;
 
     // no alerts so we're done with this screen
-    if (!alerts?.length) onComplete();
+    if (!alerts?.length) onCompleteRef.current();
     else {
-      // see if there's a severe tstorm and add a page for it
       const tempAlerts: FakeAlertScreen[] = [...alerts];
       const hasSevereTStormWatch = tempAlerts.findIndex((alert) => isWarningSevereThunderstormWatch(alert.headline));
       if (hasSevereTStormWatch > -1)
         tempAlerts.splice(hasSevereTStormWatch + 1, 0, { isSevereTStormExplanation: true });
 
-      // set this is as the alerts to show
-      setDisplayAlerts(tempAlerts);
+      const expanded: FakeAlertScreen[] = [];
+      for (const item of tempAlerts) {
+        if ((item as FakeAlertScreen).isSevereTStormExplanation) {
+          expanded.push(item);
+          continue;
+        }
+        const cap = item as CAPObject;
+        const pages = paginateAlertDescriptionToPages(cap.description ?? "");
+        if (pages.length === 0) {
+          expanded.push(cap);
+        } else if (pages.length === 1) {
+          expanded.push({ ...cap, description: pages[0] });
+        } else {
+          pages.forEach((body, i) => {
+            expanded.push({
+              ...cap,
+              description: body,
+              headline:
+                i === 0 ? cap.headline : compactContinuationBannerHeadline(cap.headline ?? ""),
+            });
+          });
+        }
+      }
+      setDisplayAlerts(expanded);
     }
-  }, [alerts]);
+  }, [alerts, hasFetched]);
 
-  // page changer
+  useEffect(() => {
+    setPage(1);
+  }, [displayAlerts]);
+
+  // page changer — clear prior timeout on each dep change (same pattern as forecast pagination)
   useEffect(() => {
     if (!displayAlerts.length) return;
 
-    // we know we have alerts so show the one for the current page
     setDisplayedAlert(displayAlerts[page - 1]);
 
+    if (pageChangeTimeout.current) clearTimeout(pageChangeTimeout.current);
     pageChangeTimeout.current = setTimeout(() => {
       if (page < displayAlerts.length) setPage(page + 1);
-      else onComplete();
-    }, SCREEN_DEFAULT_DISPLAY_LENGTH * 1000);
-  }, [page, displayAlerts]);
+      else onCompleteRef.current();
+    }, dwellMs);
 
-  // used to clear the page switching timeout
-  useEffect(() => {
     return () => {
-      pageChangeTimeout.current && clearTimeout(pageChangeTimeout.current);
+      if (pageChangeTimeout.current) clearTimeout(pageChangeTimeout.current);
     };
-  }, []);
-
-  const getShortDescriptionForAlert = (description: string) => {
-    if (!description?.length) return "";
-
-    // split on each paragraph
-    const paragraphSplit = description.split(/.\s\s/).map((paragraph) => paragraph.trim());
-
-    // take the first two paragraphs and join them
-    const shortDescription = paragraphSplit.slice(0, 2)?.join(". ")?.trim() ?? "";
-
-    // remove extra stuff thats not relevant
-    const [relevantDescription] = shortDescription.split(/\n+###|\s+##/gi);
-    return formatStringTo8x32(relevantDescription.replace(/\n+/g, " ").split(/locations impacted/gi)[0], 7);
-  };
+  }, [page, displayAlerts, dwellMs]);
 
   // display nothing if there's no alerts
   if (!displayAlerts?.length) return <></>;
@@ -99,7 +120,9 @@ export function AlertScreen(props: AlertScreenProps) {
           <div className={shouldAlertFlash(displayedAlert as CAPObject) ? "flash" : ""}>
             {cleanupAlertHeadline(displayedAlert.headline)}
           </div>
-          <div>{getShortDescriptionForAlert(displayedAlert.description)}</div>
+          <div className="alert-description-body" style={{ whiteSpace: "pre-wrap", textAlign: "left" }}>
+            {displayedAlert.description}
+          </div>
         </>
       )}
     </div>

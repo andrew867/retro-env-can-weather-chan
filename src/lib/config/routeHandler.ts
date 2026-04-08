@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import { initializeConfig } from "./config";
+import { broadcastCrawlerUpdate, registerInitSseClient } from "./initSseHub";
 import { getECCCWeatherStations } from "lib/eccc/weatherStations";
 import { AuthenticRefreshConfig, GfxRuntimeConfig } from "types";
 
@@ -27,7 +28,13 @@ export function getInitHandler(req: Request, res: Response) {
     crawler: config.crawlerMessages,
     flavour: config.flavour,
     music: config.musicPlaylist ?? [],
+    infoScreen: config.infoScreenLines ?? [],
   });
+}
+
+/** SSE: push `crawler_update` when crawler lines change (see `INIT_SSE_CRAWLER_EVENT`). */
+export function getInitStreamHandler(req: Request, res: Response) {
+  registerInitSseClient(res);
 }
 
 export async function postStationsHandler(req: Request, res: Response) {
@@ -164,6 +171,7 @@ export function postCrawlerMessages(req: Request, res: Response) {
     if (!Array.isArray(crawler)) throw "`crawler` must be an array of strings";
 
     config.setCrawlerMessages(crawler);
+    broadcastCrawlerUpdate(crawler);
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: e });

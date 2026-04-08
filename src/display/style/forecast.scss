@@ -1,42 +1,99 @@
 /** Forecast reload line visibility is driven in JS (ForecastScreen) so reveals stay strictly ordered. */
 
-.forecast-authentic-wrap {
-  min-height: 1em;
-  position: relative;
+#forecast_screen {
+  align-self: stretch;
+  text-align: left;
   width: 100%;
 }
 
-.authentic-forecast-pending {
-  min-height: 1em;
-  visibility: hidden;
+/**
+ * Centered ~32-column raster (text left-aligned inside), matching VHS citypage / Weather Channel plates.
+ * Used for first-page forecast copy, continuation bodies, and outlook list.
+ */
+.forecast-hardware-text-column {
+  margin-inline: auto;
+  max-width: 32ch;
+  text-align: left;
+  width: 100%;
+}
+
+/** Almanac “Last Year / Normal / Records” rows are wider than 32 cols on the original feed. */
+.forecast-hardware-text-column--almanac-records {
+  max-width: 44ch;
+}
+
+/** Only when the first-page forecast block is short of its line budget (does not fill the plate). */
+#forecast_screen .forecast.forecast-hardware-text-column--top-balance {
+  margin-top: 0.5em;
+}
+
+#almanac_screen {
+  align-self: stretch;
+  padding-bottom: 0.55em;
+  width: 100%;
+}
+
+#almanac_screen .forecast-hardware-text-column--almanac-records {
+  margin-top: 0.5em;
+}
+
+.forecast-continuation-screen {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.forecast-continuation-head {
+  margin-bottom: 0.4em;
+  text-align: center;
+  width: 100%;
+}
+
+#forecast_screen .forecast {
+  text-align: left;
+}
+
+.forecast-authentic-wrap {
+  min-height: 0;
+  position: relative;
+  width: 100%;
 }
 
 .authentic-forecast-stream {
   background: transparent;
   color: inherit;
+  display: block;
   font: inherit;
   margin: 0;
+  min-height: 0;
   position: relative;
+  text-align: left;
   text-transform: inherit;
   white-space: pre-wrap;
-  z-index: 1;
+  width: 100%;
 }
 
-.authentic-clear {
-  inset: 0;
-  position: absolute;
-  z-index: 2;
+/** Regional outlook: centered plate title, body in same hardware column as forecast copy. */
+.outlook-screen-title {
+  margin-bottom: 0.35em;
+  text-align: center;
+  width: 100%;
 }
 
-.authentic-clear--blank {
-  background: #000;
+#outlook_screen .outlook-screen-body {
+  line-height: 1.15;
 }
 
-.authentic-clear--fill {
-  background: #fff;
+.outlook-body-line {
+  margin: 0;
+  text-align: left;
+  text-transform: uppercase;
 }
 
-.authentic-clear--inverse {
-  background: #fff;
-  filter: invert(1);
+/** Province temp/precip: header rows use the same span column grid as `<li>` rows (avoids padStart(19)+mixed gaps jumbling). */
+#province_tracking_screen {
+  text-align: left;
+  white-space: pre;
+  width: 100%;
 }

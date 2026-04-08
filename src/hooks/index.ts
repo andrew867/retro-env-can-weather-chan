@@ -8,6 +8,7 @@ export * from "./season";
 export * from "./lastMonth";
 export * from "./hotColdSpots";
 export * from "./usa";
+export * from "./airportMetar";
 export * from "./sunspots";
 export * from "./config";
 export * from "./saveConfigOption";

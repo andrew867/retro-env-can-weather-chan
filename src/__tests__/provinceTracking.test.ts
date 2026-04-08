@@ -250,6 +250,31 @@ describe("Provincial temp/precip tracking", () => {
     const provinceTracking = initializeProvinceTracking();
   });
 
+  it("parses yesterday precip when citypage XML uses a text-only precip element (ec-weather-js returns a string)", (done) => {
+    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => "");
+
+    const minimalWithStringPrecip = `<siteData>
+<location><country code="ca">Canada</country><province code="on">Ontario</province><name code="s0000623">Ottawa</name></location>
+<currentConditions><temperature>5</temperature></currentConditions>
+<yesterdayConditions><temperature class="high">10</temperature><temperature class="low">5</temperature><precip>4.2</precip></yesterdayConditions>
+</siteData>`;
+
+    moxios.wait(async () => {
+      await moxios.requests.at(0).respondWith({ status: 200, response: minimalWithStringPrecip });
+      await moxios.requests.at(1).respondWith({ status: 200, response: minimalWithStringPrecip });
+
+      const { tracking } = provinceTracking.provinceTracking();
+      expect(tracking[0].yesterdayPrecip).toBe(23.5);
+      expect(tracking[1].yesterdayPrecip).toBe(4.2);
+
+      done();
+    });
+
+    jest.useFakeTimers({ doNotFake: ["setTimeout"] });
+    jest.setSystemTime(dayTimeDate);
+    const provinceTracking = initializeProvinceTracking();
+  });
+
   it("doesn't update yesterday precip data before 2am", (done) => {
     jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => JSON.stringify(fakeStoredData));
 

@@ -2,6 +2,7 @@ import fs from "fs";
 import { initializeCurrentConditions } from "./conditions";
 import { listen } from "lib/amqp";
 import { mscAmqpListenOptionsFromEnv } from "lib/amqp/mscAmqpEnv";
+import { recordMscAmqpErrorEvent, recordMscAmqpMessage } from "lib/amqp/mscAmqpStats";
 import { Connection } from "types/amqp.types";
 import Logger from "lib/logger";
 import { CAPCPFile } from "lib/cap-cp";
@@ -9,6 +10,8 @@ import axios from "lib/backendAxios";
 import { axiosGetWithMscMirror } from "lib/eccc/mscHttpMirror";
 import { FS_NO_FILE_FOUND, MAX_STORED_CAP_ALERTS } from "consts";
 import { compareAsc, parseISO } from "date-fns";
+import eventbus from "lib/eventbus";
+import { EVENT_BUS_ALERTS_UPDATED } from "consts";
 
 const logger = new Logger("Alert_Monitor");
 const conditions = initializeCurrentConditions();
@@ -40,8 +43,12 @@ class AlertMonitor {
 
     // handle errors and messages
     listener
-      .on("error", (...error) => logger.error("AMQP error:", error))
+      .on("error", (...error) => {
+        recordMscAmqpErrorEvent("alerts");
+        logger.error("AMQP error:", error);
+      })
       .on("message", (date: string, url: string) => {
+        recordMscAmqpMessage("alerts");
         logger.log("AMQP pushed CAP file", url, "at", date);
         this.parseCAPFile(url);
       });
@@ -91,6 +98,7 @@ class AlertMonitor {
 
     this.saveCAPFiles();
     this._lastMutationAt = new Date().toISOString();
+    eventbus.emit(EVENT_BUS_ALERTS_UPDATED);
   }
 
   /** Prefer newest CAP files when over the retention cap. */
@@ -131,7 +139,12 @@ class AlertMonitor {
   }
 
   private periodicCleanupCAPFiles() {
-    if (!this._alerts?.length) return;
+    if (!this._alerts?.length) {
+      // Avoid leaving a days-old _lastMutationAt when the list is empty (footer freshness header).
+      this._lastMutationAt = new Date().toISOString();
+      eventbus.emit(EVENT_BUS_ALERTS_UPDATED);
+      return;
+    }
 
     logger.log("Running periodic cleanup");
 
@@ -145,6 +158,7 @@ class AlertMonitor {
 
     this.saveCAPFiles();
     this._lastMutationAt = new Date().toISOString();
+    eventbus.emit(EVENT_BUS_ALERTS_UPDATED);
   }
 
   private sortAlerts() {

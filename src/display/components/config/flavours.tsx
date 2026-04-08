@@ -19,8 +19,15 @@ import {
 } from "@chakra-ui/react";
 import { useSaveConfigOption } from "hooks";
 import { Flavour, FlavourScreen } from "types";
-import { generateNewFlavour, isAutomaticScreen } from "lib/flavour/utils";
-import { FLAVOUR_NAME_MAX_LENGTH, SCREEN_DESCRIPTIONS, SCREEN_MIN_DISPLAY_LENGTH, SCREEN_NAMES, Screens } from "consts";
+import { generateNewFlavour, usesPerPageDwellInFlavourConfig } from "lib/flavour/utils";
+import {
+  FLAVOUR_NAME_MAX_LENGTH,
+  SCREEN_DEFAULT_DISPLAY_LENGTH,
+  SCREEN_DESCRIPTIONS,
+  SCREEN_MIN_DISPLAY_LENGTH,
+  SCREEN_NAMES,
+  Screens,
+} from "consts";
 import axios from "lib/axios";
 
 type FlavoursConfigProps = {
@@ -115,7 +122,7 @@ export function FlavoursConfig({ currentFlavours }: FlavoursConfigProps) {
 
     setMutableFlavour({
       ...mutableFlavour,
-      screens: [...mutableFlavour.screens, { id: Screens.FORECAST, duration: 0 }],
+      screens: [...mutableFlavour.screens, { id: Screens.FORECAST, duration: SCREEN_DEFAULT_DISPLAY_LENGTH }],
     });
   };
 
@@ -131,7 +138,10 @@ export function FlavoursConfig({ currentFlavours }: FlavoursConfigProps) {
     const newScreens = [...mutableFlavour.screens];
     newScreens.splice(ix, 1, {
       id: Number(e.target.value),
-      duration: isAutomaticScreen(Number(e.target.value)) ? 0 : Math.max(SCREEN_MIN_DISPLAY_LENGTH, screen.duration),
+      duration: Math.max(
+        SCREEN_MIN_DISPLAY_LENGTH,
+        screen.duration >= SCREEN_MIN_DISPLAY_LENGTH ? screen.duration : SCREEN_DEFAULT_DISPLAY_LENGTH
+      ),
     });
 
     // store to state
@@ -174,9 +184,10 @@ export function FlavoursConfig({ currentFlavours }: FlavoursConfigProps) {
     <Stack spacing={6}>
       <Stack>
         <Text>
-          Flavours can be used to change the order in which screens appear and how long they appear for. You can also
-          change the duration for screens which aren't automatic. An automatic screen is generally paginated and is used
-          for alerts, forecast, etc.
+          Build the playlist order here. Timing (seconds) is one full step for most screens. For Forecast, Outlook, and
+          Alerts, the number is per page: each paginated slide (forecast continuation, outlook segment, alert/CAP page)
+          uses the same dwell, so total time grows with page count (e.g. 2 outlook pages at 10s ≈ 20s for that block).
+          Minimum {SCREEN_MIN_DISPLAY_LENGTH}s per step.
         </Text>
       </Stack>
 
@@ -219,7 +230,7 @@ export function FlavoursConfig({ currentFlavours }: FlavoursConfigProps) {
                 <Thead>
                   <Tr>
                     <Th>Screen</Th>
-                    <Th>Duration (secs)</Th>
+                    <Th>Timing (seconds)</Th>
                     <Th></Th>
                   </Tr>
                 </Thead>
@@ -243,17 +254,24 @@ export function FlavoursConfig({ currentFlavours }: FlavoursConfigProps) {
                           </Select>
                         </Td>
                         <Td>
-                          {isAutomaticScreen(screen.id) ? (
-                            <Text>Automatic</Text>
-                          ) : (
+                          <Stack spacing={1}>
                             <Input
-                              value={screen.duration}
+                              value={
+                                screen.duration >= SCREEN_MIN_DISPLAY_LENGTH
+                                  ? screen.duration
+                                  : SCREEN_DEFAULT_DISPLAY_LENGTH
+                              }
                               type="number"
                               onChange={(e) => updateScreenDuration(e, screen, ix)}
                               onBlur={() => onBlurScreenValidation(screen, ix)}
                               min={SCREEN_MIN_DISPLAY_LENGTH}
-                            ></Input>
-                          )}
+                            />
+                            <Text fontSize="xs" color="gray.500">
+                              {usesPerPageDwellInFlavourConfig(screen.id)
+                                ? "Per page (split slides each use this many seconds)."
+                                : "One dwell for this whole step."}
+                            </Text>
+                          </Stack>
                         </Td>
                         <Td>
                           <Stack direction={"row"} spacing={2}>

@@ -1,20 +1,27 @@
 import { format, isValid, subMonths } from "date-fns";
+import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect } from "react";
 import { LastMonth } from "types";
 import { AutomaticScreenProps } from "types/screen.types";
 
 type LastMonthScreenProps = {
   city: string;
-  lastMonth: LastMonth;
+  lastMonth: LastMonth | undefined;
+  lastMonthFetchAttempted: boolean;
 } & AutomaticScreenProps;
 
 export function LastMonthScreen(props: LastMonthScreenProps) {
-  const { city, lastMonth, onComplete } = props ?? {};
+  const { city, lastMonth, lastMonthFetchAttempted, onComplete } = props ?? {};
+  const onCompleteRef = useStableOnCompleteRef(onComplete);
 
   useEffect(() => {
-    // if there's no data just return
-    if (!city?.length || !lastMonth?.actual || !lastMonth?.normal) onComplete();
-  }, []);
+    if (!city?.length) {
+      onCompleteRef.current();
+      return;
+    }
+    if (!lastMonthFetchAttempted) return;
+    if (!lastMonth?.actual || !lastMonth?.normal) onCompleteRef.current();
+  }, [city, lastMonth, lastMonthFetchAttempted]);
 
   if (!city?.length || !lastMonth?.actual || !lastMonth?.normal) return <></>;
 

@@ -14,6 +14,8 @@ export enum Screens {
   INFO,
   SUNSPOTS,
   WINDCHILL,
+  /** ICAO METAR (AWC) — Canadian/US/international airports from config. */
+  AIRPORT_METAR,
 }
 
 export const SCREEN_NAMES = {
@@ -54,8 +56,11 @@ export const SCREEN_DESCRIPTIONS = {
   [Screens.SUNSPOTS]: "List of forecast for warmer cities during the winter",
   // [Screens.RANDOM]: "Random selection from a pre-determined list of screens",
   [Screens.WINDCHILL]: "Explains the windchill numbers",
+  [Screens.AIRPORT_METAR]:
+    "Selected ICAO stations — temperatures and flight category / sky from NOAA AWC METAR (same feed as USA backup)",
 };
 
+/** Rotator does not arm an outer dwell timer — the screen advances itself (per-page timers inside the component). */
 export const SCREENS_WITH_AUTO_DURATION = [Screens.ALERTS, Screens.FORECAST];
 
 export const SCREEN_DEFAULT_DISPLAY_LENGTH = 14 as const;

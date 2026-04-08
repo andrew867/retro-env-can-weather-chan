@@ -5,11 +5,13 @@ import {
   getAlmanac,
   getSeasons,
   getAlerts,
+  getAlertsLive,
   getLive,
   getNational,
   getProvinceTracking,
   getHoldColdSpots,
   getUSA,
+  getAirportMetar,
   getSunspots,
 } from "lib/eccc/routeHandler";
 
@@ -22,10 +24,12 @@ router.get("/observed", getObserved);
 router.get("/forecast", getForecast);
 router.get("/almanac", getAlmanac);
 router.get("/seasons", getSeasons);
+router.get("/alerts/stream", getAlertsLive);
 router.get("/alerts", getAlerts);
 router.get("/live", getLive);
 router.get("/national", getNational);
 router.get("/usa", getUSA);
+router.get("/airport-metar", getAirportMetar);
 router.get("/sunspots", getSunspots);
 router.get("/province", getProvinceTracking);
 router.get("/hotColdSpots", getHoldColdSpots);

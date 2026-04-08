@@ -1,3 +1,6 @@
+/** Default horizontal scanline overlay strength (0 = off). Broadcast preset uses a subtle ~7%. */
+export const GFX_DEFAULT_SCANLINES_OPACITY = 0.07;
+
 /** Min/max for `gfx.retro.reloadLineMs` (forecast screen stagger on observation reload). */
 export const GFX_RELOAD_LINE_MS_MIN = 30;
 export const GFX_RELOAD_LINE_MS_MAX = 500;
