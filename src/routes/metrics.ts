@@ -6,6 +6,7 @@ import { getUpstreamMetricsSnapshot } from "lib/upstreamMetrics";
 const router = express.Router();
 
 const metricsToken = process.env.RWC_METRICS_TOKEN?.trim();
+const metricsDisabled = process.env.RWC_METRICS_DISABLED === "1";
 
 router.use((_req: Request, res: Response, next: NextFunction) => {
   if (!metricsToken) return next();
@@ -18,6 +19,10 @@ router.use((_req: Request, res: Response, next: NextFunction) => {
 });
 
 router.get("/", (_req: Request, res: Response) => {
+  if (metricsDisabled) {
+    res.status(404).json({ error: "metrics_disabled", hint: "Unset RWC_METRICS_DISABLED to re-enable." });
+    return;
+  }
   res.json(getUpstreamMetricsSnapshot());
 });
 

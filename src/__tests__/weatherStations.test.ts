@@ -6,8 +6,14 @@ import ecccWeatherStations from "./testdata/ecccData/ecccStationList";
 const search = "Vale";
 
 describe("ECCC weather station list", () => {
-  beforeEach(() => moxios.install(axios));
-  afterEach(() => moxios.uninstall(axios));
+  beforeEach(() => {
+    process.env.RWC_HTTP_RETRY_COUNT = "0";
+    moxios.install(axios);
+  });
+  afterEach(() => {
+    moxios.uninstall(axios);
+    delete process.env.RWC_HTTP_RETRY_COUNT;
+  });
 
   it("parses data correctly and gives back the expected filtered set", async () => {
     moxios.wait(() => {

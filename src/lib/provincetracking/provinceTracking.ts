@@ -1,11 +1,13 @@
 const Weather = require("ec-weather-js");
 import fs from "fs";
 import { EVENT_BUS_CONFIG_CHANGE_PROVINCE_TRACKING, PROVINCE_TRACKING_TEMP_TO_TRACK } from "consts";
+import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
 import axios from "lib/backendAxios";
 import { axiosGetWithMscMirror } from "lib/eccc/mscHttpMirror";
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
-import { ProvinceStationTracking, ProvinceStations } from "types";
+import type { ProvinceTracking as ProvinceTrackingSnapshot, ProvinceStationTracking, ProvinceStations } from "types";
+import { LastKnownGood } from "lib/reliability/lastKnownGood";
 import { initializeCurrentConditions, initializeHistoricalTempPrecip } from "lib/eccc";
 import eventbus from "lib/eventbus";
 import { format, subDays } from "date-fns";
@@ -17,6 +19,56 @@ const PROVINCE_TRACKING_FILE = "db/province_tracking.json";
 const conditions = initializeCurrentConditions();
 const historicalData = initializeHistoricalTempPrecip();
 
+function normalizeProvinceStationCode(code: string): string {
+  return code.replace(/\s/g, "").toUpperCase();
+}
+
+/**
+ * ec-weather-js `simplify()` turns `<precip>2.4</precip>` into a string; with attributes it stays `{ value, units }`.
+ * Reading only `.value` misses the common text-only form and left every station on "MISSING".
+ */
+function parseYesterdayPrecipScalar(raw: unknown, defaultUnits: "mm" | "cm"): { amount: number; units: "mm" | "cm" } | null {
+  if (raw == null) return null;
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return { amount: raw, units: defaultUnits };
+  }
+  if (typeof raw === "string") {
+    const t = raw.trim();
+    if (t === "" || /^nil|n\/a$/i.test(t)) return { amount: 0, units: defaultUnits };
+    if (/^trace$/i.test(t)) return { amount: 0, units: defaultUnits };
+    const n = Number(t);
+    return Number.isFinite(n) ? { amount: n, units: defaultUnits } : null;
+  }
+  if (typeof raw === "object" && raw !== null && "value" in raw) {
+    const o = raw as { value?: unknown; units?: string };
+    const v = o.value;
+    const u = (o.units ?? "").toLowerCase();
+    const units: "mm" | "cm" = u === "cm" ? "cm" : defaultUnits;
+    if (v == null || v === "") return null;
+    const n = typeof v === "number" ? v : Number(String(v).trim());
+    if (!Number.isFinite(n)) return null;
+    return { amount: n, units };
+  }
+  return null;
+}
+
+function yesterdayPrecipFromCitypage(yesterdayConditions: unknown): { amount: number; unit: string } | null {
+  if (yesterdayConditions == null || typeof yesterdayConditions !== "object") return null;
+  const yc = yesterdayConditions as Record<string, unknown>;
+
+  const snow = parseYesterdayPrecipScalar(yc.snow, "cm");
+  if (snow && snow.amount > 0) {
+    return { amount: snow.amount, unit: "cm snow" };
+  }
+
+  const liquid = parseYesterdayPrecipScalar(yc.precip, "mm");
+  if (liquid) {
+    return { amount: liquid.amount, unit: liquid.units === "cm" ? "cm snow" : "mm" };
+  }
+
+  return null;
+}
+
 class ProvinceTracking {
   private _stations: ProvinceStations;
   private _tracking: ProvinceStationTracking[];
@@ -24,6 +76,7 @@ class ProvinceTracking {
   private _yesterdayPrecipDate: string = "";
   private _periodicBusy = false;
   private _fetchedAt: string | null = null;
+  private readonly _lkg = new LastKnownGood<ProvinceTrackingSnapshot>();
 
   constructor() {
     this.load();
@@ -118,6 +171,27 @@ class ProvinceTracking {
     return this._fetchedAt;
   }
 
+  public getDataFetchedAtForHeader(): string | null {
+    if (!config.provinceHighLowEnabled) return this._fetchedAt;
+    const fresh = this.snapshot();
+    if (this.snapshotHasUsefulDisplayTemps(fresh)) return this._fetchedAt;
+    const lkgSnap = this._lkg.getIfFresh(rwcLkgMaxAgeMs());
+    if (lkgSnap && this.snapshotHasUsefulDisplayTemps(lkgSnap)) return this._lkg.savedAtIso;
+    return this._fetchedAt;
+  }
+
+  private snapshot(): ProvinceTrackingSnapshot {
+    return {
+      tracking: this._tracking,
+      isOvernight: this._displayTemp === PROVINCE_TRACKING_TEMP_TO_TRACK.MIN_TEMP,
+      yesterdayPrecipDate: this._yesterdayPrecipDate,
+    };
+  }
+
+  private snapshotHasUsefulDisplayTemps(s: ProvinceTrackingSnapshot): boolean {
+    return s.tracking.some((t) => t.displayTemp !== "M");
+  }
+
   private async fetchWeatherForStation(station: ProvinceStationTracking) {
     const { name, code } = station.station;
 
@@ -131,31 +205,48 @@ class ProvinceTracking {
         const weather = new Weather(data);
         if (!weather) throw "Unable to parse weather data";
 
-        // store the precip for yesterday if there's no data or its after 2am
-        // 2am seems to be when the api returns yesterday's data
-        if (station.yesterdayPrecip === null || this.shouldUpdatePrecipData()) {
+        // Refresh when empty, when we previously failed to parse ("MISSING"), or after 02:00 (yesterday summary stable).
+        const shouldRefreshPrecip =
+          station.yesterdayPrecip === null ||
+          station.yesterdayPrecip === "MISSING" ||
+          this.shouldUpdatePrecipData();
+
+        if (shouldRefreshPrecip) {
           const { yesterdayConditions } = weather.all;
 
-          // if selected station then use historical data, otherwise we can use the data from the conditions api
           const isLocalStation =
-            station.station.code === `${config.primaryLocation.province}/${config.primaryLocation.location}`;
+            normalizeProvinceStationCode(station.station.code) ===
+            normalizeProvinceStationCode(`${config.primaryLocation.province}/${config.primaryLocation.location}`);
 
-          // pull in precip values with plenty of fallbacks so we do our best to display a value
-          const detailedPrecip = isLocalStation
-            ? historicalData.yesterdaySnowData().amount || historicalData.yesterdayPrecipData().amount
-            : null;
+          const histSnowAmt = isLocalStation ? historicalData.yesterdaySnowData().amount : null;
+          const histRainAmt = isLocalStation ? historicalData.yesterdayPrecipData().amount : null;
 
-          // now store these to the station
-          const yesterdayPrecip = (detailedPrecip || yesterdayConditions?.precip?.value) ?? "MISSING";
-          station.yesterdayPrecip = !isNaN(yesterdayPrecip) ? Number(yesterdayPrecip) : yesterdayPrecip;
-          station.yesterdayPrecipUnit =
-            isLocalStation && historicalData.yesterdaySnowData().amount > 0 ? "cm snow" : "mm";
+          const fromHistorical =
+            typeof histSnowAmt === "number" && histSnowAmt > 0
+              ? { amount: histSnowAmt, unit: "cm snow" as const }
+              : typeof histRainAmt === "number"
+                ? { amount: histRainAmt, unit: "mm" as const }
+                : null;
 
-          // store what date this data is from
-          this._yesterdayPrecipDate = format(subDays(conditions.observedDateTimeAtStation(), 1), "MMM dd").replace(
-            /\s0/i,
-            "  "
-          );
+          const fromApi = yesterdayPrecipFromCitypage(yesterdayConditions);
+
+          let resolved: { amount: number; unit: string } | null = fromHistorical;
+          if (!resolved && fromApi) resolved = fromApi;
+          if (!resolved && yesterdayConditions != null) {
+            resolved = { amount: 0, unit: "mm" };
+          }
+
+          if (resolved) {
+            station.yesterdayPrecip = resolved.amount;
+            station.yesterdayPrecipUnit = resolved.unit;
+            this._yesterdayPrecipDate = format(subDays(conditions.observedDateTimeAtStation(), 1), "MMM dd").replace(
+              /\s0/i,
+              "  "
+            );
+          } else {
+            station.yesterdayPrecip = "MISSING";
+            station.yesterdayPrecipUnit = "mm";
+          }
         }
 
         // Running min/max from each observation so a cold start (no prior night) still fills the grid on first successful fetch.
@@ -239,12 +330,21 @@ class ProvinceTracking {
     });
   }
 
-  public provinceTracking() {
-    return {
-      tracking: this._tracking,
-      isOvernight: this._displayTemp === PROVINCE_TRACKING_TEMP_TO_TRACK.MIN_TEMP,
-      yesterdayPrecipDate: this._yesterdayPrecipDate,
-    };
+  public provinceTracking(): ProvinceTrackingSnapshot {
+    if (!config.provinceHighLowEnabled) {
+      return this.snapshot();
+    }
+    const fresh = this.snapshot();
+    const lkgSnap = this._lkg.getIfFresh(rwcLkgMaxAgeMs());
+    const freshUseful = this.snapshotHasUsefulDisplayTemps(fresh);
+    if (freshUseful) {
+      this._lkg.save(JSON.parse(JSON.stringify(fresh)) as ProvinceTrackingSnapshot);
+      return fresh;
+    }
+    if (lkgSnap && this.snapshotHasUsefulDisplayTemps(lkgSnap)) {
+      return lkgSnap;
+    }
+    return fresh;
   }
 }
 

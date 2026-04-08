@@ -1,6 +1,9 @@
 import type { AxiosError } from "axios";
 import axios from "axios";
+import type { MscAmqpListenerRole, MscAmqpListenerStats } from "lib/amqp/mscAmqpStats";
+import { getMscAmqpStatsSnapshot, resetMscAmqpStatsForTests } from "lib/amqp/mscAmqpStats";
 import { getClientMetricsReport } from "lib/clientMetricsLastReport";
+import { getUpstreamCircuitSnapshot, type UpstreamCircuitSnapshot, resetUpstreamCircuitsForTests } from "lib/reliability/upstreamCircuit";
 
 export type OutboundAxiosMetricsBucket = {
   requestCount: number;
@@ -17,6 +20,10 @@ export type UpstreamMetricSnapshot = {
   /** Last display-bundle axios counters POSTed from a browser session (see POST /api/v1/metrics/client). */
   displayAxiosFromClient: OutboundAxiosMetricsBucket | null;
   displayAxiosReportedAt: string | null;
+  /** MSC public AMQP listeners: message/error counts and last timestamps (Sarracenia-style `xpublic`). */
+  mscAmqp: Record<MscAmqpListenerRole, MscAmqpListenerStats>;
+  /** Per-host upstream circuit (cool-off) state from outbound HTTP retries. */
+  upstreamCircuits: UpstreamCircuitSnapshot;
   since: string;
 };
 
@@ -78,6 +85,8 @@ export function getUpstreamMetricsSnapshot(): UpstreamMetricSnapshot {
     backendAxios: { ...backend },
     displayAxiosFromClient: client.displayAxiosFromClient,
     displayAxiosReportedAt: client.displayAxiosReportedAt,
+    mscAmqp: getMscAmqpStatsSnapshot(),
+    upstreamCircuits: getUpstreamCircuitSnapshot(),
     since: startedAt,
   };
 }
@@ -90,4 +99,6 @@ export function resetUpstreamMetricsForTests(): void {
   backend.status4xx = 0;
   backend.status5xx = 0;
   backend.networkError = 0;
+  resetMscAmqpStatsForTests();
+  resetUpstreamCircuitsForTests();
 }

@@ -7,11 +7,14 @@ import flavourRoutes from "./flavour";
 import airQualityRoutes from "./airQuality";
 import metricsRoutes from "./metrics";
 import healthRoutes from "./health";
+import readyRoutes from "./ready";
 
 export function initializeRouter(): Router {
   const router = express.Router();
   router.use("/init", initRoutes);
   router.use("/health", healthRoutes);
+  router.use("/healthz", healthRoutes);
+  router.use("/ready", readyRoutes);
   router.use("/metrics", metricsRoutes);
   router.use("/weather", weatherRoutes);
   router.use("/config", configRoutes);

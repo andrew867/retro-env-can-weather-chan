@@ -1,6 +1,8 @@
 import fs from "fs";
-import { FLAVOUR_DEFAULT, FLAVOUR_DIRECTORY, FS_NO_FILE_FOUND, SCREEN_MIN_DISPLAY_LENGTH, Screens } from "consts";
+import { FLAVOUR_DEFAULT, FLAVOUR_DIRECTORY, FS_NO_FILE_FOUND, Screens } from "consts";
+import { logConfigValidationIssues, validateFlavourScreenIds } from "lib/config/configValidation";
 import { parseISO } from "date-fns";
+import { resolveScreenDwellSeconds } from "lib/flavour/utils";
 import Logger from "lib/logger";
 import { FlavourScreen } from "types";
 
@@ -41,11 +43,12 @@ export class FlavourLoader {
         .filter((screen: FlavourScreen) => this.isScreenConfigValid(screen))
         .map((screen: FlavourScreen) => ({
           ...screen,
-          duration: screen.duration ? Math.max(Number(screen.duration), SCREEN_MIN_DISPLAY_LENGTH) : 0,
+          duration: resolveScreenDwellSeconds(screen),
         }));
 
       if (!this.screens?.length) throw "No valid screens on flavour";
-      else logger.log("Successfully loaded flavour", this.name);
+      logConfigValidationIssues(validateFlavourScreenIds(this.screens));
+      logger.log("Successfully loaded flavour", this.name);
     } catch (err) {
       if (err.code === FS_NO_FILE_FOUND) logger.error("Flavour not found, loading default");
       else logger.error("Corrupted flavour:", err, "... loading default");
@@ -69,7 +72,7 @@ export class FlavourLoader {
       !isNaN(screen.id) &&
       typeof screen.duration !== "string" &&
       screen.id >= Screens.ALERTS &&
-      screen.id <= Screens.WINDCHILL
+      screen.id <= Screens.AIRPORT_METAR
     );
   }
 }

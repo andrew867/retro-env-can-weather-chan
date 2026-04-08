@@ -2,16 +2,14 @@ import { Request, Response } from "express";
 import { initializeCurrentConditions } from "./conditions";
 import { isSunSpotSeason, isWindchillSeason, getIsWinterSeason } from "lib/date";
 import { initializeAlertMonitor } from "./alertMonitor";
-import {
-  CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT,
-  CONDITIONS_EVENT_STREAM_INTERVAL,
-  RWC_DATA_FETCHED_AT_HEADER,
-} from "consts";
-import { attachConditionsSse } from "./sseLive";
+import { RWC_DATA_FETCHED_AT_HEADER } from "consts";
+import { registerWeatherLiveClient } from "./weatherSseHub";
+import { registerAlertsLiveClient } from "./alertsSseHub";
 import { initializeNationalWeather } from "lib/national";
 import { initializeProvinceTracking } from "lib/provincetracking";
 import { initializeCanadaProvincialHotColdSpot } from "./canadaHotColdSpot";
 import { initializeUSAWeather } from "lib/usaweather";
+import { initializeAirportMetarWeather } from "lib/airportMetar";
 import { initializeSunspots } from "lib/sunspots";
 
 const conditions = initializeCurrentConditions();
@@ -20,6 +18,7 @@ const provinceTracking = initializeProvinceTracking();
 const alertMonitor = initializeAlertMonitor();
 const hotColdSpots = initializeCanadaProvincialHotColdSpot();
 const usaWeather = initializeUSAWeather();
+const airportMetar = initializeAirportMetarWeather();
 const sunspots = initializeSunspots();
 
 function setFetchedAtHeader(res: Response, iso: string | null) {
@@ -55,31 +54,44 @@ export function getAlerts(req: Request, res: Response) {
 }
 
 export function getLive(req: Request, res: Response) {
-  attachConditionsSse(req, res, {
-    intervalMs: CONDITIONS_EVENT_STREAM_INTERVAL,
-    eventName: CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT,
-    getData: () => conditions.observed(),
+  registerWeatherLiveClient(req, res, {
+    getObserved: () => conditions.observed(),
+    getForecast: () => ({
+      ...conditions.forecast(),
+      fetchedAt: conditions.getLastSuccessfulFetchIso(),
+    }),
   });
 }
 
+/** SSE: instant CAP list updates (AMQP `*.WXO-DD.alerts.cap.#` on MSC public broker). */
+export function getAlertsLive(req: Request, res: Response) {
+  registerAlertsLiveClient(req, res, () => alertMonitor.alerts());
+}
+
 export function getNational(req: Request, res: Response) {
-  setFetchedAtHeader(res, nationalWeather.getLastSuccessfulFetchIso());
+  setFetchedAtHeader(res, nationalWeather.getDataFetchedAtForHeader());
   res.json(nationalWeather.nationalWeather());
 }
 
 export function getUSA(req: Request, res: Response) {
-  setFetchedAtHeader(res, usaWeather.getLastSuccessfulFetchIso());
+  setFetchedAtHeader(res, usaWeather.getDataFetchedAtForHeader());
   res.json(usaWeather.weather());
 }
 
+export function getAirportMetar(req: Request, res: Response) {
+  setFetchedAtHeader(res, airportMetar.getDataFetchedAtForHeader());
+  res.json(airportMetar.observations());
+}
+
 export function getSunspots(req: Request, res: Response) {
-  setFetchedAtHeader(res, sunspots.getLastFetchIso());
+  // Off-season we do not poll; an old _fetchedAt would false-positive the footer stale hint.
+  setFetchedAtHeader(res, isSunSpotSeason() ? sunspots.getLastFetchIso() : null);
   if (!isSunSpotSeason()) res.json([]);
   else res.json(sunspots.sunspots());
 }
 
 export function getProvinceTracking(req: Request, res: Response) {
-  setFetchedAtHeader(res, provinceTracking.getLastFetchIso());
+  setFetchedAtHeader(res, provinceTracking.getDataFetchedAtForHeader());
   res.json(provinceTracking.provinceTracking());
 }
 

@@ -2,6 +2,121 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.6.2] - 2026-04-07
+
+### Reliability and operations (release hardening)
+
+- **Last-known-good (LKG)** for auxiliary JSON: national regions, USA list, airport METAR, and province tracking keep an in-memory snapshot (default max age **90 min**, `RWC_LKG_MAX_AGE_MS`). **`X-RWC-Data-Fetched-At`** uses `getDataFetchedAtForHeader()` so the footer reflects **snapshot age** when serving cached rows, not wall-clock pretend-fresh.
+- **Bounded HTTP retries:** NWS and AWC use `axiosGetWithRetry` (jittered backoff, per-host circuit). MSC mirror (`axiosGetWithMscMirror`) no longer runs **extra retry waves** after both HPFX and Datamart return terminal **4xx** (fixes redundant requests and stuck tests); waves still apply for **5xx**, **429**, **408**, and network errors.
+- **Per-upstream circuit:** cool-off state is exposed on **`GET /api/v1/metrics`** as **`upstreamCircuits`**. Env: `RWC_CIRCUIT_FAILURE_THRESHOLD`, `RWC_CIRCUIT_COOL_OFF_MS`.
+- **Health and readiness:** **`GET /api/v1/health`** adds **`degraded`** (`citypageStale`, `upstreamCircuitCoolOff`). New **`GET /api/v1/ready`** returns **503** with `reason: "citypage_data_stale"` when the last successful citypage parse exceeds **`RWC_CITYPAGE_STALE_FALLBACK_AFTER_MS`** (or there was never a parse).
+- **Structured upstream logs:** optional **`[upstream]`** lines on `backendAxios` when `config.rwcUpstream` is set; disable with **`RWC_STRUCTURED_UPSTREAM_LOG=0`**.
+- **Config validation:** warnings at load for malformed `primaryLocation`, `airportMetarStations`, and out-of-range flavour screen ids (`configValidation.ts`).
+- **Disk guard:** optional startup WARN via **`fs.statfsSync`** when free space &lt; **`RWC_MIN_DISK_FREE_MIB`** (0 = off).
+- **Metrics kill switch:** **`RWC_METRICS_DISABLED=1`** returns **404** for **`GET /api/v1/metrics`** (health unaffected).
+- **AMQP reconnect override:** **`RWC_AMQP_RECONNECT_LIMIT_MS`** maps to `amqp_reconnect_limit_ms` / `reconnectExponentialLimit` in `sarra-canada-amqp.js`.
+
+### Tooling and docs
+
+- **`yarn smoke`** / **`node scripts/post-deploy-smoke.mjs`** — checks `/health`, `/ready`, `/weather/observed`, `/weather/usa`, `/weather/airport-metar` (optional **`BASE_URL`**).
+- **Operator and spec docs:** [OPERATORS.md](./OPERATORS.md) env matrix and runbook; [PLAN-release-hardening.md](./docs/specs/PLAN-release-hardening.md) and [PLAN-sarracenia-data-tranche.md](./docs/specs/PLAN-sarracenia-data-tranche.md) marked complete; [POLL-vs-PUSH-matrix.md](./docs/specs/POLL-vs-PUSH-matrix.md), [INVENTORY-feeds.md](./docs/specs/INVENTORY-feeds.md), [TEST-PLAN-sarracenia-data-tranche.md](./docs/specs/TEST-PLAN-sarracenia-data-tranche.md) updated.
+
+### Tests
+
+- **`configValidation`**, **`sarraAmqpListen`** (AMQP reconnect options), **`mscAmqpEnv`** reconnect env, **`mscAmqpStats`** + `upstreamCircuits`; AQHI / ECCC station list tests pin **`RWC_HTTP_RETRY_COUNT=0`** for deterministic moxios counts.
+
+---
+
+## [2.6.1] - 2026-04-07
+
+### Real-time ingest (MSC / Sarracenia AMQP — already in use)
+
+- **Citypage + forecast**: `GET /api/v1/weather/live` is now **push-driven** when ECCC citypage XML is parsed (MSC AMQP `*.WXO-DD.citypage_weather.<province>.#` → HTTP fetch → `condition_update` + **`forecast_update`** SSE). Initial connect still sends **two events immediately** (no wait for a poll interval). A **30s** SSE comment ping keeps connections alive behind proxies.
+- **CAP / NAADS-style alerts**: Still ingested over the same public MSC AMQP broker (`*.WXO-DD.alerts.cap.#`). New **`GET /api/v1/weather/alerts/stream`** pushes **`alerts_update`** when the CAP list changes; the display uses EventSource + a **10-minute** HTTP fallback poll.
+
+### Observability
+
+- **`mscAmqp`** on **`GET /api/v1/health`** / **`GET /api/v1/metrics`**: per-role counters (`messageCount`, `errorEventCount`) and ISO timestamps (`lastMessageAt`, `lastErrorAt`) for the **citypage** and **alerts** `listen()` subscribers.
+
+### Forecast continuation / authentic streaming fixes
+
+- **Continuation off + multi-page reload**: the **0.05s** “skip first page” dwell now applies only when there is a **single** forecast body; otherwise the full **14s** dwell runs so staggered reload can finish across pages.
+- **Continuation on (non-reload passes)**: secondary pages use authentic streaming whenever the feature is enabled (not only during `isReload`), so “forecast cont..” no longer stalls after the clear bar.
+- **Clear → stream handoff**: clear-hold timeouts no longer cancel when grapheme counts change mid-effect; continuation phase resets in **`useLayoutEffect`** so stale `done` cannot unblock the page timer before the new page’s stream state is applied.
+
+### ECCC citypage — production-grade HTTP path (conditions + datamart consumers)
+
+**Problem addressed:** Datamart (`https://dd.weather.gc.ca`) does **not** mirror the legacy HPFX-only tree `…/today/citypage_weather/xml/{province}/{id}_e.xml`. Hourly citypage files live under `…/today/citypage_weather/{province}/{UTC hour}/…`. Listing and GET had to use the **same host** that served the directory index; building file URLs only on `hpfx.collab.science.gc.ca` after a successful read from Datamart caused intermittent **404** on national / province / secondary fetches.
+
+**Datamart resolver (`GetWeatherFileFromECCC`):**
+
+- Directory listing uses **`axiosGetWithMscMirrorResolved`**: the **resolved URL** (HPFX or Datamart) drives the base for the English `MSC_CitypageWeather_{station}_en.xml` link.
+- Multiple UTC hour buckets (**8** hours) and multiple timestamped `href`s per station (newest first) are tried; each candidate is checked with **`HEAD`** across mirrors before returning a URL so “phantom” listing rows do not win.
+
+**Primary station conditions (`runConditionsFetch`) — ordered fallbacks:**
+
+1. **AMQP push URL** when present (fast path; `normalizeMscHttpUrl`).
+2. **Hourly bucket URL** from `GetWeatherFileFromECCC` (same resolver as national/province).
+3. **Legacy HPFX** `…/xml/{province}/{id}_e.xml` via **`legacyHpfxCitypageEnglishXmlUrl`** (exported from `datamart.ts`) — last resort; Datamart usually 404s this path, HPFX may still serve it.
+
+**Ops notes:** No change to AMQP topic (`*.WXO-DD.citypage_weather.<province>.#`). Stale HTTP fallback and bootstrap both use the chain above. **`RWC_MSC_TRY_DATAMART_FIRST`** still controls mirror order for MSC HTTP.
+
+### USA — NWS `api.weather.gov` + NOAA AWC METAR backup
+
+**Problem addressed:** `api.weather.gov/.../observations/latest` can return **503** / 5xx (service unavailable) even when METAR exists elsewhere.
+
+**Behaviour:** For each US station, the server tries **NWS latest observation** first. On failure types that indicate overload or outage (**5xx**, **429**, **408**, or network errors — **not** 4xx client errors such as unknown station), it falls back to **NOAA Aviation Weather Center METAR** JSON: `GET https://aviationweather.gov/api/data/metar?ids={ICAO}&format=json`. Temperature and a short condition line (flight category, sky cover, wind when present) are mapped into the same fields as the NWS path. A log line **`using AWC METAR backup (NWS observation unavailable)`** is emitted when the backup path is used.
+
+**Ops notes:** AWC is a **different service** than NWS API — not a second identical mirror, but a practical backup for the same ICAO observation family. Respect AWC/NWS acceptable use; default poll cadence unchanged (**5 min**).
+
+### Airport conditions screen — ICAO METAR (Canada / US / international)
+
+**New rotator screen:** **`Screens.AIRPORT_METAR`** (“Airport conditions (METAR)”), included in the **default flavour** after **USA regional conditions**.
+
+**Config (`cfg/rwc-config.json`):** array **`airportMetarStations`** — up to **4** entries: `{ "name": "Winnipeg", "code": "CYWG" }`. ICAO codes are normalized to uppercase; invalid entries are dropped. Example in repo default config: **CYWG**, **CYYZ**, **CYVR**.
+
+**Server:** batch fetch from the same AWC METAR endpoint (one HTTP request for all configured ids). **`GET /api/v1/weather/airport-metar`** returns the filtered reporting rows and **`X-RWC-Data-Fetched-At`** when any station updated successfully. Display polls on the same **5 min** interval as USA weather; recovery refetch includes airport METAR after SSE reconnect.
+
+**Layout:** Same typography / column pattern as national regional screens (name, °C, abbreviated condition).
+
+### Reference: NWS FTP “selected cities” lists vs automation
+
+Curated text lists under **`ftp://tgftp.nws.noaa.gov`** (e.g. `data/summaries/selected_cities/current/…`, anonymous FTP) are useful **human references** for picking ICAO stations and city names. They are **not** wired into the app as a second HTTP source: parsing FTP directories from the broadcast server is brittle and redundant now that **AWC’s documented JSON API** backs up NWS and powers the airport screen. Keep those files as editorial reference alongside `airportMetarStations` in config.
+
+---
+
+## [2.6.0] - 2026-04-07
+
+### Forecast continuation & authentic streaming
+
+- **Page advance gating**: Multi-page forecast no longer advances on a fixed timer while the first page or a continuation page is still **authentic-streaming** (`pageAdvanceBlocked` waits for `authenticPhase === 'done'` and continuation `contPhase === 'done'`). After streaming completes, the usual **14s** dwell runs before the next page or `onComplete` — fixing stalls where the rotator advanced before long text finished.
+- **Continuation pages**: With **`authenticRefresh.continuationGraphemeReveal`** on by default, continuation screens use the same grapheme typing reveal as page 0 on reload; with it off, full static lines still show (see Graphics → **Continuation grapheme reveal**).
+
+### Init & ops
+
+- **SSE**: **`GET /api/v1/init/stream`** pushes **`crawler_update`** when crawler lines change; the display refetches init on that event and polls init less often (**30s**).
+- **Health**: **`GET /api/v1/healthz`** mirrors **`GET /api/v1/health`**.
+
+### Tests
+
+- **`forecastContinuation.test.ts`**: Pagination line budgets match the forecast screen so multi-page text is not truncated at the formatter layer.
+
+---
+
+## [2.5.0] - 2026-04-07
+
+### Authentic refresh & GFX — default on-air preset
+
+Fresh installs (and any `rwc-config.json` **without** overriding `gfx` / `authenticRefresh`) now ship with the **broadcast RDS-style** look:
+
+- **Authentic refresh** on: **100** chars/sec, **120** ms clear hold, **12** ms jitter cap (blank clear), grapheme stream, reduced-motion respected.
+- **Next-gen visual layers** on; **SD** logical resolution, **4:3** frame.
+- **Retro**: **reload line 100** ms, **VHS analog** layer on, **scanlines ~7%**, **vignette 0.12**, **colour preset none**.
+
+Existing configs on disk are **unchanged** until you save from the Graphics tab or edit JSON. **Crawler** updates via **`POST /api/v1/config/crawler`** are unaffected.
+
+---
+
 ## [2.4.0] - 2026-04-07
 
 ### Province high/low grid (cold start)

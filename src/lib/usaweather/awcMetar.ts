@@ -1,0 +1,91 @@
+/**
+ * NOAA Aviation Weather Center (AWC) METAR API — independent of api.weather.gov; used as a backup when NWS
+ * `observations/latest` returns 5xx/503 or is unreachable.
+ * @see https://aviationweather.gov/data/api/
+ */
+import { isAxiosError } from "axios";
+import type { AxiosInstance } from "axios";
+import { generateConditionsUUID } from "lib/eccc/utils";
+import { axiosGetWithRetry } from "lib/reliability/httpRetry";
+
+export const AWC_METAR_API = "https://aviationweather.gov/api/data/metar";
+
+export type AwcMetarRow = {
+  icaoId: string;
+  temp?: number;
+  reportTime?: string;
+  cover?: string;
+  fltCat?: string;
+  wdir?: number;
+  wspd?: number;
+  rawOb?: string;
+};
+
+export function shouldTryAwcAfterNwsFailure(err: unknown): boolean {
+  if (!isAxiosError(err)) return true;
+  if (err.code === "ERR_CANCELED") return false;
+  const status = err.response?.status;
+  if (status == null) return true;
+  if (status === 429) return true;
+  if (status >= 500 && status <= 599) return true;
+  if (status === 408) return true;
+  return false;
+}
+
+export function formatAwcMetarConditionLine(row: AwcMetarRow): string {
+  const cat = row.fltCat?.trim();
+  const cover = row.cover?.trim();
+  const wind =
+    row.wspd != null && row.wdir != null
+      ? `${String(row.wdir).padStart(3, "0")}° @ ${row.wspd} kt`
+      : row.wspd != null
+        ? `${row.wspd} kt`
+        : null;
+  const parts = [cat, cover, wind].filter(Boolean);
+  if (parts.length) return parts.join(" · ");
+  return "METAR";
+}
+
+function awcReportTimeToUuidKey(reportTime: string): string {
+  const digits = reportTime.replace(/[-T:.Z]/g, "");
+  return generateConditionsUUID(digits.length >= 12 ? digits : digits.padEnd(12, "0"));
+}
+
+export type ParsedAwcStationObservation = {
+  temperatureC: number;
+  condition: string;
+  conditionUUID: string;
+};
+
+export function parseAwcMetarRow(row: AwcMetarRow): ParsedAwcStationObservation | null {
+  if (row.temp == null || Number.isNaN(Number(row.temp))) return null;
+  const reportTime = row.reportTime ?? new Date().toISOString();
+  return {
+    temperatureC: Number(row.temp),
+    condition: formatAwcMetarConditionLine(row),
+    conditionUUID: awcReportTimeToUuidKey(reportTime),
+  };
+}
+
+/**
+ * Fetch latest METAR rows for one or more ICAO ids (e.g. KTPA or CYYZ).
+ */
+export async function fetchAwcMetarRows(
+  client: AxiosInstance,
+  icaoIds: string[],
+  timeoutMs: number
+): Promise<Map<string, AwcMetarRow>> {
+  const out = new Map<string, AwcMetarRow>();
+  if (!icaoIds.length) return out;
+  const ids = [...new Set(icaoIds.map((c) => c.trim().toUpperCase()).filter(Boolean))];
+  const url = `${AWC_METAR_API}?ids=${ids.map(encodeURIComponent).join(",")}&format=json`;
+  const resp = await axiosGetWithRetry<AwcMetarRow[]>(client, url, {
+    timeout: timeoutMs,
+    rwcUpstream: { feed: "awc_metar", key: ids.slice(0, 8).join(",") },
+  });
+  const rows = Array.isArray(resp.data) ? resp.data : [];
+  for (const r of rows) {
+    if (r?.icaoId) out.set(String(r.icaoId).toUpperCase(), r);
+  }
+  return out;
+}

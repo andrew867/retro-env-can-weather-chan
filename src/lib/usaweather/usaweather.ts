@@ -12,6 +12,10 @@ import { harshTruncateConditions } from "lib/conditions";
 import eventbus from "lib/eventbus";
 import { generateConditionsUUID } from "lib/eccc/utils";
 import { initializeConfig } from "lib/config";
+import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
+import { LastKnownGood } from "lib/reliability/lastKnownGood";
+import { axiosGetWithRetry } from "lib/reliability/httpRetry";
+import { fetchAwcMetarRows, parseAwcMetarRow, shouldTryAwcAfterNwsFailure } from "lib/usaweather/awcMetar";
 
 const config = initializeConfig();
 
@@ -32,6 +36,7 @@ class USAWeather {
   private _fetchedAt: string | null = null;
   private _lastBatchStartMs = 0;
   private _usaBatchId = 0;
+  private readonly _lkg = new LastKnownGood<USAStationObservations>();
 
   constructor() {
     this.periodicUpdate();
@@ -51,21 +56,18 @@ class USAWeather {
   }
 
   private forceUpdate(conditionUUID: string) {
-    // update expected condition uuid from main station
     const hadExpectedConditionUUID = !!this._expectedConditionUUID;
     const shouldClear = this._expectedConditionUUID !== conditionUUID;
     this._expectedConditionUUID = conditionUUID;
 
-    // if we didn't have an expected condition uuid, we dont need to force an update
     if (!hadExpectedConditionUUID) return;
 
-    // otherwise we can call periodic update early since other stations probably updated
     this.periodicUpdate(shouldClear);
   }
 
   private isStationReporting(station: USAStationObservation) {
     return (
-      station?.condition && !station?.condition?.toLowerCase().includes("unknown") && station?.temperature !== null
+      station?.condition && !station?.condition?.toLowerCase().includes("unknown") && station.temperature !== null
     );
   }
 
@@ -76,7 +78,6 @@ class USAWeather {
     batchId: number
   ) {
     logger.log("Fetching latest observations");
-    // empty out the current observations and generate new data
     if (clearExistingData || !observations?.length) {
       observations.splice(
         0,
@@ -88,7 +89,6 @@ class USAWeather {
       );
     }
 
-    // loop through stations and get current conditions for them
     stations.forEach((station) => this.fetchWeatherForStation(station, observations, batchId));
   }
 
@@ -97,47 +97,102 @@ class USAWeather {
     observations: USAStationObservations,
     batchId: number
   ) {
-    axios
-      .get(`https://api.weather.gov/stations/${station.code}/observations/latest`, {
+    void this.fetchWeatherForStationAsync(station, observations, batchId);
+  }
+
+  private async fetchWeatherForStationAsync(
+    station: USAStationConfig,
+    observations: USAStationObservations,
+    batchId: number
+  ) {
+    const stationIx = observations.findIndex((observationStation) => observationStation.code === station.code);
+    if (stationIx === -1) return;
+
+    const applyObservation = (
+      condition: string | null,
+      temperature: number | null,
+      conditionUUID: string,
+      source: "nws" | "awc"
+    ) => {
+      if (batchId !== this._usaBatchId) return;
+      if (config.misc.rejectInHourConditionUpdates && conditionUUID === observations[stationIx].conditionUUID)
+        return;
+      observations.splice(stationIx, 1, {
+        ...station,
+        condition,
+        abbreviatedCondition: condition ? harshTruncateConditions(condition) : null,
+        temperature,
+        conditionUUID,
+      });
+      this._fetchedAt = new Date().toISOString();
+      if (source === "awc") {
+        logger.log(`${station.name}: using AWC METAR backup (NWS observation unavailable)`);
+      }
+    };
+
+    try {
+      const resp = await axiosGetWithRetry(axios, `https://api.weather.gov/stations/${station.code}/observations/latest`, {
         timeout: USA_WEATHER_HTTP_TIMEOUT_MS,
-      })
-      .then((resp) => {
-        if (batchId !== this._usaBatchId) return;
-        const { data: weather } = resp;
-        if (!weather) throw "Unable to parse USA weather data";
+        rwcUpstream: { feed: "nws_observations_latest", key: station.code },
+      });
+      if (batchId !== this._usaBatchId) return;
+      const weather = resp.data;
+      if (!weather) throw new Error("Unable to parse USA weather data");
 
-        const stationIx = observations.findIndex((observationStation) => observationStation.code === station.code);
-        if (stationIx === -1) return;
-
-        const { properties } = weather;
-
-        // handle rejecting in-hour updates for these stations too
-        const [timestamp] = properties.timestamp.split("+");
-        const conditionUUID = generateConditionsUUID(timestamp.replace(/[-T:]/g, ""));
-        if (config.misc.rejectInHourConditionUpdates && conditionUUID === observations[stationIx].conditionUUID) return;
-
-        const { textDescription: condition = null, temperature = null } = properties ?? {};
-        observations.splice(stationIx, 1, {
-          ...station,
-          condition: condition ?? null,
-          abbreviatedCondition: condition ? harshTruncateConditions(condition) : null,
-          temperature: temperature?.value && !isNaN(temperature.value) ? Number(temperature.value) : null,
-          conditionUUID,
-        });
-        this._fetchedAt = new Date().toISOString();
-      })
-      .catch((err) => logger.warn(`${station.name}: NWS observation fetch failed (${summarizeFetchError(err)})`));
+      const { properties } = weather;
+      const [timestamp] = properties.timestamp.split("+");
+      const conditionUUID = generateConditionsUUID(timestamp.replace(/[-T:]/g, ""));
+      const { textDescription: condition = null, temperature = null } = properties ?? {};
+      applyObservation(
+        condition ?? null,
+        temperature?.value != null && !isNaN(temperature.value) ? Number(temperature.value) : null,
+        conditionUUID,
+        "nws"
+      );
+    } catch (nwsErr) {
+      if (!shouldTryAwcAfterNwsFailure(nwsErr)) {
+        logger.warn(`${station.name}: NWS observation fetch failed (${summarizeFetchError(nwsErr)})`);
+        return;
+      }
+      try {
+        const map = await fetchAwcMetarRows(axios, [station.code], USA_WEATHER_HTTP_TIMEOUT_MS);
+        const row = map.get(station.code.toUpperCase());
+        const parsed = row ? parseAwcMetarRow(row) : null;
+        if (!parsed) throw new Error("AWC METAR missing or incomplete");
+        applyObservation(parsed.condition, parsed.temperatureC, parsed.conditionUUID, "awc");
+      } catch (awcErr) {
+        logger.warn(
+          `${station.name}: NWS + AWC METAR failed (NWS: ${summarizeFetchError(nwsErr)}; AWC: ${summarizeFetchError(awcErr)})`
+        );
+      }
+    }
   }
 
   public getLastSuccessfulFetchIso(): string | null {
     return this._fetchedAt;
   }
 
-  public weather() {
-    // when we return we should filter down to just reporting stations, and then limit each one
+  public getDataFetchedAtForHeader(): string | null {
+    const fresh = this.freshUsaSlice();
+    if (fresh.length) return this._fetchedAt;
+    const fallback = this._lkg.getIfFresh(rwcLkgMaxAgeMs());
+    if (fallback?.length) return this._lkg.savedAtIso;
+    return null;
+  }
+
+  private freshUsaSlice(): USAStationObservations {
     return this._usaStations
       .filter((stationObservation) => this.isStationReporting(stationObservation))
       .slice(0, MAX_USA_STATIONS_PER_PAGE);
+  }
+
+  public weather() {
+    const fresh = this.freshUsaSlice();
+    const merged = fresh.length ? fresh : this._lkg.getIfFresh(rwcLkgMaxAgeMs()) ?? [];
+    if (fresh.length) {
+      this._lkg.save(fresh);
+    }
+    return merged;
   }
 }
 

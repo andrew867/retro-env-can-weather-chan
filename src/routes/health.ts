@@ -1,14 +1,10 @@
 import express, { Request, Response } from "express";
-import { SERVER_STARTED_AT_MS } from "lib/serverStartedAt";
+import { getHealthPayload } from "lib/health/readiness";
 
 const router = express.Router();
 
 router.get("/", (_req: Request, res: Response) => {
-  res.json({
-    ok: true,
-    service: "rwc",
-    uptimeSec: Math.floor((Date.now() - SERVER_STARTED_AT_MS) / 1000),
-  });
+  res.json(getHealthPayload());
 });
 
 export default router;

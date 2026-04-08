@@ -8,7 +8,10 @@ import {
   NATIONAL_WEATHER_FETCH_INTERVAL,
   WEST_WEATHER_STATIONS,
 } from "consts";
-import { NationalStationConfig, NationalStationObservation, NationalStationObservations } from "types";
+import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
+import { NationalStationConfig, NationalStationObservation, NationalStationObservations, NationalWeather } from "types";
+import { LastKnownGood } from "lib/reliability/lastKnownGood";
+import { mergeNationalWithLkg } from "lib/reliability/mergeNationalLkg";
 import Logger from "lib/logger";
 import axios from "lib/backendAxios";
 import { axiosGetWithMscMirror } from "lib/eccc/mscHttpMirror";
@@ -29,6 +32,7 @@ class NationalWeather {
   private _fetchedAt: string | null = null;
   private _lastBatchStartMs = 0;
   private _nationalBatchId = 0;
+  private readonly _lkg = new LastKnownGood<NationalWeather>();
 
   constructor() {
     this.periodicUpdate();
@@ -51,6 +55,29 @@ class NationalWeather {
 
   public getLastSuccessfulFetchIso(): string | null {
     return this._fetchedAt;
+  }
+
+  /** ISO time for `X-RWC-Data-Fetched-At` — uses LKG age when serving cached regional lists. */
+  public getDataFetchedAtForHeader(): string | null {
+    const fresh = this.freshNationalWeather();
+    if (fresh.mb.length || fresh.east.length || fresh.west.length) return this._fetchedAt;
+    const merged = mergeNationalWithLkg(fresh, this._lkg.getIfFresh(rwcLkgMaxAgeMs()));
+    if (merged.mb.length || merged.east.length || merged.west.length) return this._lkg.savedAtIso;
+    return null;
+  }
+
+  private freshNationalWeather(): NationalWeather {
+    return {
+      mb: this._manitobaStations
+        .filter((stationObservation) => this.isStationReporting(stationObservation))
+        .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
+      east: this._eastStations
+        .filter((stationObservation) => this.isStationReporting(stationObservation))
+        .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
+      west: this._westStations
+        .filter((stationObservation) => this.isStationReporting(stationObservation))
+        .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
+    };
   }
 
   private forceUpdate(conditionUUID: string) {
@@ -150,18 +177,12 @@ class NationalWeather {
   }
 
   public nationalWeather() {
-    // when we return we should filter down to just reporting stations, and then limit each one
-    return {
-      mb: this._manitobaStations
-        .filter((stationObservation) => this.isStationReporting(stationObservation))
-        .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
-      east: this._eastStations
-        .filter((stationObservation) => this.isStationReporting(stationObservation))
-        .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
-      west: this._westStations
-        .filter((stationObservation) => this.isStationReporting(stationObservation))
-        .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
-    };
+    const fresh = this.freshNationalWeather();
+    const merged = mergeNationalWithLkg(fresh, this._lkg.getIfFresh(rwcLkgMaxAgeMs()));
+    if (fresh.mb.length || fresh.east.length || fresh.west.length) {
+      this._lkg.save(fresh);
+    }
+    return merged;
   }
 }
 

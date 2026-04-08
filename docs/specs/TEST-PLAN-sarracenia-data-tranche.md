@@ -38,19 +38,20 @@
 | T3.1 | No AMQP message: datamart resolver still returns a URL when directories exist | Existing datamart tests + integration with mirror |
 | T3.2 | HTTP 404 on HPFX then success on Datamart | Covered by `axiosGetWithMscMirror` retry policy + moxios |
 
-### T4 — Reconnect / backoff (if implemented in tranche)
+### T4 — Reconnect / backoff
 
 | ID | Case | Assert |
 |----|------|--------|
-| T4.1 | Simulated disconnect | Listener schedules reconnect with bounded backoff (unit-test with fake timers) |
-| T4.2 | `ERR_CANCELED` / shutdown | No reconnect loop after intentional disconnect |
+| T4.1 | `listen()` passes exponential reconnect options to `amqp.createConnection` | `src/__tests__/sarraAmqpListen.test.ts` (mocked `amqp`) |
+| T4.2 | `RWC_AMQP_RECONNECT_LIMIT_MS` → `amqp_reconnect_limit_ms` | `src/__tests__/mscAmqpEnv.test.ts` |
 
-### T5 — Metrics / health (if implemented)
+### T5 — Metrics / health
 
 | ID | Case | Assert |
 |----|------|--------|
-| T5.1 | Counter or snapshot increments on connect / message / error | Snapshot test on metrics module |
-| T5.2 | Health endpoint (if added) returns JSON with `amqpConnected` or equivalent | Supertest contract test |
+| T5.1 | MSC AMQP + `upstreamCircuits` in metrics snapshot | `src/__tests__/mscAmqpStats.test.ts`, `lib/upstreamMetrics.ts` |
+| T5.2 | Health includes `degraded` flags | `lib/health/readiness.ts`, `GET /api/v1/health` |
+| T5.3 | Readiness endpoint | `GET /api/v1/ready` (503 when citypage stale per `citypageStaleFallback`) |
 
 ## CI recommendation
 
@@ -59,5 +60,5 @@
 
 ## Definition of done (testing)
 
-- All T1–T3 cases implemented or explicitly deferred with issue ID in PLAN.
+- T1–T5 cases implemented or explicitly covered in PLAN; see [PLAN-sarracenia-data-tranche.md](./PLAN-sarracenia-data-tranche.md).
 - No regression in existing Jest count; new files listed in this document are referenced from `package.json` test run (no extra manual steps for default CI).

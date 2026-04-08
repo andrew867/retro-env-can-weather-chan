@@ -10,7 +10,9 @@ import {
   EVENT_BUS_CONFIG_CHANGE_PROVINCE_TRACKING,
   FLAVOUR_DIRECTORY,
   FS_NO_FILE_FOUND,
+  MAX_AIRPORT_METAR_STATIONS,
   PROVINCE_TRACKING_DEFAULT_STATIONS,
+  GFX_DEFAULT_SCANLINES_OPACITY,
   GFX_RELOAD_LINE_MS_DEFAULT,
   GFX_RELOAD_LINE_MS_MAX,
   GFX_RELOAD_LINE_MS_MIN,
@@ -32,6 +34,7 @@ import {
   ProvinceStations,
 } from "types";
 import eventbus from "lib/eventbus";
+import { logConfigValidationIssues, validateLoadedConfigJson } from "lib/config/configValidation";
 
 const logger = new Logger("config");
 const CONFIG_PATH = {
@@ -48,13 +51,12 @@ const CRAWLER_PATH = {
 const CRAWLER_ABSOLUTE_PATH = `${CRAWLER_PATH.FOLDER}/${CRAWLER_PATH.FILE}`;
 const MUSIC_DIR = "music";
 
+/** On-air preset: serial-style forecast reveal + SD 4:3 + light scanline/VHS polish (see OPERATORS.md). */
 const DEFAULT_AUTHENTIC_REFRESH: AuthenticRefreshConfig = {
-  enabled: false,
-  charsPerSecond: 10,
-  clearHoldMs: 120,
-  clearStyle: "blank",
+  enabled: true,
+  charsPerSecond: 100,
   jitterMsPerCharMax: 12,
-  secondaryPageStreaming: false,
+  continuationGraphemeReveal: true,
   respectReducedMotion: true,
   streamUnit: "grapheme",
 };
@@ -63,15 +65,15 @@ const DEFAULT_GFX: GfxRuntimeConfig = {
   displayAspectRatio: "4:3",
   displayResolution: "sd",
   features: {
-    authenticRefreshEnabled: false,
-    nextGenVisualLayersEnabled: false,
+    authenticRefreshEnabled: true,
+    nextGenVisualLayersEnabled: true,
   },
   safeArea: { top: 0.02, bottom: 0.06, left: 0.02, right: 0.02 },
   retro: {
-    scanlinesOpacity: 0,
+    scanlinesOpacity: GFX_DEFAULT_SCANLINES_OPACITY,
     phosphorTint: "none",
     vignetteStrength: 0.12,
-    vhsAnalogLayerEnabled: false,
+    vhsAnalogLayerEnabled: true,
     reloadLineMs: GFX_RELOAD_LINE_MS_DEFAULT,
   },
 };
@@ -101,10 +103,14 @@ class Config {
   };
   crawlerMessages: string[] = [];
   musicPlaylist: string[] = []; // what music files are available
+  /** Lines shown when flavour includes `Screens.INFO` (`infoScreen` in rwc-config.json). */
+  infoScreenLines: string[] = [];
   flavour: Flavour;
   flavours: string[] = []; // what flavours are available
   provinceStations: ProvinceStation[]; // what provinces to track high/low/precip for
   airQualityStation: string; // what area/station code to use for air quality
+  /** ICAO list for {@link Screens.AIRPORT_METAR} (max {@link MAX_AIRPORT_METAR_STATIONS}). */
+  airportMetarStations: AirportMetarStation[];
   configVersion: string; // config version
   gfx: GfxRuntimeConfig = {
     ...DEFAULT_GFX,
@@ -116,6 +122,7 @@ class Config {
   authenticRefresh: AuthenticRefreshConfig = { ...DEFAULT_AUTHENTIC_REFRESH };
 
   constructor() {
+    this.airportMetarStations = [];
     this.loadConfig();
     this.checkFlavoursDirectory();
     this.loadFlavour();
@@ -136,10 +143,12 @@ class Config {
       flavour: this.flavour,
       flavours: this.flavours,
       airQualityStation: this.airQualityStation,
+      airportMetarStations: this.airportMetarStations,
       crawler: this.crawlerMessages,
       music: this.musicPlaylist ?? [],
       gfx: this.gfx,
       authenticRefresh: this.authenticRefresh,
+      infoScreen: this.infoScreenLines,
     };
   }
 
@@ -175,6 +184,8 @@ class Config {
         airQualityStation,
         gfx,
         authenticRefresh,
+        infoScreen,
+        airportMetarStations,
       } = parsedConfig;
 
       // but first we make sure that we have at least the province info
@@ -207,12 +218,34 @@ class Config {
       if (authenticRefresh && typeof authenticRefresh === "object") {
         this.authenticRefresh = this.normalizeAuthenticRefresh({ ...this.authenticRefresh, ...authenticRefresh });
       }
+
+      if (Array.isArray(infoScreen)) {
+        this.infoScreenLines = infoScreen.filter((line): line is string => typeof line === "string");
+      }
+
+      if (Array.isArray(airportMetarStations)) {
+        this.airportMetarStations = airportMetarStations
+          .filter(
+            (row: unknown): row is { name?: unknown; code?: unknown } =>
+              row != null && typeof row === "object" && "code" in row
+          )
+          .map((row) => {
+            const code = typeof row.code === "string" ? row.code.trim().toUpperCase() : "";
+            const name =
+              typeof row.name === "string" && row.name.trim().length ? row.name.trim() : code || "Unknown";
+            return { name, code };
+          })
+          .filter((row) => /^[A-Z0-9]{3,4}$/.test(row.code))
+          .slice(0, MAX_AIRPORT_METAR_STATIONS);
+      }
       if (this.gfx?.features?.authenticRefreshEnabled) {
         this.authenticRefresh = this.normalizeAuthenticRefresh({
           ...this.authenticRefresh,
           enabled: true,
         });
       }
+
+      logConfigValidationIssues(validateLoadedConfigJson(parsedConfig as Record<string, unknown>));
 
       logger.log("Loaded weather channel. Location:", `${name}, ${province}`, `(${location})`);
     } catch (err) {
@@ -440,18 +473,14 @@ class Config {
 
   private normalizeAuthenticRefresh(next: AuthenticRefreshConfig): AuthenticRefreshConfig {
     const cps = Math.round(Number(next.charsPerSecond ?? DEFAULT_AUTHENTIC_REFRESH.charsPerSecond));
-    const clearHold = Math.round(Number(next.clearHoldMs ?? DEFAULT_AUTHENTIC_REFRESH.clearHoldMs));
     const jitter = Math.round(Number(next.jitterMsPerCharMax ?? DEFAULT_AUTHENTIC_REFRESH.jitterMsPerCharMax));
-    const cs = next.clearStyle;
-    const clearStyle =
-      cs === "fill" || cs === "inverse" || cs === "blank" ? cs : DEFAULT_AUTHENTIC_REFRESH.clearStyle;
     return {
       enabled: !!next.enabled,
-      charsPerSecond: Number.isFinite(cps) ? Math.min(120, Math.max(1, cps)) : 10,
-      clearHoldMs: Number.isFinite(clearHold) ? Math.min(500, Math.max(0, clearHold)) : 120,
-      clearStyle,
+      charsPerSecond: Number.isFinite(cps)
+        ? Math.min(120, Math.max(1, cps))
+        : (DEFAULT_AUTHENTIC_REFRESH.charsPerSecond ?? 100),
       jitterMsPerCharMax: Number.isFinite(jitter) ? Math.min(100, Math.max(0, jitter)) : 12,
-      secondaryPageStreaming: !!next.secondaryPageStreaming,
+      continuationGraphemeReveal: next.continuationGraphemeReveal !== false,
       respectReducedMotion: next.respectReducedMotion !== false,
       streamUnit: next.streamUnit === "word" ? "word" : "grapheme",
     };

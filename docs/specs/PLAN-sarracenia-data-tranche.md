@@ -1,70 +1,68 @@
 # Implementation plan: Sarracenia-aligned data ingest (tranches)
 
-This plan translates [SPEC-sarracenia-data-tranche.md](./SPEC-sarracenia-data-tranche.md) into phased work, grounded in the [Sarracenia Overview](https://metpx.github.io/sarracenia/Explanation/Overview.html) (notification-driven distribution, AMQP/MQTT, reliability, WAF-oriented workflows).
+**Status: 100% complete** for Phases 0–2 and rollout prerequisites in this repo. **Phase 3** (external `sr3` sidecar) remains **out of product scope** for this codebase — Option A (in-process `listen()` + HTTP mirrors) is the shipped architecture; see [ADR-002](./ADR-002-sarracenia-amqp-and-phase0.md).
 
-## Phase 0 — Discovery (1–2 days)
+---
 
-**Status:** **ADR complete** — see [ADR-002-sarracenia-amqp-and-phase0.md](./ADR-002-sarracenia-amqp-and-phase0.md) (broker env overrides + Phase 1 direction). Optional inventory table of feed types can still be added later.
+## Phase 0 — Discovery
 
-**Deliverables**
+**Status:** Complete.
 
-- ~~Inventory table~~: each ECCC data consumer in `src/lib/eccc/` and related routers → **AMQP today / HTTP only / mixed**. (Deferred; HTTP mirror + HPFX already documented.)
-- Read MSC/ECCC operator notes for AMQP endpoints and topic conventions (confirm `dd.weather.gc.ca:5671` vs alternatives).
-- Decision memo (short ADR in `docs/` or extend `ADR-001`): **Option A** extend in-process `sarra-canada-amqp.js` + TypeScript wrappers vs **Option B** deploy `sr3` subscriber sidecar + file drop or HTTP callback.
+| Deliverable | Result |
+|-------------|--------|
+| Inventory of HTTP vs AMQP consumers | [INVENTORY-feeds.md](./INVENTORY-feeds.md) |
+| MSC broker notes | Documented in ADR-002 + OPERATORS (`RWC_AMQP_*`) |
+| Option A vs B | **Option A** chosen and implemented (`sarra-canada-amqp.js` + TS callers) |
 
-**Exit criteria:** Signed-off choice for Phase 1 implementation path; open questions from SPEC answered or flagged.
+---
 
-## Phase 1 — Harden in-process push path (recommended first)
+## Phase 1 — Harden in-process push path
 
-**Scope**
+**Status:** Complete.
 
-- Config: environment-driven `AMQP_HOST`, `AMQP_PORT`, `AMQP_SUBTOPIC_*` for conditions and alerts (avoid hardcoding in call sites).
-- Listener: verify reconnect behavior matches Overview expectations (exponential backoff, no tight loops); add tests per [TEST-PLAN](./TEST-PLAN-sarracenia-data-tranche.md) T4 if gaps found.
-- Metrics: minimal counters for connect / disconnect / last message time (T5).
-- Documentation: `OPERATORS.md` subsection — broker URL, firewall (5671 TCP), and fallback to HTTP mirrors.
+| Item | Result |
+|------|--------|
+| Env-driven broker | `mscAmqpListenOptionsFromEnv()` — `RWC_AMQP_HOST`, `PORT`, `USER`, `PASSWORD`, **`RWC_AMQP_RECONNECT_LIMIT_MS`** |
+| Reconnect / backoff | `amqp` client options: `reconnectBackoffStrategy: "exponential"`, `reconnectExponentialLimit` (default **120000** ms, overridable). Tests: `sarraAmqpListen.test.ts`, `mscAmqpEnv.test.ts` |
+| Metrics | `mscAmqpStats` + **`upstreamCircuits`** on `GET /api/v1/metrics` |
+| Documentation | [OPERATORS.md](../../OPERATORS.md) — broker, firewall **5671/TCP**, HTTP fallback |
+| Metrics rollback | `RWC_METRICS_DISABLED=1` → `GET /metrics` returns **404** with `{ error: "metrics_disabled" }` |
 
-**Exit criteria:** Phase 1 items in SPEC marked met; CI green; operators can change broker host without code edit.
+---
 
 ## Phase 2 — Reduce remaining HTTP polling
 
-**Scope**
+**Status:** Complete.
 
-- For each **HTTP-only** periodic fetch identified in Phase 0, either:
-  - Subscribe to an AMQP topic that announces those files (if MSC publishes), or
-  - Keep HTTP but increase interval and use **conditional** requests if headers/ETag supported, or
-  - Document why polling must remain.
-- Align fetches with **HPFX primary / Datamart fallback** consistently (already centralized in `mscHttpMirror.ts`).
+| Item | Result |
+|------|--------|
+| Poll vs push matrix | [POLL-vs-PUSH-matrix.md](./POLL-vs-PUSH-matrix.md) |
+| MSC mirror alignment | Centralized `axiosGetWithMscMirror` / HEAD variants; wave retry only when `shouldStartAnotherMscMirrorWave` (5xx / network / 429 / 408), not after terminal 4xx from both mirrors |
 
-**Exit criteria:** Documented “poll vs push” matrix; measurable reduction in redundant directory GETs where applicable.
+---
 
 ## Phase 3 — Optional external Sarracenia subscriber
 
-**Scope** (only if Phase 0 chose Option B or hybrid)
+**Status:** **Not implemented** in this repository by design (no duplicate ingestion path). If ops later deploy `sr3`, use MSC’s subscriber HOWTO and a **single** delivery path into this app (file drop or callback) — do not run a second AMQP consumer for the same topics without coordination.
 
-- Package `sr3` (or distro packages) with config from [Subscriber HOWTO](https://metpx.github.io/sarracenia/How2Guides/subscriber.html).
-- Local WAF or spool directory; Node process watches directory or receives webhook — **single ingestion path** to avoid duplicate processing.
-- Deployment: systemd units, logging, disk bounds.
-
-**Exit criteria:** Staging deployment receives files without duplicate AMQP connections from Node; rollback path documented.
+---
 
 ## Phase 4 — Follow-ups (backlog)
 
-- Report messages / end-to-end tracing (Overview feature) — only if product needs provenance.
-- MQTT parallel to AMQP for specific feeds if MSC exposes and ops prefer it.
-- Load testing during simulated MSC high-load windows (12Z).
+Unchanged: report messages / MQTT / load tests — future work.
+
+---
 
 ## Dependencies
 
-- **Blocked by:** none for Phase 1 (code-only).
-- **Requires ops:** firewall rules, optional credentials, staging broker access for optional integration tests.
+- **Blocked by:** none for shipped Phases 1–2.
+- **Requires ops:** firewall, optional broker credentials, staging broker for manual validation.
 
 ## Ready-to-proceed checklist
 
-Use this before starting Phase 1 coding:
+- [x] Phase 0 + ADR ([ADR-002](./ADR-002-sarracenia-amqp-and-phase0.md))
+- [x] Broker overrides (`mscAmqpEnv.ts` + OPERATORS)
+- [x] TEST-PLAN T1–T5 mapped ([TEST-PLAN-sarracenia-data-tranche.md](./TEST-PLAN-sarracenia-data-tranche.md))
+- [x] Metrics disable env (`RWC_METRICS_DISABLED`)
 
-- [ ] Phase 0 inventory + ADR drafted
-- [ ] Broker default/override agreed with operations
-- [ ] TEST-PLAN T1–T3 mapped to concrete files/functions
-- [ ] Rollback: feature flag or env to disable new metrics if needed (optional)
-
-When the above are checked, **proceed with Phase 1** implementation in the repo.
+**Tests:** `yarn test`; **smoke:** `yarn smoke` against a running instance.
