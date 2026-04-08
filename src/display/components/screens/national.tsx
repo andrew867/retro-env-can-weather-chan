@@ -4,6 +4,7 @@ import {
   MIN_NATIONAL_STATIONS_NEEDED_TO_DISPLAY,
 } from "consts";
 import { formatObservedLong } from "lib/date";
+import { coerceArray } from "lib/display/safeData";
 import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo, useState } from "react";
 import { NationalStationObservations, WeatherStationTimeData } from "types";
@@ -16,7 +17,8 @@ type NationalWeatherProps = {
 } & AutomaticScreenProps;
 
 export function NationalWeatherScreen(props: NationalWeatherProps) {
-  const { observations, area, weatherStationTime, onComplete } = props ?? {};
+  const { observations: observationsRaw, area, weatherStationTime, onComplete } = props ?? {};
+  const observations = coerceArray(observationsRaw);
   const onCompleteRef = useStableOnCompleteRef(onComplete);
   const title = useMemo(
     () => formatObservedLong(weatherStationTime, true, " "),
@@ -52,11 +54,11 @@ export function NationalWeatherScreen(props: NationalWeatherProps) {
       <ol>
         {observationsOnMount.map((nationalObservation) => (
           <li key={nationalObservation.code}>
-            <span>{nationalObservation.name.padEnd(MAX_NATIONAL_STATION_NAME_LENGTH)}</span>
-            <span>{Math.round(nationalObservation.temperature).toString().padStart(4)}</span>
+            <span>{(nationalObservation.name ?? "").padEnd(MAX_NATIONAL_STATION_NAME_LENGTH)}</span>
+            <span>{Math.round(Number(nationalObservation.temperature ?? 0)).toString().padStart(4)}</span>
             <span>
               {"".padStart(2)}
-              {nationalObservation.abbreviatedCondition.padEnd(MAX_CONDITION_LENGTH)}
+              {(nationalObservation.abbreviatedCondition ?? "").padEnd(MAX_CONDITION_LENGTH)}
             </span>
           </li>
         ))}

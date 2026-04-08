@@ -30,7 +30,7 @@ export function AQHIWarningScreen({ city, airQuality, onComplete }: AQHIWarningS
 
   return (
     <div style={{ textAlign: "left" }}>
-      <div>{city.slice(0, 3)} air quality health index at</div>
+      <div>{(city ?? "").slice(0, 3)} air quality health index at</div>
       <div>
         {observedDateTime} is {Math.round(airQuality.value).toString().padStart(2)}-{getAQHIRisk(airQuality.value)} risk
       </div>

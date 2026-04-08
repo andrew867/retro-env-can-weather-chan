@@ -11,19 +11,22 @@ export function formatDisplayDate(timestamp: number) {
     .replace(/\s0/, "  ");
 }
 
-export function adjustObservedDateTimeToStationTime(date: WeatherStationTimeData) {
-  if (!date) return new Date();
-  return addMinutes(parseISO(date?.observedDateTime), date?.stationOffsetMinutesFromLocal);
+export function adjustObservedDateTimeToStationTime(date: WeatherStationTimeData | null | undefined): Date {
+  if (!date?.observedDateTime) return new Date();
+  const parsed = parseISO(date.observedDateTime);
+  if (!isValid(parsed)) return new Date();
+  return addMinutes(parsed, date.stationOffsetMinutesFromLocal ?? 0);
 }
 
 export function formatObservedLong(
-  date: WeatherStationTimeData,
+  date: WeatherStationTimeData | null | undefined,
   handleMid: boolean = false,
   additionalTimeZonePadding: string = ""
 ) {
-  if (!date) return "";
+  if (!date?.observedDateTime) return "";
 
   const parsedDate = adjustObservedDateTimeToStationTime(date);
+  if (!isValid(parsedDate)) return "";
   const timeZone = date.timezone;
 
   // is the right place to do this? idk
@@ -56,21 +59,23 @@ export function formatObservedLong(
   return displayDateString;
 }
 
-export function formatObservedMonthDate(date: WeatherStationTimeData, isLongMonths: boolean = false) {
+export function formatObservedMonthDate(date: WeatherStationTimeData | null | undefined, isLongMonths: boolean = false) {
   if (!date?.observedDateTime) return "";
 
   const parsedDate = adjustObservedDateTimeToStationTime(date);
-  const dateString = isValid(parsedDate) && format(parsedDate, "MMM d");
+  if (!isValid(parsedDate)) return "";
+  const dateString = format(parsedDate, "MMM d");
   if (!isLongMonths) return dateString;
 
   return dateString;
 }
 
-export function formatSunspotDate(date: WeatherStationTimeData) {
-  if (!date) return "";
+export function formatSunspotDate(date: WeatherStationTimeData | null | undefined) {
+  if (!date?.observedDateTime) return "";
 
   // if its after 12pm we look at the next day
   let parsedDate = adjustObservedDateTimeToStationTime(date);
+  if (!isValid(parsedDate)) return "";
   if (parsedDate.getHours() >= 12) parsedDate = addDays(parsedDate, 1);
 
   const formatString = "MMM'. 'd";
@@ -78,18 +83,16 @@ export function formatSunspotDate(date: WeatherStationTimeData) {
   return formattedDate.replace(/mar./gi, "March").replace(/apr./gi, "April");
 }
 
-export function getDaysAheadFromObserved(date: WeatherStationTimeData, numberOfDays: number = 6) {
+export function getDaysAheadFromObserved(date: WeatherStationTimeData | null | undefined, numberOfDays: number = 6) {
   // lets turn it into a date and then count forward
   const parsedDate = adjustObservedDateTimeToStationTime(date);
-  const daysAhead = addDays(parsedDate, numberOfDays);
-
-  return daysAhead;
+  if (!isValid(parsedDate)) return new Date();
+  return addDays(parsedDate, numberOfDays);
 }
 
-export function getDaysBehindFromObserved(date: WeatherStationTimeData, numberOfDays: number = 1) {
+export function getDaysBehindFromObserved(date: WeatherStationTimeData | null | undefined, numberOfDays: number = 1) {
   // turn it into a date and count back
   const parsedDate = adjustObservedDateTimeToStationTime(date);
-  const daysBehind = subDays(parsedDate, numberOfDays);
-
-  return daysBehind;
+  if (!isValid(parsedDate)) return new Date();
+  return subDays(parsedDate, numberOfDays);
 }

@@ -1,4 +1,5 @@
 import Marquee from "react-fast-marquee";
+import { coerceArray } from "lib/display/safeData";
 import { CrawlerMessages } from "types";
 
 type CrawlerMessagesProps = {
@@ -6,13 +7,14 @@ type CrawlerMessagesProps = {
 };
 
 export function CrawlerMessages({ crawler }: CrawlerMessagesProps) {
-  if (!crawler?.length) return <div id="crawler"></div>;
+  const lines = coerceArray<string>(crawler);
+  if (!lines.length) return <div id="crawler"></div>;
 
   return (
     <div id="crawler">
       <Marquee loop={0} speed={125}>
         <div className="message"></div>
-        {crawler.map((message, ix) => (
+        {lines.map((message, ix) => (
           <div className="message" key={`crawler.${ix}`}>
             {message}
           </div>

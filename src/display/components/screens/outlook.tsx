@@ -1,4 +1,5 @@
 import { buildOutlookScreenBodies, type OutlookPlaylistPage } from "lib/display/outlookScreenBodies";
+import { coerceStringLines } from "lib/display/safeData";
 import { useMemo } from "react";
 import { WeatherStation } from "types";
 
@@ -20,11 +21,13 @@ export function OutlookScreen(props: OutlookScreenProps) {
   const page = pages[outlookPageIndex] ?? pages[0];
   if (!page) return <></>;
 
+  const bodyLines = coerceStringLines(page.bodyLines);
+
   return (
     <div id="outlook_screen">
-      {page.title ? <div className="outlook-screen-title">{page.title}</div> : null}
+      {page.title ? <div className="outlook-screen-title">{String(page.title ?? "")}</div> : null}
       <div className="forecast-hardware-text-column outlook-screen-body">
-        {page.bodyLines.map((line, i) => (
+        {bodyLines.map((line, i) => (
           <div key={i} className="outlook-body-line">
             {line}
           </div>

@@ -40,7 +40,11 @@ export function GfxRetroApply({ gfx, useOfficialFonts = true }: GfxRetroApplyPro
     const res = gfx?.displayResolution === "hd" ? "hd" : "sd";
     el.classList.remove("rwc-resolution-sd", "rwc-resolution-hd");
     el.classList.add(res === "hd" ? "rwc-resolution-hd" : "rwc-resolution-sd");
-    el.style.setProperty("--rwc-ui-scale", res === "hd" ? "2" : "1");
+    const scale = res === "hd" ? 2 : 1;
+    el.style.setProperty("--rwc-ui-scale", String(scale));
+    /** Match `rwc-resolution-hd` frame size so safe-area padding and bar heights stay consistent when scaled. */
+    el.style.setProperty("--channel-max-height", `${480 * scale}px`);
+    el.style.setProperty("--channel-max-width", `${640 * scale}px`);
 
     el.style.setProperty("--rwc-pillar-color", SCREEN_BACKGROUND_BLUE);
   }, [gfx, useOfficialFonts]);

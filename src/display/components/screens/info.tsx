@@ -1,5 +1,7 @@
+import { coerceStringLines } from "lib/display/safeData";
+
 type InfoScreenProps = {
-  lines: string[];
+  lines?: unknown;
 };
 
 /**
@@ -7,8 +9,9 @@ type InfoScreenProps = {
  * Lines come from `infoScreen` in `cfg/rwc-config.json` (array of strings).
  */
 export function InfoScreen(props: InfoScreenProps) {
-  const { lines = [] } = props ?? {};
-  const display = lines.map((l) => String(l).trim()).filter((l) => l.length > 0);
+  const display = coerceStringLines(props?.lines)
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 
   if (!display.length) {
     return (

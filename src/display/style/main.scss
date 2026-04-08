@@ -122,9 +122,10 @@ ol {
     align-items: flex-end;
     background: $crawler_bar_background_col;
     display: flex;
+    flex-shrink: 0;
     font-size: 34px;
     justify-content: flex-end;
-    height: $crawler_bar_height;
+    height: calc(#{$crawler_bar_height} * var(--rwc-ui-scale, 1));
     overflow: hidden;
     padding: 0 10%;
     padding-bottom: 10px;
@@ -146,18 +147,42 @@ ol {
 
   #display {
     @include recwc_body;
-    align-items: center;
+    align-items: stretch;
     display: flex;
+    flex: 1 1 0;
     flex-direction: column;
     flex-wrap: nowrap;
-    height: $display_area_height;
+    min-height: 0;
     overflow: hidden;
     /** Legacy ~10% inset plus gfx “safe area” (fraction of 640×480) from `GfxRetroApply`. */
     padding-top: calc(var(--gfx-safe-top, 0.02) * var(--channel-max-height, 480px));
-    padding-bottom: calc(var(--gfx-safe-bottom, 0.06) * var(--channel-max-height, 480px));
+    /** Bottom inset is shared with `#footer_bar`; keep this modest so body text is not clipped above the footer. */
+    padding-bottom: calc(var(--gfx-safe-bottom, 0.06) * var(--channel-max-height, 480px) * 0.42);
     padding-left: calc(10% + var(--gfx-safe-left, 0.02) * var(--channel-max-width, 640px));
     padding-right: calc(10% + var(--gfx-safe-right, 0.02) * var(--channel-max-width, 640px));
     width: 100%;
+
+    #rwc-screen-title {
+      flex: 0 0 auto;
+      font-size: 0.62em;
+      letter-spacing: 0.04em;
+      line-height: 1.05;
+      padding-bottom: 0.12em;
+      text-align: center;
+      width: 100%;
+    }
+
+    #rwc-screen-body {
+      align-items: center;
+      display: flex;
+      flex: 1 1 0;
+      flex-direction: column;
+      /** Allow wide monospace screens (e.g. province precip) to respect horizontal padding instead of clipping. */
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      width: 100%;
+    }
 
     .centre-align {
       text-align: center;
@@ -166,10 +191,11 @@ ol {
 
   #footer_bar {
     background: $footer_bar_background_col;
-    height: $footer_bar_height;
+    flex-shrink: 0;
+    height: calc(#{$footer_bar_height} * var(--rwc-ui-scale, 1));
     overflow: hidden;
     padding: 0.4em calc(10% + var(--gfx-safe-right, 0.02) * var(--channel-max-width, 640px))
-      calc(0.55em + var(--gfx-safe-bottom, 0.06) * var(--channel-max-height, 480px) * 0.25)
+      calc(0.62em + var(--gfx-safe-bottom, 0.06) * var(--channel-max-height, 480px) * 0.32)
       calc(10% + var(--gfx-safe-left, 0.02) * var(--channel-max-width, 640px));
     text-align: center;
     width: 100%;

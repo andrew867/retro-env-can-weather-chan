@@ -1,6 +1,6 @@
 # Operator guide (deployed instances)
 
-This document is for people running the Retro ECCC Weather Channel simulator in production or on a headless box (for example `mz-weather01`). End-user setup remains in [README.md](./README.md).
+This document is for people running the Retro ECCC Weather Channel simulator in production or on a headless box (for example `rwc-display-01`). End-user setup remains in [README.md](./README.md).
 
 ## Git and `yarn.lock` on the server
 
@@ -81,23 +81,31 @@ Under **Graphics**:
 
 Saving from the config UI persists these files; the display picks up changes via `GET /init` (slow poll) and **immediately** for crawler lines via **`GET /init/stream`** (SSE `crawler_update` after `POST /api/v1/config/crawler`).
 
-## Publishing to the public GitHub fork (from a private monorepo)
+## Publishing to the public GitHub mirror (subtree from a private parent repo)
 
-If this app lives inside a larger private repository and you mirror **only** this directory to a public fork (for example `retro-env-can-weather-chan` on GitHub), use a **subtree split** from the monorepo root so prod can keep using `git pull` on the fork.
+The **public** GitHub project must contain **only** this app’s directory—never the whole parent repository. If this tree lives inside a larger **private** repo (for example on self-hosted Git), use **`git subtree split`** from the **parent repository root** and push **only** that split branch to GitHub.
 
-One-time: add a remote for the fork (SSH or HTTPS):
+### Hygiene (public mirror)
+
+- Do **not** mention private parent-repo names, internal hostnames, or proprietary codenames in this tree, in commit messages you intend to appear on GitHub, or in public issues.
+- Prefer neutral examples in docs (e.g. `rwc-display-01` for a headless display host).
+
+### One-time: `github` remote over HTTPS
 
 ```bash
-git remote add github git@github.com:YOUR_USER/retro-env-can-weather-chan.git
+git remote add github https://github.com/YOUR_USER/retro-env-can-weather-chan.git
+# Already added? Switch off SSH:
+# git remote set-url github https://github.com/YOUR_USER/retro-env-can-weather-chan.git
 ```
 
-Publish the subtree branch and push:
+### Publish (run from the **parent monorepo root**, not inside this folder)
 
 ```bash
-# Run from the monorepo repository root (not inside this folder).
 git subtree split --prefix=code/weather-gfx/retro-env-can-weather-chan -b rwc-github-publish
 git push github rwc-github-publish:main --force-with-lease
 git branch -D rwc-github-publish
 ```
 
-Keep **internal product names and private hostnames** out of commits that go to the public fork; use neutral operator wording in docs and config UI copy.
+Use your GitHub default branch name if it is not `main` (e.g. `master`).
+
+**`origin`** remains your private forge; **`github`** is only for this subtree push. Do not run `git push github` from the full monorepo without the split step above.

@@ -1,5 +1,6 @@
 import { MAX_SUNSPOT_CITY_NAME_LENGTH } from "consts";
 import { formatSunspotDate, isSunSpotSeason } from "lib/date";
+import { coerceArray } from "lib/display/safeData";
 import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo } from "react";
 import { SunspotStationObservations, WeatherStationTimeData, AutomaticScreenProps } from "types";
@@ -31,8 +32,8 @@ export function SunspotScreen(props: SunspotScreenProps) {
     [weatherStationTime?.observedDateTime]
   );
 
-  const formatTemp = (temperature: number) =>
-    Math.round(temperature ?? 0)
+  const formatTemp = (temperature: number | undefined) =>
+    Math.round(Number.isFinite(Number(temperature)) ? Number(temperature) : 0)
       .toString()
       .padStart(2, "0");
 
@@ -46,8 +47,8 @@ export function SunspotScreen(props: SunspotScreenProps) {
       <ol>
         {sunspots.map((sunspot) => (
           <li key={sunspot.code}>
-            <span>{sunspot.name.slice(0, MAX_SUNSPOT_CITY_NAME_LENGTH).padEnd(MAX_SUNSPOT_CITY_NAME_LENGTH)}</span>
-            <span>{sunspot.abbreviatedForecast.padEnd(13)}</span>
+            <span>{(sunspot.name ?? "").slice(0, MAX_SUNSPOT_CITY_NAME_LENGTH).padEnd(MAX_SUNSPOT_CITY_NAME_LENGTH)}</span>
+            <span>{(sunspot.abbreviatedForecast ?? sunspot.forecast ?? "").padEnd(13)}</span>
             <span>
               {formatTemp(sunspot.highTemp)}/{formatTemp(sunspot.lowTemp)}
             </span>

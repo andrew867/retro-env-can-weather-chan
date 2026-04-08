@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.6.3] - 2026-04-08
+
+### Display layout and readability
+
+- **Frame math:** `#display` uses **flex** (`flex: 1 1 0`, `min-height: 0`) between crawler and footer instead of a fixed pixel height, so the middle band always fills the channel frame.
+- **HD / `--rwc-ui-scale`:** Crawler and footer bar **heights scale** with resolution; **`GfxRetroApply`** sets **`--channel-max-height`** / **`--channel-max-width`** so gfx safe-area padding matches the scaled raster (fixes clipped last lines when logical resolution is doubled).
+- **Screen title strip:** **`#rwc-screen-title`** in the rotator shows the active screen name and city (distinct from the crawler headline strip).
+- **Footer:** Slightly more bottom padding on **`#footer_bar`** so branding text is not clipped.
+- **Province temp/precip:** Narrower gap column, slightly **smaller font** on `#province_tracking_screen`, and **`min-width: 0`** on **`#rwc-screen-body`** so wide monospace rows are not cut off on the right.
+
+### Display reliability (partial / malformed data)
+
+- **`mergeDefined`:** Same-`observationID` condition SSE merges **skip `undefined` patch keys** so `{ ...prev, ...parsed }` cannot wipe **`observed`** or **`stationTime`** when the server omits fields.
+- **`displayTime`:** **`adjustObservedDateTimeToStationTime`**, **`formatObservedLong`**, **`formatSunspotDate`**, **`formatObservedMonthDate`**, and day offset helpers **guard** missing or invalid **`observedDateTime`**.
+- **`lib/display/safeData`:** **`coerceArray`**, **`coerceStringLines`**, **`isPlainObject`** — used by list/line UIs and SSE handlers so non-array JSON does not crash **`.map`** / **`.length`**.
+- **Hooks:** **`useWeatherEventStream`** accepts only **plain-object** condition payloads; **`useAlerts`** REST and SSE require **`alerts`** to be an **array**.
+- **Screens / crawler:** Defensive coercions and optional chaining on **forecast**, **national**, **airport METAR**, **outlook**, **info**, **crawler**, **province tracking**, **sunspots**; safer **Conditions** / **almanac** / **forecast** / **last month** / **AQHI** props.
+
+### Docs
+
+- **[OPERATORS.md](./OPERATORS.md):** Public GitHub mirror via **`git subtree split`**, **HTTPS** remote example, hygiene for neutral wording, and reminder not to push the full parent repository to **`github`**.
+
+### Tests
+
+- **`mergeDefined.test.ts`**, **`safeData.test.ts`**.
+
+---
+
 ## [2.6.2] - 2026-04-07
 
 ### Reliability and operations (release hardening)

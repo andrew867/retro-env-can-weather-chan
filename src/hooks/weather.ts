@@ -2,6 +2,8 @@ import {
   CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT,
   CONDITIONS_EVENT_STREAM_FORECAST_UPDATE_EVENT,
 } from "consts";
+import { mergeDefined } from "lib/mergeDefined";
+import { isPlainObject } from "lib/display/safeData";
 import { useEffect, useRef, useState } from "react";
 import { WeatherStation } from "types";
 
@@ -53,12 +55,13 @@ export function useWeatherEventStream(options?: WeatherEventStreamOptions) {
 
       es.addEventListener(CONDITIONS_EVENT_STREAM_CONDITION_UPDATE_EVENT, (conditionUpdate) => {
         try {
-          const parsed = JSON.parse(conditionUpdate.data) as WeatherStation;
-          if (!parsed) return;
+          const raw = JSON.parse(conditionUpdate.data) as unknown;
+          if (!isPlainObject(raw)) return;
+          const parsed = raw as WeatherStation;
           setCurrentConditions((prev) => {
             // Same observation hour can still get a new `fetchedAt` after server restart/reparse; merge so the stale footer clears.
             if (prev && parsed.observationID === prev.observationID) {
-              return { ...prev, ...parsed };
+              return mergeDefined(prev, parsed);
             }
             return parsed;
           });
@@ -69,7 +72,9 @@ export function useWeatherEventStream(options?: WeatherEventStreamOptions) {
 
       es.addEventListener(CONDITIONS_EVENT_STREAM_FORECAST_UPDATE_EVENT, (ev) => {
         try {
-          const parsed = JSON.parse(ev.data) as Partial<WeatherStation> & {
+          const raw = JSON.parse(ev.data) as unknown;
+          if (!isPlainObject(raw)) return;
+          const parsed = raw as Partial<WeatherStation> & {
             forecast?: WeatherStation["forecast"];
             fetchedAt?: string | null;
           };

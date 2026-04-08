@@ -10,10 +10,14 @@ const TEMPERATURE_STRING_LENGTH = 5;
 
 export function AlmanacScreen(props: AlmanacScreenProps) {
   const { weatherStationResponse, airQuality } = props ?? {};
-  const { city, observed, stationTime, almanac } = weatherStationResponse ?? {};
 
   // no response from weather station so whatever
   if (!weatherStationResponse) return <></>;
+
+  const city = weatherStationResponse.city ?? "";
+  const observed = weatherStationResponse.observed ?? undefined;
+  const stationTime = weatherStationResponse.stationTime;
+  const almanac = weatherStationResponse.almanac;
 
   const formatTemperature = (temperature: number | null | undefined, length: number = TEMPERATURE_STRING_LENGTH) => {
     if (temperature == null || Number.isNaN(Number(temperature))) return "N/A".padStart(length);

@@ -1,3 +1,4 @@
+import { coerceArray } from "lib/display/safeData";
 import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { AQHIObservationResponse, CAPObject, WeatherStation, AuthenticRefreshConfig } from "types";
@@ -30,7 +31,7 @@ export function ForecastScreen(props: ForecastScreenProps) {
   const {
     onComplete,
     weatherStationResponse,
-    forecastBodies,
+    forecastBodies: forecastBodiesRaw,
     forecastPageIndex,
     alert,
     isReload,
@@ -41,6 +42,7 @@ export function ForecastScreen(props: ForecastScreenProps) {
     configVersion,
     secondsPerPage,
   } = props ?? {};
+  const forecastBodies = coerceArray<string>(forecastBodiesRaw);
   const dwellSec =
     secondsPerPage != null && secondsPerPage >= SCREEN_MIN_DISPLAY_LENGTH
       ? secondsPerPage
@@ -379,8 +381,8 @@ export function ForecastScreen(props: ForecastScreenProps) {
       {forecastPageIndex === 0 && (
         <>
           <Conditions
-            city={weatherStationResponse.city}
-            conditions={weatherStationResponse.observed}
+            city={weatherStationResponse.city ?? ""}
+            conditions={weatherStationResponse.observed ?? undefined}
             stationTime={weatherStationResponse.stationTime}
             airQuality={airQuality}
             revealStep={effectiveReveal}
@@ -410,7 +412,7 @@ export function ForecastScreen(props: ForecastScreenProps) {
       )}
       {forecastPageIndex > 0 && forecastBodies[forecastPageIndex] != null && (
         <div className="forecast-continuation-screen">
-          <div className="forecast-continuation-head">{weatherStationResponse.city} forecast cont..</div>
+          <div className="forecast-continuation-head">{weatherStationResponse.city ?? ""} forecast cont..</div>
           <div className="forecast-continuation-body forecast-hardware-text-column">
             {useAuthenticContinuation ? (
               <div className="forecast-authentic-wrap">

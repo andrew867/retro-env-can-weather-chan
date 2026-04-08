@@ -2,6 +2,7 @@ import { ALERTS_SSE_UPDATE_EVENT } from "consts";
 import axios from "lib/axios";
 import { getDataFetchedAtHeader } from "lib/fetchMeta";
 import { logClientFetchWarning } from "lib/eccc/fetchErrors";
+import { isPlainObject } from "lib/display/safeData";
 import { CAPObject } from "types";
 import { useCallback, useEffect, useState } from "react";
 
@@ -18,8 +19,8 @@ export function useAlerts() {
   const refetchAlerts = useCallback(async () => {
     try {
       const resp = await axios.get("weather/alerts");
-      const list = (resp.data as { alerts?: CAPObject[] })?.alerts ?? [];
-      setAlerts(list);
+      const raw = (resp.data as { alerts?: unknown })?.alerts;
+      setAlerts(Array.isArray(raw) ? (raw as CAPObject[]) : []);
       setAlertsDataFetchedAt(getDataFetchedAtHeader(resp));
     } catch (err) {
       logClientFetchWarning("alerts", err);
@@ -66,8 +67,9 @@ export function useAlerts() {
 
       es.addEventListener(ALERTS_SSE_UPDATE_EVENT, (ev) => {
         try {
-          const parsed = JSON.parse(ev.data) as { alerts?: CAPObject[] };
-          setAlerts(parsed.alerts ?? []);
+          const parsed = JSON.parse(ev.data) as unknown;
+          const raw = isPlainObject(parsed) ? (parsed as { alerts?: unknown }).alerts : undefined;
+          setAlerts(Array.isArray(raw) ? (raw as CAPObject[]) : []);
           setAlertsDataFetchedAt(new Date().toISOString());
           reconnectAttempt = 0;
         } catch {
