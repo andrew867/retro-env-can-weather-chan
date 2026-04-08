@@ -41,7 +41,7 @@ See [docs/specs/ADR-002-sarracenia-amqp-and-phase0.md](./docs/specs/ADR-002-sarr
 - **AMQP down:** Citypage and CAP still recover via HTTP — bootstrap fetch on startup, **stale fallback** on a timer (`RWC_CITYPAGE_STALE_*`), and alert HTTP poll in the display bundle. Check firewall **5671/tcp** to `RWC_AMQP_HOST`.
 - **HPFX TLS issues:** Set **`RWC_MSC_TRY_DATAMART_FIRST=1`** so **`dd.weather.gc.ca`** is tried before **`hpfx.collab.science.gc.ca`** for MSC mirror pairs.
 - **Logs:** Logger categories include `upstream` (structured lines), `CONFIG` (validation), `Storage` (disk warn). No tokens or passwords are logged.
-- **Metrics / circuits:** `GET /api/v1/metrics` includes **`upstreamCircuits`** (per-host cool-off state). **`GET /api/v1/health`** includes **`degraded`** flags; **`GET /api/v1/ready`** returns **503** if the last successful **citypage parse** is older than **`RWC_CITYPAGE_STALE_FALLBACK_AFTER_MS`** (same bar as the internal stale checker).
+- **Metrics / circuits:** `GET /api/v1/metrics` includes **`upstreamCircuits`** (per-host cool-off state). **`GET /api/v1/health`** includes **`degraded`** flags; **`GET /api/v1/ready`** returns **503** if the last successful **citypage parse** is older than **`RWC_CITYPAGE_STALE_FALLBACK_AFTER_MS`** (same threshold used by the periodic stale checker).
 - **Restart order:** Start API (`yarn start` or process manager) after config under `./cfg/` exists; run **`yarn smoke`** (or `node scripts/post-deploy-smoke.mjs`) against `BASE_URL` after deploy.
 - **Escalation:** *On-call / owner — set per deployment.*
 
@@ -81,15 +81,15 @@ Under **Graphics**:
 
 Saving from the config UI persists these files; the display picks up changes via `GET /init` (slow poll) and **immediately** for crawler lines via **`GET /init/stream`** (SSE `crawler_update` after `POST /api/v1/config/crawler`).
 
-## Publishing to the public GitHub mirror (subtree from a private parent repo)
+## Publishing to the public GitHub mirror
 
-The **public** GitHub project must contain **only** this app’s directory—never the whole parent repository. If this tree lives inside a larger **private** repo (for example on self-hosted Git), use **`git subtree split`** from the **parent repository root** and push **only** that split branch to GitHub.
+The **public** GitHub project must contain **only** this app’s directory—never the whole source checkout. If this tree lives inside a larger repository, use **`git subtree split`** from the **repository root** and push **only** that split branch to GitHub.
 
 ### If GitHub shows “hundreds/thousands of commits behind” another `retro-env-can-weather-chan` fork
 
 That banner compares your **`main`** to the **upstream repository GitHub still treats as this repo’s parent** (often **Forceh91/retro-env-can-weather-chan** if the public repo was originally created with **Fork**).
 
-**`git subtree split` does not produce the same Git history as that upstream.** The split rewrites commits from your **private monorepo path only**. The trees may look similar, but the **commit graph is unrelated**, so GitHub’s “X ahead / Y behind” is **misleading** and will look worse after **every** subtree push—not because you forgot to merge, but because the comparison itself is the wrong metric.
+**`git subtree split` does not produce the same Git history as that upstream.** The split rewrites commits from this project path only. The trees may look similar, but the **commit graph is unrelated**, so GitHub’s “X ahead / Y behind” is **misleading** and will look worse after **every** subtree push—not because you forgot to merge, but because the comparison itself is the wrong metric.
 
 **What to do (pick one):**
 
@@ -100,7 +100,7 @@ That banner compares your **`main`** to the **upstream repository GitHub still t
 
 ### Hygiene (public mirror)
 
-- Do **not** mention private parent-repo names, internal hostnames, or proprietary codenames in this tree, in commit messages you intend to appear on GitHub, or in public issues.
+- Do **not** mention other repo names, deployment-specific hostnames, or proprietary codenames in this tree, in commit messages you intend to appear on GitHub, or in public issues.
 - Prefer neutral examples in docs (e.g. `rwc-display-01` for a headless display host).
 
 ### One-time: `github` remote over HTTPS
@@ -111,7 +111,7 @@ git remote add github https://github.com/YOUR_USER/retro-env-can-weather-chan.gi
 # git remote set-url github https://github.com/YOUR_USER/retro-env-can-weather-chan.git
 ```
 
-### Publish (run from the **parent monorepo root**, not inside this folder)
+### Publish (run from the **repository root**, not inside this folder)
 
 ```bash
 git subtree split --prefix=code/weather-gfx/retro-env-can-weather-chan -b rwc-github-publish
@@ -121,4 +121,4 @@ git branch -D rwc-github-publish
 
 Use your GitHub default branch name if it is not `main` (e.g. `master`).
 
-**`origin`** remains your private forge; **`github`** is only for this subtree push. Do not run `git push github` from the full monorepo without the split step above.
+**`origin`** remains your source remote; **`github`** is only for this subtree push. Do not run `git push github` from the full repository without the split step above.

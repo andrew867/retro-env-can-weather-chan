@@ -110,9 +110,14 @@ Implement behind a **config flag** (e.g. `authenticRefresh: boolean` or baud pre
 
 ---
 
-## Formal spec, tests, and implementation plans
+## Related public docs
 
-Detailed authentic-refresh specifications and phased plans are maintained in the operator’s **private workspace** (for example under `.cursor/plans/` in a full checkout). They are not part of the public GitHub tree; release notes and code remain the source of truth for what shipped.
+- [SPEC-vhs-layout-fidelity.md](./docs/specs/SPEC-vhs-layout-fidelity.md)
+- [PLAN-vhs-layout-fidelity.md](./docs/specs/PLAN-vhs-layout-fidelity.md)
+- [TEST-PLAN-vhs-layout-fidelity.md](./docs/specs/TEST-PLAN-vhs-layout-fidelity.md)
+- [SPEC-versioning-and-release-cycle.md](./docs/specs/SPEC-versioning-and-release-cycle.md)
+- [PLAN-versioning-and-release-cycle.md](./docs/specs/PLAN-versioning-and-release-cycle.md)
+- [TEST-PLAN-versioning-and-release-cycle.md](./docs/specs/TEST-PLAN-versioning-and-release-cycle.md)
 
 ---
 

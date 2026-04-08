@@ -2,6 +2,21 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.6.4] - 2026-04-08
+
+### Display polish
+
+- **VHS layout fidelity:** Restored the plate structure to the historical look by removing the in-plate title strip, reducing crawler dominance, widening forecast/almanac fit, and rebalancing province temp/precip spacing.
+- **Bottom row safety:** Kept a modest bottom-safe cushion in `#rwc-screen-body` so the last visible line fares better without overflow bleed or native scrollbars.
+
+### Public docs and release metadata
+
+- **`OPERATORS.md`:** Reworded the GitHub mirror workflow so it reads cleanly in the public repo while keeping the subtree publish instructions intact.
+- **`HISTORY-AUTHENTICITY.md`:** Replaced the private-workspace note with links to the public specs and test-plan docs now tracked in the repository.
+- **Version metadata:** Bumped the active development version to **`2.6.4`** in `package.json`.
+
+---
+
 ## [2.6.3] - 2026-04-08
 
 ### Display layout and readability
