@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.6.6] - 2026-04-08
+
+### Display
+
+- **Airport METAR:** Row text is built in a single span (avoids extra `white-space: pre` gaps between columns) and uses one space between temperature and condition instead of two, so four-letter flight categories (e.g. MVFR) no longer push the temperature past the plate edge.
+
+---
+
 ## [2.6.5] - 2026-04-09
 
 ### Operator status dashboard

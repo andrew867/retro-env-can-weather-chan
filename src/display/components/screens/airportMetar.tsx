@@ -52,16 +52,20 @@ export function AirportMetarScreen(props: AirportMetarScreenProps) {
         {title}
       </>
       <ol>
-        {observationsOnMount.map((row) => (
-          <li key={row.code}>
-            <span>{(row.name ?? "").padEnd(MAX_NATIONAL_STATION_NAME_LENGTH)}</span>
-            <span>{Math.round(row.temperature ?? 0).toString().padStart(4)}</span>
-            <span>
-              {"".padStart(2)}
-              {(row.abbreviatedCondition ?? "").padEnd(MAX_CONDITION_LENGTH)}
-            </span>
-          </li>
-        ))}
+        {observationsOnMount.map((row) => {
+          const name = (row.name ?? "")
+            .slice(0, MAX_NATIONAL_STATION_NAME_LENGTH)
+            .padEnd(MAX_NATIONAL_STATION_NAME_LENGTH);
+          const temp = Math.round(row.temperature ?? 0).toString().padStart(4);
+          const cond = (row.abbreviatedCondition ?? "")
+            .slice(0, MAX_CONDITION_LENGTH)
+            .padEnd(MAX_CONDITION_LENGTH);
+          return (
+            <li key={row.code}>
+              <span>{`${name}${temp} ${cond}`}</span>
+            </li>
+          );
+        })}
       </ol>
     </div>
   );
