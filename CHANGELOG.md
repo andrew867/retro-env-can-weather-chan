@@ -2,6 +2,14 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.6.7] - 2026-04-08
+
+### Config
+
+- **Airport METAR:** `MAX_AIRPORT_METAR_STATIONS` raised to **8**; **`DEFAULT_AIRPORT_METAR_STATIONS`** in consts is Winnipeg, St. John's (**CYYT**), Vancouver, Toronto, Montreal, Calgary, Chicago (**KORD**), New York (**KJFK**). Omit **`airportMetarStations`** in `rwc-config.json` to use that list; set it to **`[]`** to disable the screen.
+
+---
+
 ## [2.6.6] - 2026-04-08
 
 ### Display
@@ -153,7 +161,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 **New rotator screen:** **`Screens.AIRPORT_METAR`** (“Airport conditions (METAR)”), included in the **default flavour** after **USA regional conditions**.
 
-**Config (`cfg/rwc-config.json`):** array **`airportMetarStations`** — up to **4** entries: `{ "name": "Winnipeg", "code": "CYWG" }`. ICAO codes are normalized to uppercase; invalid entries are dropped. Example in repo default config: **CYWG**, **CYYZ**, **CYVR**.
+**Config (`cfg/rwc-config.json`):** array **`airportMetarStations`** — up to **8** entries: `{ "name": "Winnipeg", "code": "CYWG" }`. ICAO codes are normalized to uppercase; invalid entries are dropped. Default config includes Canadian hubs (e.g. **CYWG**, **CYYT**, **CYVR**, **CYYZ**, **CYUL**, **CYYC**) plus **KORD** / **KJFK**.
 
 **Server:** batch fetch from the same AWC METAR endpoint (one HTTP request for all configured ids). **`GET /api/v1/weather/airport-metar`** returns the filtered reporting rows and **`X-RWC-Data-Fetched-At`** when any station updated successfully. Display polls on the same **5 min** interval as USA weather; recovery refetch includes airport METAR after SSE reconnect.
 

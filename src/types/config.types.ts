@@ -20,7 +20,7 @@ export type ConfigFields = {
   flavours: FlavourNames;
   provinceStations: ProvinceStation[];
   airQualityStation: string;
-  /** ICAO METAR screen; max 4 stations (see `MAX_AIRPORT_METAR_STATIONS`). */
+  /** ICAO METAR screen; max length `MAX_AIRPORT_METAR_STATIONS` in consts. */
   airportMetarStations?: AirportMetarStation[];
   crawler: string[];
   music: string[];

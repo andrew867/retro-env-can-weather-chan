@@ -10,6 +10,7 @@ import {
   EVENT_BUS_CONFIG_CHANGE_PROVINCE_TRACKING,
   FLAVOUR_DIRECTORY,
   FS_NO_FILE_FOUND,
+  DEFAULT_AIRPORT_METAR_STATIONS,
   MAX_AIRPORT_METAR_STATIONS,
   PROVINCE_TRACKING_DEFAULT_STATIONS,
   GFX_DEFAULT_SCANLINES_OPACITY,
@@ -261,6 +262,8 @@ class Config {
           })
           .filter((row) => /^[A-Z0-9]{3,4}$/.test(row.code))
           .slice(0, MAX_AIRPORT_METAR_STATIONS);
+      } else {
+        this.airportMetarStations = DEFAULT_AIRPORT_METAR_STATIONS.map((row) => ({ ...row }));
       }
       if (this.gfx?.features?.authenticRefreshEnabled) {
         this.authenticRefresh = this.normalizeAuthenticRefresh({

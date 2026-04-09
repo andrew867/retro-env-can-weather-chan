@@ -2,6 +2,7 @@ jest.mock("fs");
 import { initializeConfig } from "lib/config/config";
 import fs from "fs";
 import exampleConfig from "./testdata/config/exampleConfig.json";
+import { DEFAULT_AIRPORT_METAR_STATIONS } from "consts/airportMetar.consts";
 import { FLAVOUR_DEFAULT } from "consts/flavour.consts";
 import { DEFAULT_WEATHER_STATION_ID } from "consts/server.consts";
 import { PROVINCE_TRACKING_DEFAULT_STATIONS } from "consts/provincetracking.consts";
@@ -34,6 +35,15 @@ describe("Config file loading", () => {
     expect(config.flavour.screens).toStrictEqual(FLAVOUR_DEFAULT.screens);
     expect(config.musicPlaylist).toHaveLength(0);
     expect(config.crawlerMessages).toHaveLength(0);
+    expect(config.airportMetarStations).toEqual([...DEFAULT_AIRPORT_METAR_STATIONS]);
+  });
+
+  it("keeps empty airport METAR list when airportMetarStations is []", () => {
+    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() =>
+      JSON.stringify({ ...exampleConfig, airportMetarStations: [] })
+    );
+    const config = initializeConfig();
+    expect(config.airportMetarStations).toStrictEqual([]);
   });
 
   it("loads from file correctly when primary location is missing", () => {
