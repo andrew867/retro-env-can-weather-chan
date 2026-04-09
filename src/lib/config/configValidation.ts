@@ -52,6 +52,17 @@ export function validateLoadedConfigJson(parsed: Record<string, unknown>): Confi
     }
   }
 
+  const misc = parsed.misc as Record<string, unknown> | undefined;
+  if (misc && typeof misc === "object" && misc.logLevel !== undefined) {
+    const level = String(misc.logLevel).trim().toLowerCase();
+    if (!["debug", "notice", "warn", "warning", "error", "critical"].includes(level)) {
+      issues.push({
+        level: "warn",
+        message: `misc.logLevel must be one of debug|notice|warn|error|critical (got ${String(misc.logLevel)})`,
+      });
+    }
+  }
+
   return issues;
 }
 

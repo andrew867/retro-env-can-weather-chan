@@ -19,7 +19,7 @@ import {
   GFX_RELOAD_LINE_MS_MIN,
 } from "consts";
 import { FlavourLoader } from "lib/flavour";
-import Logger from "lib/logger";
+import Logger, { normalizeLogLevel, setLogLevel } from "lib/logger";
 import {
   AuthenticRefreshConfig,
   ClimateNormals,
@@ -124,6 +124,7 @@ class Config {
   misc: MiscConfig = {
     rejectInHourConditionUpdates: false, // whether we should only update conditions once an hour
     alternateRecordsSource: undefined, // if you want to supply your own record data to override what ECCC has, you can do it here with a JSON file at http(s)://example.com/records.json
+    logLevel: "warn", // mute notice/debug by default; emit warn/error/critical
   };
   crawlerMessages: string[] = [];
   musicPlaylist: string[] = []; // what music files are available
@@ -224,6 +225,8 @@ class Config {
       if (this.lookAndFeel.showFooterFreshnessHint === undefined) this.lookAndFeel.showFooterFreshnessHint = true;
       if (this.lookAndFeel.useOfficialFonts === undefined) this.lookAndFeel.useOfficialFonts = true;
       this.misc = { ...this.misc, ...misc };
+      this.misc.logLevel = normalizeLogLevel(this.misc.logLevel, "warn");
+      setLogLevel(this.misc.logLevel);
       const rawProvinceStations =
         provinceHighLowEnabled && provinceStations?.length ? provinceStations : PROVINCE_TRACKING_DEFAULT_STATIONS;
       this.provinceStations = mergeProvinceStationClimateDefaults(rawProvinceStations);
@@ -438,9 +441,13 @@ class Config {
     this.checkFlavoursDirectory();
   }
 
-  public setMiscSettings(rejectInHourConditionUpdates: boolean, alternateRecordsSource: string) {
+  public setMiscSettings(rejectInHourConditionUpdates: boolean, alternateRecordsSource: string, logLevel?: string) {
     this.misc.alternateRecordsSource = alternateRecordsSource;
     this.misc.rejectInHourConditionUpdates = rejectInHourConditionUpdates;
+    if (typeof logLevel === "string") {
+      this.misc.logLevel = normalizeLogLevel(logLevel, this.misc.logLevel ?? "warn");
+      setLogLevel(this.misc.logLevel);
+    }
   }
 
   public setLookAndFeelSettings(

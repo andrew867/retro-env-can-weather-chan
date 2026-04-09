@@ -13,4 +13,12 @@ describe("configValidation", () => {
     const issues = validateFlavourScreenIds([{ id: Screens.AIRPORT_METAR + 99 }]);
     expect(issues.length).toBeGreaterThan(0);
   });
+
+  it("validateLoadedConfigJson warns on invalid misc.logLevel", () => {
+    const issues = validateLoadedConfigJson({
+      primaryLocation: { province: "MB", location: "s0000193" },
+      misc: { logLevel: "chatty" },
+    });
+    expect(issues.some((i) => i.message.includes("misc.logLevel"))).toBe(true);
+  });
 });

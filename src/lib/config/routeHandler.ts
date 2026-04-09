@@ -113,15 +113,16 @@ export function postClimateNormals(req: Request, res: Response) {
 
 export function postMisc(req: Request, res: Response) {
   const {
-    body: { rejectInHourConditionUpdates, alternateRecordsSource },
+    body: { rejectInHourConditionUpdates, alternateRecordsSource, logLevel },
   } = req ?? {};
 
   try {
     if (typeof rejectInHourConditionUpdates !== "boolean") throw "`rejectInHourConditionUpdates` must be true/false";
     if (typeof alternateRecordsSource !== "string") throw "`alternateRecordsSource` must be a string";
+    if (logLevel !== undefined && typeof logLevel !== "string") throw "`logLevel` must be a string";
 
     config.updateAndSaveConfigOption(() =>
-      config.setMiscSettings(rejectInHourConditionUpdates, alternateRecordsSource)
+      config.setMiscSettings(rejectInHourConditionUpdates, alternateRecordsSource, logLevel)
     );
     res.sendStatus(200);
   } catch (e) {

@@ -7,6 +7,7 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Config
 
 - **Airport METAR:** `MAX_AIRPORT_METAR_STATIONS` raised to **8**; **`DEFAULT_AIRPORT_METAR_STATIONS`** in consts is Winnipeg, St. John's (**CYYT**), Vancouver, Toronto, Montreal, Calgary, Chicago (**KORD**), New York (**KJFK**). Omit **`airportMetarStations`** in `rwc-config.json` to use that list; set it to **`[]`** to disable the screen.
+- **Logging levels:** Console output is now level-gated with `debug|notice|warn|error|critical`; default is **`warn`** (so debug/notice are muted). Set `misc.logLevel` in `rwc-config.json` (or env `RWC_LOG_LEVEL`) to change verbosity.
 
 ---
 

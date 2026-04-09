@@ -2,6 +2,7 @@ import { Flavour, FlavourNames } from "./flavour.types";
 import type { AuthenticRefreshConfig } from "./authenticRefresh.types";
 import type { GfxRuntimeConfig } from "./gfx.types";
 import { ProvinceStation } from "./provincetracking.types";
+import type { LogLevel } from "lib/logger";
 
 /** ICAO codes for the Airport METAR rotator screen — NOAA AWC (see `cfg/rwc-config.json`). */
 export type AirportMetarStation = {
@@ -56,6 +57,8 @@ export type LookAndFeel = {
 export type MiscConfig = {
   rejectInHourConditionUpdates?: boolean;
   alternateRecordsSource?: string;
+  /** Console log threshold (`debug` | `notice` | `warn` | `error` | `critical`). Default: `warn`. */
+  logLevel?: LogLevel;
 };
 
 export type InitChannel = {
