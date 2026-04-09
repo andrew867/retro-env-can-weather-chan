@@ -53,6 +53,7 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
   const [safeLeft, setSafeLeft] = useState(gfx?.safeArea?.left ?? 0.02);
   const [safeRight, setSafeRight] = useState(gfx?.safeArea?.right ?? 0.02);
   const [vhsAnalog, setVhsAnalog] = useState(!!gfx?.retro?.vhsAnalogLayerEnabled);
+  const [vhsHeadSwitchTear, setVhsHeadSwitchTear] = useState(!!gfx?.retro?.vhsHeadSwitchTearEnabled);
   const [reloadLineMs, setReloadLineMs] = useState(gfx?.retro?.reloadLineMs ?? GFX_RELOAD_LINE_MS_DEFAULT);
   const [displayAspect, setDisplayAspect] = useState<GfxDisplayAspectRatio>(gfx?.displayAspectRatio ?? "4:3");
   const [displayResolution, setDisplayResolution] = useState<GfxDisplayResolution>(gfx?.displayResolution ?? "sd");
@@ -73,6 +74,7 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
     setSafeLeft(gfx?.safeArea?.left ?? 0.02);
     setSafeRight(gfx?.safeArea?.right ?? 0.02);
     setVhsAnalog(!!gfx?.retro?.vhsAnalogLayerEnabled);
+    setVhsHeadSwitchTear(!!gfx?.retro?.vhsHeadSwitchTearEnabled);
     setReloadLineMs(gfx?.retro?.reloadLineMs ?? GFX_RELOAD_LINE_MS_DEFAULT);
     setDisplayAspect(gfx?.displayAspectRatio === "16:9" ? "16:9" : "4:3");
     setDisplayResolution(gfx?.displayResolution === "hd" ? "hd" : "sd");
@@ -101,6 +103,7 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
         vignetteStrength: vignette,
         phosphorTint: colourPreset,
         vhsAnalogLayerEnabled: vhsAnalog,
+        vhsHeadSwitchTearEnabled: vhsHeadSwitchTear,
         reloadLineMs: Math.min(
           GFX_RELOAD_LINE_MS_MAX,
           Math.max(GFX_RELOAD_LINE_MS_MIN, Math.round(Number(reloadLineMs)) || GFX_RELOAD_LINE_MS_DEFAULT)
@@ -265,6 +268,20 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
             <Switch id="gfx-vhs-analog" isChecked={vhsAnalog} onChange={(e) => setVhsAnalog(e.target.checked)} />
             <FormHelperText>
               Subtle grain + bottom-band shimmer over the frame; works with colour presets and scanlines.
+            </FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel htmlFor="gfx-vhs-tear">VHS head-switch tear (tape dub)</FormLabel>
+            <Switch
+              id="gfx-vhs-tear"
+              isChecked={vhsHeadSwitchTear}
+              isDisabled={!vhsAnalog}
+              onChange={(e) => setVhsHeadSwitchTear(e.target.checked)}
+            />
+            <FormHelperText>
+              Bottom horizontal band with slow horizontal wobble (head-switch / tracking feel). Turn <strong>off</strong>{" "}
+              for clean RF-style broadcast analog with grain only; turn <strong>on</strong> for nth-generation tape
+              captures. Requires the analog layer above.
             </FormHelperText>
           </FormControl>
 

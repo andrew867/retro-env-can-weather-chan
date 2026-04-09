@@ -50,6 +50,8 @@ class HistoricalTempPrecip {
   private _historicalData: any[] = [];
   private _fetchBusy = false;
   private _fetchPendingDate: Date | null = null;
+  /** Set when the most recent `fetchLastTwoYearsOfData` batch finished (success or partial failure). */
+  private _lastBulkFetchCompletedAt: string | null = null;
 
   private _lastYearTemperatures: HistoricalTemperatureAlmanac = { min: null, max: null };
   private _seasonPrecipData: HistoricalPrecipData = { amount: 0, normal: 0, unit: "mm", type: "rain" };
@@ -127,6 +129,7 @@ class HistoricalTempPrecip {
     Promise.allSettled(promises).then(() => {
       this.parseHistoricalStationData(currentDate);
       this._fetchBusy = false;
+      this._lastBulkFetchCompletedAt = new Date().toISOString();
       eventbus.emit(EVENT_BUS_AUXILIARY_WEATHER_DATA_READY);
       if (this._fetchPendingDate) {
         const next = this._fetchPendingDate;
@@ -134,6 +137,10 @@ class HistoricalTempPrecip {
         this.fetchLastTwoYearsOfData(next);
       }
     });
+  }
+
+  public getLastBulkFetchCompletedIso(): string | null {
+    return this._lastBulkFetchCompletedAt;
   }
 
   private parseHistoricalStationData(currentDate: Date) {

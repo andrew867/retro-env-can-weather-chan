@@ -34,6 +34,7 @@ export const SCREEN_NAMES = {
   [Screens.INFO]: "Info screen",
   [Screens.SUNSPOTS]: "Sunspot forecast",
   [Screens.WINDCHILL]: "Windchill Explanation",
+  [Screens.AIRPORT_METAR]: "Airport METAR",
 };
 
 export const SCREEN_DESCRIPTIONS = {

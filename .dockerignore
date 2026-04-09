@@ -1,0 +1,12 @@
+node_modules
+dist
+.git
+output
+.playwright-cli
+playwright/test-results
+playwright-report
+**/*.log
+.env
+.env.*
+# Large reference / capture trees not needed for yarn build:display
+references

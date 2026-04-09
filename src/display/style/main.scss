@@ -49,7 +49,11 @@ ol {
 
   @include ws4000_body;
 
-  .rwc-channel-frame {
+  /**
+   * Sized like the on-air raster (in 16:9, the centered 4:3/HD box — not the full letterboxed host).
+   * Tear overlay is a direct child so `bottom: 0` sits on the actual picture, not black pillars.
+   */
+  .rwc-channel-stack {
     background: #000;
     color: inherit;
     display: flex;
@@ -58,6 +62,21 @@ ol {
     height: 100%;
     line-height: inherit;
     min-height: $channel_max_height;
+    overflow: hidden;
+    position: relative;
+    text-transform: inherit;
+    white-space: inherit;
+    width: 100%;
+  }
+
+  .rwc-channel-frame {
+    color: inherit;
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    font: inherit;
+    line-height: inherit;
+    min-height: 0;
     overflow: hidden;
     position: relative;
     text-transform: inherit;
@@ -89,7 +108,7 @@ ol {
     overflow-x: auto;
     width: min(100vw, calc(100vh * 16 / 9));
 
-    .rwc-channel-frame {
+    .rwc-channel-stack {
       flex-shrink: 0;
       height: $channel_max_height;
       width: $channel_max_width;
@@ -112,7 +131,7 @@ ol {
       width: calc(#{$channel_max_width} * var(--rwc-ui-scale, 1));
     }
 
-    &.rwc-aspect-16-9 .rwc-channel-frame {
+    &.rwc-aspect-16-9 .rwc-channel-stack {
       height: calc(#{$channel_max_height} * var(--rwc-ui-scale, 1));
       width: calc(#{$channel_max_width} * var(--rwc-ui-scale, 1));
     }
@@ -173,6 +192,18 @@ ol {
       overflow: hidden;
       padding-bottom: 4px;
       width: 100%;
+    }
+
+    /**
+     * Stats plate: WebKit grayscale smoothing (`#weather_channel`) thins strokes; at `overflow: hidden` ancestors
+     * the anti-alias fringe is clipped (e.g. SUNRISE… / AM–PM). Subpixel smoothing + layer promotion fixes paint
+     * without changing copy, line breaks, or character-based widths.
+     */
+    #stats_screen {
+      -webkit-font-smoothing: subpixel-antialiased;
+      backface-visibility: hidden;
+      text-rendering: geometricPrecision;
+      transform: translateZ(0);
     }
 
     #national_weather,
@@ -302,7 +333,7 @@ ol {
     --crawler-font: "ws4000", monospace;
   }
 
-  /** Inset shadow on the host was invisible under opaque child rasters; overlay sits above the frame (see channel.tsx). */
+  /** Inset shadow on the host was invisible under opaque child rasters; overlay sits above the stack (see channel.tsx). */
   > .gfx-vignette-layer {
     border-radius: inherit;
     box-shadow: inset 0 0 min(140px, 22vw) rgba(0, 0, 0, var(--gfx-vignette, 0));
@@ -310,6 +341,40 @@ ol {
     pointer-events: none;
     position: absolute;
     z-index: 650;
+  }
+
+  /**
+   * VHS head-switch band: horizontal wobble via `--gfx-vhs-tear-x` (low-rate JS, see VhsHeadSwitchTearLayer).
+   * Between analog grain (::before z 850) and scanlines (::after z 900).
+   */
+  .rwc-channel-stack > .gfx-vhs-head-switch-tear {
+    bottom: 0;
+    height: 7%;
+    left: 0;
+    min-height: 10px;
+    mix-blend-mode: overlay;
+    opacity: 0.62;
+    pointer-events: none;
+    position: absolute;
+    right: 0;
+    z-index: 880;
+
+    .gfx-vhs-head-switch-tear__band {
+      backface-visibility: hidden;
+      background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.2)),
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.08) 0px,
+          transparent 1px,
+          transparent 4px,
+          rgba(0, 0, 0, 0.09) 5px
+        );
+      height: 100%;
+      position: absolute;
+      transform: translate3d(var(--gfx-vhs-tear-x, 0px), 0, 0);
+      width: 100%;
+      will-change: transform;
+    }
   }
 }
 

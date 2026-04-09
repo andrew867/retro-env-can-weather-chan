@@ -2,6 +2,7 @@ import { CrawlerMessages } from "display/components/crawler";
 import { FontModeApply } from "display/components/fontModeApply";
 import { FooterBar } from "display/components/footerbar";
 import { GfxRetroApply } from "display/components/gfxRetroApply";
+import { VhsHeadSwitchTearLayer } from "display/components/vhsHeadSwitchTearLayer";
 import { NextGenGfxLayer } from "display/components/nextGenGfxLayer";
 import { PlaylistComponent } from "display/components/playlist";
 import { ScreenRotator } from "display/components/screenrotator";
@@ -106,42 +107,47 @@ function WeatherChannel() {
     <>
       <GfxRetroApply gfx={config?.gfx} useOfficialFonts={config?.config.useOfficialFonts ?? true} />
       <FontModeApply useOfficialFonts={config?.config.useOfficialFonts ?? true} />
-      <div className="rwc-channel-frame">
-        <NextGenGfxLayer enabled={!!config?.gfx?.features?.nextGenVisualLayersEnabled} />
-        <CrawlerMessages crawler={config?.crawler} />
-        <ScreenRotator
-          screens={config?.flavour?.screens}
-          weatherStationResponse={currentConditions}
-          alerts={alertsHook}
-          nationalWeather={nationalWeather}
-          provinceTracking={provinceTracking}
-          season={season}
-          hotColdSpots={hotColdSpots}
-          lastMonth={lastMonth}
-          lastMonthFetchAttempted={lastMonthFetchAttempted}
-          usaWeather={usaWeather}
-          airportMetar={airportMetar ?? []}
-          sunspots={sunspots}
-          sunspotsFetchAttempted={sunspotsFetchAttempted}
-          airQuality={airQuality}
-          configVersion={config?.config.configVersion}
-          reloadLineMs={config?.gfx?.retro?.reloadLineMs}
-          authenticRefresh={config?.authenticRefresh}
-          gfxFeatures={config?.gfx?.features}
-          infoScreenLines={config?.infoScreen}
-        />
-        <FooterBar
-          timeOffset={currentConditions?.stationTime?.stationOffsetMinutesFromLocal ?? 0}
-          showFooterFreshnessHint={config?.config.showFooterFreshnessHint ?? true}
-          snapshotFreshnessIsos={[
-            currentConditions?.fetchedAt,
-            nationalDataFetchedAt,
-            provinceDataFetchedAt,
-            alertsHook.alertsDataFetchedAt,
-            airQualityDataFetchedAt,
-            // Omit: USA (non-ECCC), season/last-month (server-computed cadence), sunspots (5m poll vs hourly ECCC),
-            // hot/cold (6h server poll) — they should not drive “ECCC snapshot” wording.
-          ]}
+      <div className="rwc-channel-stack">
+        <div className="rwc-channel-frame">
+          <NextGenGfxLayer enabled={!!config?.gfx?.features?.nextGenVisualLayersEnabled} />
+          <CrawlerMessages crawler={config?.crawler} />
+          <ScreenRotator
+            screens={config?.flavour?.screens}
+            weatherStationResponse={currentConditions}
+            alerts={alertsHook}
+            nationalWeather={nationalWeather}
+            provinceTracking={provinceTracking}
+            season={season}
+            hotColdSpots={hotColdSpots}
+            lastMonth={lastMonth}
+            lastMonthFetchAttempted={lastMonthFetchAttempted}
+            usaWeather={usaWeather}
+            airportMetar={airportMetar ?? []}
+            sunspots={sunspots}
+            sunspotsFetchAttempted={sunspotsFetchAttempted}
+            airQuality={airQuality}
+            configVersion={config?.config.configVersion}
+            reloadLineMs={config?.gfx?.retro?.reloadLineMs}
+            authenticRefresh={config?.authenticRefresh}
+            gfxFeatures={config?.gfx?.features}
+            infoScreenLines={config?.infoScreen}
+          />
+          <FooterBar
+            timeOffset={currentConditions?.stationTime?.stationOffsetMinutesFromLocal ?? 0}
+            showFooterFreshnessHint={config?.config.showFooterFreshnessHint ?? true}
+            snapshotFreshnessIsos={[
+              currentConditions?.fetchedAt,
+              nationalDataFetchedAt,
+              provinceDataFetchedAt,
+              alertsHook.alertsDataFetchedAt,
+              airQualityDataFetchedAt,
+              // Omit: USA (non-ECCC), season/last-month (server-computed cadence), sunspots (5m poll vs hourly ECCC),
+              // hot/cold (6h server poll) — they should not drive “ECCC snapshot” wording.
+            ]}
+          />
+        </div>
+        <VhsHeadSwitchTearLayer
+          enabled={!!config?.gfx?.retro?.vhsAnalogLayerEnabled && !!config?.gfx?.retro?.vhsHeadSwitchTearEnabled}
         />
       </div>
       <div className="gfx-vignette-layer" aria-hidden />

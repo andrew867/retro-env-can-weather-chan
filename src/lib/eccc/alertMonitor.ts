@@ -186,6 +186,11 @@ class AlertMonitor {
     return this._lastMutationAt;
   }
 
+  /** Re-run expiry trim + disk sync; new CAP ingest remains AMQP-driven. */
+  public requestOperatorMaintenance(): void {
+    this.periodicCleanupCAPFiles();
+  }
+
   public alerts() {
     // sort the alerts and then clean the response payload up because we dont need everything
     const sortedAlerts = this.sortAlerts()?.map((alert) => ({

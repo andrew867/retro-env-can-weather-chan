@@ -12,6 +12,7 @@ import { initializeCurrentConditions, initializeHistoricalTempPrecip } from "lib
 import eventbus from "lib/eventbus";
 import { format, subDays } from "date-fns";
 import { GetWeatherFileFromECCC } from "lib/eccc/datamart";
+import { fetchYesterdayPrecipFromClimateBulk } from "lib/eccc/provinceYesterdayClimatePrecip";
 
 const logger = new Logger("ProvinceTracking");
 const PROVINCE_TRACKING_FILE = "db/province_tracking.json";
@@ -171,6 +172,10 @@ class ProvinceTracking {
     return this._fetchedAt;
   }
 
+  public requestOperatorRefresh(): void {
+    this.periodicUpdate();
+  }
+
   public getDataFetchedAtForHeader(): string | null {
     if (!config.provinceHighLowEnabled) return this._fetchedAt;
     const fresh = this.snapshot();
@@ -200,7 +205,7 @@ class ProvinceTracking {
     if (!url) return Promise.reject("URL was invalid.");
 
     return axiosGetWithMscMirror(axios, url)
-      .then((resp) => {
+      .then(async (resp) => {
         const data = resp && resp.data;
         const weather = new Weather(data);
         if (!weather) throw "Unable to parse weather data";
@@ -234,6 +239,18 @@ class ProvinceTracking {
           if (!resolved && fromApi) resolved = fromApi;
           if (!resolved && yesterdayConditions != null) {
             resolved = { amount: 0, unit: "mm" };
+          }
+
+          if (
+            !resolved &&
+            typeof station.station.climateStationId === "number" &&
+            Number.isFinite(station.station.climateStationId)
+          ) {
+            const climateRow = await fetchYesterdayPrecipFromClimateBulk(
+              station.station.climateStationId,
+              conditions.observedDateTimeAtStation()
+            );
+            if (climateRow) resolved = climateRow;
           }
 
           if (resolved) {

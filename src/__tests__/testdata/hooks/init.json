@@ -23,6 +23,7 @@
       "phosphorTint": "none",
       "vignetteStrength": 0.12,
       "vhsAnalogLayerEnabled": true,
+      "vhsHeadSwitchTearEnabled": false,
       "reloadLineMs": 100
     }
   },

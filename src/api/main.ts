@@ -18,6 +18,8 @@ export function initializeAPI(): void {
   api.use(express.static("music"));
   api.get("/", (req: Request, res: Response) => res.sendFile("dist/index.html", { root: "." }));
   api.get("/config", (req: Request, res: Response) => res.sendFile("dist/config.html", { root: "." }));
+  api.get("/status", (req: Request, res: Response) => res.sendFile("dist/status.html", { root: "." }));
+  api.get("/status.html", (req: Request, res: Response) => res.sendFile("dist/status.html", { root: "." }));
   api.get("/music/*", (req: Request, res: Response) => {
     res.sendFile(`./music/${decodeURI(req.url).split("music/")[1]}`, { root: "." });
   });

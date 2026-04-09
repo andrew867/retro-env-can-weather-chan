@@ -15,7 +15,9 @@ A dirty `yarn.lock` does **not** by itself mean the server missed pushed commits
 
 | Variable | Purpose |
 | -------- | ------- |
-| **`RWC_METRICS_TOKEN`** | If set, **`GET /api/v1/metrics`** and **`POST /api/v1/metrics/client`** require `Authorization: Bearer <token>`. Omit for same-host-only or trusted networks. |
+| **`RWC_METRICS_TOKEN`** | If set, **`GET /api/v1/metrics`** and **`POST /api/v1/metrics/client`** require `Authorization: Bearer <token>`. Omit for same-host-only or trusted networks. Also used as the status API bearer when **`RWC_STATUS_TOKEN`** is unset (see below). |
+| **`RWC_STATUS_ENABLED`** | In **`NODE_ENV=production`**, **`GET /api/v1/status`**, **`POST /api/v1/status/refresh`**, and the JSON they serve are **disabled** (404) unless this is **`1`**. Non-production defaults to **enabled** unless **`RWC_STATUS_ENABLED=0`**. |
+| **`RWC_STATUS_TOKEN`** | Optional dedicated bearer for **`/api/v1/status`** and **`/api/v1/status/refresh`**. If unset but **`RWC_METRICS_TOKEN`** is set, that token is required instead. If neither is set, no bearer is required (same-origin browser use only). |
 | **`RWC_AMQP_HOST`** | Optional. MSC Datamart AMQP broker hostname (default **`dd.weather.gc.ca`**). Used by citypage and CAP `listen()` subscribers. |
 | **`RWC_AMQP_PORT`** | Optional. AMQP port (default **5671**, TLS). |
 | **`RWC_AMQP_USER`** | Optional. AMQP login (default **`anonymous`**). |
@@ -56,6 +58,8 @@ See [docs/specs/ADR-002-sarracenia-amqp-and-phase0.md](./docs/specs/ADR-002-sarr
 | `GET` | `/metrics` | Same **`mscAmqp`** as health, **`upstreamCircuits`**, plus **server** outbound HTTP (`backendAxios`) since process start, and **last reported** display-bundle counters (`displayAxiosFromClient`, `displayAxiosReportedAt`) if a browser has posted to `/metrics/client`. Disabled when **`RWC_METRICS_DISABLED=1`**. |
 | `POST` | `/metrics/client` | Body: `{ "displayAxios": { "requestCount", "successCount", "errorCount", "timeoutCount", "status4xx", "status5xx", "networkError" } }`. The display posts about every 30 seconds while `/` is open. Same auth as `GET /metrics` when `RWC_METRICS_TOKEN` is set. |
 | `GET` | `/init` | Display bootstrap: flavour, crawler, `gfx`, and look-and-feel flags (including footer freshness and font mode). |
+| `GET` | `/status` | JSON feed snapshot: last fetch times, citypage observation id, LKG hints, **`statusSchemaVersion`**. Disabled in production without **`RWC_STATUS_ENABLED=1`** (404). Optional bearer: **`RWC_STATUS_TOKEN`** or **`RWC_METRICS_TOKEN`**. |
+| `POST` | `/status/refresh` | Body **`{ "scope": "all" }`** or **`{ "scope": "single", "target": "<feed>" }`** (`observed`, `national`, `usa`, `airport_metar`, `province`, `sunspots`, `hot_cold`, `alerts`, `historical`, `climate_normals`, `aqhi`). **202**; work is async. Same enable/auth as **`GET /api/v1/status`**. |
 
 ## Look and feel (config UI)
 
@@ -66,12 +70,13 @@ Under **Display → Look and Feel**:
 
 ## Graphics (config UI)
 
-**Default on-air preset (new installs):** authentic refresh **on** (100 cps, 120 ms clear, 12 ms jitter), next-gen layers **on**, SD **4:3**, reload line **100** ms, VHS-style analog **on**, scanlines **~0.07**, vignette **0.12**, colour preset **none**. Tune or disable under **Graphics**; RDS/automation that only hits **`POST /api/v1/config/crawler`** does not touch these flags.
+**Default on-air preset (new installs):** authentic refresh **on** (100 cps, 120 ms clear, 12 ms jitter), next-gen layers **on**, SD **4:3**, reload line **100** ms, VHS-style analog **on**, **head-switch tear off** (grain/RF-style by default), scanlines **~0.07**, vignette **0.12**, colour preset **none**. Tune or disable under **Graphics**; RDS/automation that only hits **`POST /api/v1/config/crawler`** does not touch these flags.
 
 Under **Graphics**:
 
 - **`gfx.retro.reloadLineMs`** — Delay between each staggered line on forecast observation reload (default **100**, clamped **30–500**). Persisted in `rwc-config.json`; the display sets CSS `--gfx-reload-line-ms` on `#weather_channel`.
 - **`gfx.retro.vhsAnalogLayerEnabled`** — Optional **broadcast analog** layer (grain + subtle bottom-band shimmer), full colour—not mono terminal. Pairs with scanlines.
+- **`gfx.retro.vhsHeadSwitchTearEnabled`** — Bottom **head-switch / tracking** band (slow horizontal wobble). Only active when **`vhsAnalogLayerEnabled`** is **on**. Use **off** for RF-style analog (grain only); **on** for tape-dub / nth-gen VHS capture flavour.
 - **`gfx.retro.vignetteStrength`** — Edge darkening (0–1). The vignette is drawn in a **dedicated overlay** above the 4:3 raster so it stays visible (inset shadow on the host alone sat under opaque fills). Default **0.12** in new installs; set **0** in Graphics to disable.
 
 ## Config on disk

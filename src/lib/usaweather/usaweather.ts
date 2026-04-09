@@ -172,6 +172,11 @@ class USAWeather {
     return this._fetchedAt;
   }
 
+  public requestOperatorRefresh(): void {
+    this._lastBatchStartMs = 0;
+    this.periodicUpdate(true);
+  }
+
   public getDataFetchedAtForHeader(): string | null {
     const fresh = this.freshUsaSlice();
     if (fresh.length) return this._fetchedAt;

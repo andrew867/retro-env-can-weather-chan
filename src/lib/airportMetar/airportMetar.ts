@@ -86,6 +86,10 @@ class AirportMetarWeather {
     return this._fetchedAt;
   }
 
+  public requestOperatorRefresh(): void {
+    void this.fetchAll();
+  }
+
   public getDataFetchedAtForHeader(): string | null {
     const fresh = this.filteredObservations();
     if (fresh.length) return this._fetchedAt;

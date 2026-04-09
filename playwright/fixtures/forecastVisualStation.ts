@@ -100,6 +100,7 @@ export function buildForecastOnlyInit(): InitChannel {
         phosphorTint: "none",
         vignetteStrength: 0,
         vhsAnalogLayerEnabled: false,
+        vhsHeadSwitchTearEnabled: false,
         reloadLineMs: 30,
       },
     },

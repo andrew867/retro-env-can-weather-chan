@@ -40,6 +40,11 @@ export type GfxRetroLook = {
    */
   vhsAnalogLayerEnabled?: boolean;
   /**
+   * Bottom-of-frame head-switch style horizontal wobble + streak overlay (tape dub look).
+   * Only applied when {@link vhsAnalogLayerEnabled} is true; off for “RF broadcast” style with grain only.
+   */
+  vhsHeadSwitchTearEnabled?: boolean;
+  /**
    * Delay between each `.reload-animation` step on forecast reload (ms). Clamped server-side.
    * Exposed as `--gfx-reload-line-ms` on `#weather_channel`.
    */

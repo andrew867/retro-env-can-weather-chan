@@ -29,12 +29,14 @@ pnpm-debug.log*
 coverage
 playwright-report/
 test-results/
+/output
 
 # REC
 db*
 cfg*
 alerts.txt
-build*
+# Local compile/output dirs only — do not use `build*` (would ignore `buildSnapshot.ts`).
+/build
 
 # Local-only engineering / ops notes (not published to GitHub)
 /docs/**

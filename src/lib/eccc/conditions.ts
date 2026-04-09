@@ -193,6 +193,11 @@ class CurrentConditions {
     return this._conditionsFetchedAt;
   }
 
+  /** Operator / status dashboard: coalesced citypage HTTP fetch (same path as AMQP-driven updates). */
+  public requestCitypageRefresh(): void {
+    this.requestConditionsFetch();
+  }
+
   /**
    * Parse citypage GET response into live conditions. `unparsed` means try another URL (bad body).
    */

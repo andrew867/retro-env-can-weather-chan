@@ -6,6 +6,7 @@ import seasonRoutes from "./season";
 import flavourRoutes from "./flavour";
 import airQualityRoutes from "./airQuality";
 import metricsRoutes from "./metrics";
+import statusRoutes from "./status";
 import healthRoutes from "./health";
 import readyRoutes from "./ready";
 
@@ -16,6 +17,7 @@ export function initializeRouter(): Router {
   router.use("/healthz", healthRoutes);
   router.use("/ready", readyRoutes);
   router.use("/metrics", metricsRoutes);
+  router.use("/status", statusRoutes);
   router.use("/weather", weatherRoutes);
   router.use("/config", configRoutes);
   router.use("/season", seasonRoutes);

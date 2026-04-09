@@ -57,6 +57,12 @@ class NationalWeather {
     return this._fetchedAt;
   }
 
+  /** Bypass the short throttle and clear regional rows so the next batch repopulates from upstream. */
+  public requestOperatorRefresh(): void {
+    this._lastBatchStartMs = 0;
+    this.periodicUpdate(true);
+  }
+
   /** ISO time for `X-RWC-Data-Fetched-At` — uses LKG age when serving cached regional lists. */
   public getDataFetchedAtForHeader(): string | null {
     const fresh = this.freshNationalWeather();

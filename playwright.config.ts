@@ -19,6 +19,11 @@ export default defineConfig({
     url: `${baseURL}/`,
     timeout: 240_000,
     reuseExistingServer: !process.env.CI,
+    env: {
+      ...process.env,
+      /** Ensure `/api/v1/status` and `/status` UI work even when the shell uses `NODE_ENV=production`. */
+      RWC_STATUS_ENABLED: "1",
+    },
   },
   expect: {
     toHaveScreenshot: { maxDiffPixels: 400 },

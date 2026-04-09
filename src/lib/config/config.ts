@@ -37,6 +37,28 @@ import eventbus from "lib/eventbus";
 import { logConfigValidationIssues, validateLoadedConfigJson } from "lib/config/configValidation";
 
 const logger = new Logger("config");
+
+function normalizeProvinceStationCode(code: string): string {
+  return code.replace(/\s/g, "").toUpperCase();
+}
+
+/** Apply known `climateStationId` defaults when JSON config omits them (same `code` as shipped Manitoba list). */
+function mergeProvinceStationClimateDefaults(stations: ProvinceStation[]): ProvinceStation[] {
+  const defaultsByCode = new Map(
+    PROVINCE_TRACKING_DEFAULT_STATIONS.map((s) => [normalizeProvinceStationCode(s.code), s.climateStationId])
+  );
+  return stations.map((row) => {
+    if (typeof row.climateStationId === "number" && Number.isFinite(row.climateStationId)) {
+      return row;
+    }
+    const id = defaultsByCode.get(normalizeProvinceStationCode(row.code));
+    if (typeof id === "number" && Number.isFinite(id)) {
+      return { ...row, climateStationId: id };
+    }
+    return row;
+  });
+}
+
 const CONFIG_PATH = {
   FOLDER: "./cfg",
   FILE: "rwc-config.json",
@@ -74,6 +96,7 @@ const DEFAULT_GFX: GfxRuntimeConfig = {
     phosphorTint: "none",
     vignetteStrength: 0.12,
     vhsAnalogLayerEnabled: true,
+    vhsHeadSwitchTearEnabled: false,
     reloadLineMs: GFX_RELOAD_LINE_MS_DEFAULT,
   },
 };
@@ -200,8 +223,9 @@ class Config {
       if (this.lookAndFeel.showFooterFreshnessHint === undefined) this.lookAndFeel.showFooterFreshnessHint = true;
       if (this.lookAndFeel.useOfficialFonts === undefined) this.lookAndFeel.useOfficialFonts = true;
       this.misc = { ...this.misc, ...misc };
-      this.provinceStations =
+      const rawProvinceStations =
         provinceHighLowEnabled && provinceStations?.length ? provinceStations : PROVINCE_TRACKING_DEFAULT_STATIONS;
+      this.provinceStations = mergeProvinceStationClimateDefaults(rawProvinceStations);
       this.airQualityStation = airQualityStation ?? AIR_QUALITY_DEFAULT_STATION;
 
       if (gfx && typeof gfx === "object") {
@@ -380,7 +404,7 @@ class Config {
 
   public setProvinceStations(isEnabled: boolean, stations: ProvinceStations) {
     this.provinceHighLowEnabled = isEnabled;
-    if (stations?.length) this.provinceStations = stations;
+    if (stations?.length) this.provinceStations = mergeProvinceStationClimateDefaults(stations);
 
     eventbus.emit(EVENT_BUS_CONFIG_CHANGE_PROVINCE_TRACKING, true);
   }
@@ -495,6 +519,7 @@ class Config {
       ? Math.min(GFX_RELOAD_LINE_MS_MAX, Math.max(GFX_RELOAD_LINE_MS_MIN, n))
       : GFX_RELOAD_LINE_MS_DEFAULT;
     if (retro.vhsAnalogLayerEnabled === undefined) retro.vhsAnalogLayerEnabled = false;
+    if (retro.vhsHeadSwitchTearEnabled === undefined) retro.vhsHeadSwitchTearEnabled = false;
   }
 
   public setAirQualityStation(station: string) {

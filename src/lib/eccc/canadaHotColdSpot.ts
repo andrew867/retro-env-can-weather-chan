@@ -122,6 +122,10 @@ class CanadaProvincialHotColdSpots {
   public getLastFetchIso(): string | null {
     return this._lastUpdated?.toISOString() ?? null;
   }
+
+  public requestOperatorRefresh(): void {
+    this.fetchCanadaProvincialHotColdSpot();
+  }
 }
 
 let canadaProvincialHotColdSpots: CanadaProvincialHotColdSpots | null = null;

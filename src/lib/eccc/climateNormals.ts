@@ -108,6 +108,7 @@ class ClimateNormals {
     temperature: { min: 0, max: 0, mean: 0 },
     precip: { amount: 0 },
   };
+  private _fetchedAt: string | null = null;
 
   constructor() {
     if (!config) return;
@@ -154,6 +155,7 @@ class ClimateNormals {
 
         this.applyPrecipNormals(currentDate, values);
         this.applyTempNormals(values);
+        this._fetchedAt = new Date().toISOString();
         eventbus.emit(EVENT_BUS_AUXILIARY_WEATHER_DATA_READY);
       })
       .catch((err) => logger.warn(`Climate normals fetch skipped: ${formatFetchError(err)}`))
@@ -218,6 +220,14 @@ class ClimateNormals {
 
   public getNormalsForLastMonth() {
     return this._normalsForLastMonth;
+  }
+
+  public getLastFetchIso(): string | null {
+    return this._fetchedAt;
+  }
+
+  public requestOperatorRefresh(currentDate: Date = new Date()): void {
+    this.fetchClimateNormals(currentDate);
   }
 }
 

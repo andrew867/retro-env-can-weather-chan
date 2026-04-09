@@ -2,6 +2,34 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.6.5] - 2026-04-09
+
+### Operator status dashboard
+
+- **`/status` UI** (Parcel): read-only view of feed health and last successful fetch times; optional **`RWC_STATUS_ENABLED=1`** in production, open in dev when `NODE_ENV` is not production.
+- **API:** **`GET /api/v1/status`** JSON snapshot; **`POST /api/v1/status/refresh`** with `{ "scope": "all" | "<feed>" }` to trigger poll/refresh (optional **`Authorization: Bearer <RWC_STATUS_TOKEN>`**).
+- **Snapshot plumbing:** `lib/status/buildSnapshot` aggregates modules that expose **`getLastFetchIso`** / **`getDataFetchedAtForHeader`**-style metadata (conditions, alerts, province tracking, national, USA, airport METAR, AQHI, climate normals, historical bulk, sunspots, hot/cold spots, season).
+- **Docs:** [SPEC-status-dashboard.md](./docs/specs/SPEC-status-dashboard.md), plans and test notes under **`docs/specs/`**.
+- **Tests:** Jest **`statusDashboard.test.ts`**; Playwright **`status-dashboard-visual.spec.ts`** (baseline screenshot).
+
+### Province temp/precip grid
+
+- **24 h precipitation:** When citypage **`yesterdayConditions`** is missing, stations can fall back to **ECCC climate daily bulk** (`provinceYesterdayClimatePrecip`) using optional **`climateStationId`** on **`ProvinceStation`**; shipped Manitoba defaults include mapped station IDs; config loader **merges** IDs by matching **`code`** when JSON omits them.
+- **`provinceTracking`:** Async climate fetch after citypage parse; in-memory cache (~45 min per station/day) to limit bulk traffic on the five-minute refresh.
+
+### Display / retro (VHS)
+
+- **Head-switch tear:** **`VhsHeadSwitchTearLayer`** + **`gfx.retro.vhsHeadSwitchTearEnabled`** (Graphics config); bottom band with low-rate **`--gfx-vhs-tear-x`** jitter; **`rwc-channel-stack`** wraps the raster so the tear anchors to the **4:3/HD picture** in **16:9** letterboxed layouts (was often invisible on black pillars); slightly stronger **overlay** blend and opacity.
+- **Flavours editor:** **`SCREEN_NAMES`** entry for **`AIRPORT_METAR`** so the screen dropdown shows a label (value was already correct).
+
+### Other
+
+- **`.dockerignore`:** Ignore `node_modules`, `dist`, `coverage`, local `cfg`/`db` artifacts for leaner image contexts.
+- **`.gitignore`:** Ignore **`/output`** (Playwright/local dumps); replace overly broad **`build*`** with **`/build`** so **`buildSnapshot.ts`** is not excluded.
+- **Version:** **`2.6.5`** in **`package.json`**.
+
+---
+
 ## [2.6.4] - 2026-04-08
 
 ### Display polish

@@ -107,6 +107,10 @@ class Sunspots {
   public getLastFetchIso(): string | null {
     return this._fetchedAt;
   }
+
+  public requestOperatorRefresh(): void {
+    this.periodicUpdate();
+  }
 }
 
 let sunspots: Sunspots = null;

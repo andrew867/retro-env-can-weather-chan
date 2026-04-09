@@ -89,6 +89,7 @@ class AirQuality {
           aqhiNode?._text != null && aqhiNode._text !== "" ? Number(aqhiNode._text) : null;
 
         logger.log("AQHI observation updated");
+        this._fetchedAt = new Date().toISOString();
       })
       .catch((e) => {
         logger.error("Failed to fetch AQHI observation", e);
@@ -105,6 +106,10 @@ class AirQuality {
 
   public getLastFetchIso(): string | null {
     return this._fetchedAt;
+  }
+
+  public requestOperatorRefresh(): void {
+    this.fetchAirQuality();
   }
 }
 
