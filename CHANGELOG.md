@@ -16,6 +16,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - **24 h precipitation:** When citypage **`yesterdayConditions`** is missing, stations can fall back to **ECCC climate daily bulk** (`provinceYesterdayClimatePrecip`) using optional **`climateStationId`** on **`ProvinceStation`**; shipped Manitoba defaults include mapped station IDs; config loader **merges** IDs by matching **`code`** when JSON omits them.
 - **`provinceTracking`:** Async climate fetch after citypage parse; in-memory cache (~45 min per station/day) to limit bulk traffic on the five-minute refresh.
+- **Rehydrate `station` from config:** Rows loaded from **`db/province_tracking.json`** only stored **`name`/`code`**, so **`climateStationId`** was dropped after restart and climate fallback never ran; **`initialize()`** now replaces each row’s **`station`** with the matching **`provinceStations`** entry (normalized code match).
 
 ### Display / retro (VHS)
 

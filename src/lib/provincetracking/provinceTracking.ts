@@ -24,6 +24,12 @@ function normalizeProvinceStationCode(code: string): string {
   return code.replace(/\s/g, "").toUpperCase();
 }
 
+/** Disk JSON only had `{ name, code }`; merge full `ProvinceStation` from config (e.g. `climateStationId`). */
+function stationFromConfigForCode(stations: ProvinceStations, code: string): ProvinceStations[number] | undefined {
+  const key = normalizeProvinceStationCode(code);
+  return stations.find((s) => normalizeProvinceStationCode(s.code) === key);
+}
+
 /**
  * ec-weather-js `simplify()` turns `<precip>2.4</precip>` into a string; with attributes it stays `{ value, units }`.
  * Reading only `.value` misses the common text-only form and left every station on "MISSING".
@@ -103,9 +109,22 @@ class ProvinceTracking {
             this._stations.findIndex((station) => trackingStation.station.code === station.code) !== -1
         )
       : [];
+    this.rehydrateStationsFromConfig();
     logger.log("Tracking", this._stations?.length || 0, "locations across the province");
 
     this.periodicUpdate();
+  }
+
+  /** Replace each row's `station` with the canonical config object so persisted JSON cannot strip `climateStationId`. */
+  private rehydrateStationsFromConfig() {
+    if (!this._tracking?.length) return;
+    for (let i = 0; i < this._tracking.length; i++) {
+      const row = this._tracking[i];
+      const canonical = stationFromConfigForCode(this._stations, row.station.code);
+      if (canonical) {
+        this._tracking[i] = { ...row, station: canonical };
+      }
+    }
   }
 
   private periodicUpdate() {
