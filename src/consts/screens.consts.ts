@@ -16,6 +16,7 @@ export enum Screens {
   WINDCHILL,
   /** ICAO METAR (AWC) — Canadian/US/international airports from config. */
   AIRPORT_METAR,
+  CANADA_TEMP_CONDITIONS_ON,
 }
 
 export const SCREEN_NAMES = {
@@ -35,6 +36,7 @@ export const SCREEN_NAMES = {
   [Screens.SUNSPOTS]: "Sunspot forecast",
   [Screens.WINDCHILL]: "Windchill Explanation",
   [Screens.AIRPORT_METAR]: "Airport METAR",
+  [Screens.CANADA_TEMP_CONDITIONS_ON]: "Conditions in Ontario",
 };
 
 export const SCREEN_DESCRIPTIONS = {
@@ -46,8 +48,10 @@ export const SCREEN_DESCRIPTIONS = {
   [Screens.AQHI_WARNING]: "Relevant warning screen if AQHI for the current weather station is above 3",
   [Screens.PROVINCE_PRECIP]: "Highest or lowest recorded temperature for the day plus the previous day's precipitation",
   [Screens.CANADA_TEMP_CONDITIONS_MB]: "List of Manitoba cities with the current temperature and conditions",
-  [Screens.CANADA_TEMP_CONDITIONS_WEST]: "List of West-coast cities with the current temperature and conditions",
-  [Screens.CANADA_TEMP_CONDITIONS_EAST]: "List of East-coast cities with the current temperature and conditions",
+  [Screens.CANADA_TEMP_CONDITIONS_WEST]:
+    "Up to seven cities across BC, AB, SK, MB, YT, NT, and NU with current temperature and conditions",
+  [Screens.CANADA_TEMP_CONDITIONS_EAST]:
+    "Up to seven cities across Ontario, Quebec, and the Atlantic provinces with current temperature and conditions",
   [Screens.USA_TEMP_CONDITIONS]: "List of US cities with the current temperature and conditions",
   [Screens.STATS]:
     "Screen showing sunrise/set for the day, along with seasonal precipitation stats and the hot/cold spots in Canada",
@@ -59,6 +63,7 @@ export const SCREEN_DESCRIPTIONS = {
   [Screens.WINDCHILL]: "Explains the windchill numbers",
   [Screens.AIRPORT_METAR]:
     "Selected ICAO stations — temperatures and flight category / sky from NOAA AWC METAR (same feed as USA backup)",
+  [Screens.CANADA_TEMP_CONDITIONS_ON]: "List of Ontario cities with the current temperature and conditions",
 };
 
 /** Rotator does not arm an outer dwell timer — the screen advances itself (per-page timers inside the component). */

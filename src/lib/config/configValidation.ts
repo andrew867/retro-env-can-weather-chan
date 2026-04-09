@@ -68,7 +68,7 @@ export function validateLoadedConfigJson(parsed: Record<string, unknown>): Confi
 
 export function validateFlavourScreenIds(screens: { id?: unknown }[]): ConfigValidationIssue[] {
   const issues: ConfigValidationIssue[] = [];
-  const maxId = Screens.AIRPORT_METAR;
+  const maxId = Screens.CANADA_TEMP_CONDITIONS_ON;
   const minId = Screens.ALERTS;
   screens.forEach((s, ix) => {
     const id = s?.id;

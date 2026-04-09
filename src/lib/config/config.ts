@@ -288,6 +288,14 @@ class Config {
         logger.error(BAD_CONFIG_FILE_ERROR_MESSAGE);
       }
     }
+    this.ensureAirportMetarStationsNotEmpty();
+  }
+
+  /** Empty array, all-invalid entries, or failed parse would leave METAR polling idle — use defaults. */
+  private ensureAirportMetarStationsNotEmpty() {
+    if (this.airportMetarStations?.length) return;
+    this.airportMetarStations = DEFAULT_AIRPORT_METAR_STATIONS.map((row) => ({ ...row }));
+    logger.log("airportMetarStations was empty; using DEFAULT_AIRPORT_METAR_STATIONS");
   }
 
   private loadFlavour() {

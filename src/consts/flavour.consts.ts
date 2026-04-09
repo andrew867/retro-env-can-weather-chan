@@ -37,6 +37,10 @@ export const FLAVOUR_DEFAULT = {
       duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
     },
     {
+      id: Screens.CANADA_TEMP_CONDITIONS_ON,
+      duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
+    },
+    {
       id: Screens.CANADA_TEMP_CONDITIONS_WEST,
       duration: SCREEN_DEFAULT_DISPLAY_LENGTH,
     },

@@ -4,6 +4,7 @@ jest.mock("consts/national.consts", () => ({
     { name: "Portage", code: "MB/s0000626" },
     { name: "Norway House", code: "MB/s0000616" },
   ],
+  ON_WEATHER_STATIONS: [],
   WEST_WEATHER_STATIONS: [{ name: "Vancouver", code: "BC/s0000141" }],
   EAST_WEATHER_STATIONS: [{ name: "Toronto", code: "ON/s0000458" }],
 }));

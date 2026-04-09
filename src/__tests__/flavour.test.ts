@@ -93,6 +93,7 @@ describe("Flavour utils", () => {
     const autoDurationScreens = [Screens.ALERTS, Screens.FORECAST];
     const manualDurationScreens = [
       Screens.ALMANAC,
+      Screens.CANADA_TEMP_CONDITIONS_ON,
       Screens.CANADA_TEMP_CONDITIONS_EAST,
       Screens.LAST_MONTH_STATS,
       Screens.WINDCHILL,

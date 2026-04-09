@@ -5,6 +5,7 @@ export function mergeNationalWithLkg(fresh: NationalWeather, lkg: NationalWeathe
   if (!lkg) return fresh;
   return {
     mb: fresh.mb.length ? fresh.mb : lkg.mb,
+    on: fresh.on.length ? fresh.on : lkg.on,
     east: fresh.east.length ? fresh.east : lkg.east,
     west: fresh.west.length ? fresh.west : lkg.west,
   };

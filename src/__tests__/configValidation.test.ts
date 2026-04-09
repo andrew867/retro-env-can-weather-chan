@@ -10,7 +10,7 @@ describe("configValidation", () => {
   });
 
   it("validateFlavourScreenIds warns on out-of-range screen id", () => {
-    const issues = validateFlavourScreenIds([{ id: Screens.AIRPORT_METAR + 99 }]);
+    const issues = validateFlavourScreenIds([{ id: Screens.CANADA_TEMP_CONDITIONS_ON + 99 }]);
     expect(issues.length).toBeGreaterThan(0);
   });
 

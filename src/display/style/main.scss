@@ -343,29 +343,30 @@ ol {
 
   /**
    * VHS head-switch band: horizontal wobble via `--gfx-vhs-tear-x` (low-rate JS, see VhsHeadSwitchTearLayer).
-   * Between in-stack grain (z 850) and scanlines (z 900).
+   * Above full-frame scanlines (z 900): the scanline grid sat on top and made the bottom band nearly invisible.
+   * Grain (z 850) still shows through the picture below this layer.
    */
   .rwc-channel-stack > .gfx-vhs-head-switch-tear {
     bottom: 0;
-    height: 7%;
+    height: 8%;
     left: 0;
-    min-height: 10px;
-    mix-blend-mode: overlay;
-    opacity: 0.62;
+    min-height: 12px;
+    mix-blend-mode: soft-light;
+    opacity: 0.82;
     pointer-events: none;
     position: absolute;
     right: 0;
-    z-index: 880;
+    z-index: 910;
 
     .gfx-vhs-head-switch-tear__band {
       backface-visibility: hidden;
-      background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.2)),
+      background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.28)),
         repeating-linear-gradient(
           90deg,
-          rgba(255, 255, 255, 0.08) 0px,
+          rgba(255, 255, 255, 0.12) 0px,
           transparent 1px,
           transparent 4px,
-          rgba(0, 0, 0, 0.09) 5px
+          rgba(0, 0, 0, 0.12) 5px
         );
       height: 100%;
       position: absolute;

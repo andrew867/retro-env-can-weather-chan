@@ -38,12 +38,23 @@ describe("Config file loading", () => {
     expect(config.airportMetarStations).toEqual([...DEFAULT_AIRPORT_METAR_STATIONS]);
   });
 
-  it("keeps empty airport METAR list when airportMetarStations is []", () => {
+  it("uses default airport METAR stations when airportMetarStations is []", () => {
     jest.spyOn(fs, "readFileSync").mockImplementationOnce(() =>
       JSON.stringify({ ...exampleConfig, airportMetarStations: [] })
     );
     const config = initializeConfig();
-    expect(config.airportMetarStations).toStrictEqual([]);
+    expect(config.airportMetarStations).toEqual([...DEFAULT_AIRPORT_METAR_STATIONS]);
+  });
+
+  it("uses default airport METAR stations when every airportMetarStations entry is invalid", () => {
+    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() =>
+      JSON.stringify({
+        ...exampleConfig,
+        airportMetarStations: [{ name: "Bad", code: "X" }, { foo: 1 }],
+      })
+    );
+    const config = initializeConfig();
+    expect(config.airportMetarStations).toEqual([...DEFAULT_AIRPORT_METAR_STATIONS]);
   });
 
   it("loads from file correctly when primary location is missing", () => {

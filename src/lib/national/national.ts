@@ -6,6 +6,7 @@ import {
   MAX_NATIONAL_STATIONS_PER_PAGE,
   MB_WEATHER_STATIONS,
   NATIONAL_WEATHER_FETCH_INTERVAL,
+  ON_WEATHER_STATIONS,
   WEST_WEATHER_STATIONS,
 } from "consts";
 import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
@@ -26,6 +27,7 @@ const config = initializeConfig();
 const logger = new Logger("National");
 class NationalWeather {
   private _manitobaStations: NationalStationObservations = [];
+  private _ontarioStations: NationalStationObservations = [];
   private _eastStations: NationalStationObservations = [];
   private _westStations: NationalStationObservations = [];
   private _expectedConditionUUID: string;
@@ -49,6 +51,7 @@ class NationalWeather {
     this._lastBatchStartMs = now;
     const batchId = ++this._nationalBatchId;
     this.fetchWeatherForStations(MB_WEATHER_STATIONS, this._manitobaStations, clearExistingData, batchId);
+    this.fetchWeatherForStations(ON_WEATHER_STATIONS, this._ontarioStations, clearExistingData, batchId);
     this.fetchWeatherForStations(EAST_WEATHER_STATIONS, this._eastStations, clearExistingData, batchId);
     this.fetchWeatherForStations(WEST_WEATHER_STATIONS, this._westStations, clearExistingData, batchId);
   }
@@ -66,15 +69,18 @@ class NationalWeather {
   /** ISO time for `X-RWC-Data-Fetched-At` — uses LKG age when serving cached regional lists. */
   public getDataFetchedAtForHeader(): string | null {
     const fresh = this.freshNationalWeather();
-    if (fresh.mb.length || fresh.east.length || fresh.west.length) return this._fetchedAt;
+    if (fresh.mb.length || fresh.on.length || fresh.east.length || fresh.west.length) return this._fetchedAt;
     const merged = mergeNationalWithLkg(fresh, this._lkg.getIfFresh(rwcLkgMaxAgeMs()));
-    if (merged.mb.length || merged.east.length || merged.west.length) return this._lkg.savedAtIso;
+    if (merged.mb.length || merged.on.length || merged.east.length || merged.west.length) return this._lkg.savedAtIso;
     return null;
   }
 
   private freshNationalWeather(): NationalWeather {
     return {
       mb: this._manitobaStations
+        .filter((stationObservation) => this.isStationReporting(stationObservation))
+        .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
+      on: this._ontarioStations
         .filter((stationObservation) => this.isStationReporting(stationObservation))
         .slice(0, MAX_NATIONAL_STATIONS_PER_PAGE),
       east: this._eastStations
@@ -185,7 +191,7 @@ class NationalWeather {
   public nationalWeather() {
     const fresh = this.freshNationalWeather();
     const merged = mergeNationalWithLkg(fresh, this._lkg.getIfFresh(rwcLkgMaxAgeMs()));
-    if (fresh.mb.length || fresh.east.length || fresh.west.length) {
+    if (fresh.mb.length || fresh.on.length || fresh.east.length || fresh.west.length) {
       this._lkg.save(fresh);
     }
     return merged;

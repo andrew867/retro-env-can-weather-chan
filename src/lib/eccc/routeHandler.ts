@@ -80,7 +80,8 @@ export function getUSA(req: Request, res: Response) {
 
 export function getAirportMetar(req: Request, res: Response) {
   setFetchedAtHeader(res, airportMetar.getDataFetchedAtForHeader());
-  res.json(airportMetar.observations());
+  const rows = airportMetar.observations();
+  res.json(Array.isArray(rows) ? rows : []);
 }
 
 export function getSunspots(req: Request, res: Response) {

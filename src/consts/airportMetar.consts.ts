@@ -1,7 +1,7 @@
 /** Max ICAO stations on the Airport METAR screen (layout + AWC batch size). */
-export const MAX_AIRPORT_METAR_STATIONS = 8;
+export const MAX_AIRPORT_METAR_STATIONS = 7;
 
-/** Used when `rwc-config.json` omits `airportMetarStations` (empty array = none). */
+/** Used when `rwc-config.json` omits `airportMetarStations`, it is `[]`, or every entry is invalid. */
 export const DEFAULT_AIRPORT_METAR_STATIONS: ReadonlyArray<{ name: string; code: string }> = [
   { name: "Winnipeg", code: "CYWG" },
   { name: "St. John's", code: "CYYT" },
@@ -9,7 +9,6 @@ export const DEFAULT_AIRPORT_METAR_STATIONS: ReadonlyArray<{ name: string; code:
   { name: "Toronto", code: "CYYZ" },
   { name: "Montreal", code: "CYUL" },
   { name: "Calgary", code: "CYYC" },
-  { name: "Chicago", code: "KORD" },
   { name: "New York", code: "KJFK" },
 ];
 

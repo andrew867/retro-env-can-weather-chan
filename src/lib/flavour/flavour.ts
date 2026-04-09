@@ -72,7 +72,7 @@ export class FlavourLoader {
       !isNaN(screen.id) &&
       typeof screen.duration !== "string" &&
       screen.id >= Screens.ALERTS &&
-      screen.id <= Screens.AIRPORT_METAR
+      screen.id <= Screens.CANADA_TEMP_CONDITIONS_ON
     );
   }
 }

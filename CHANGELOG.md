@@ -6,8 +6,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Config
 
-- **Airport METAR:** `MAX_AIRPORT_METAR_STATIONS` raised to **8**; **`DEFAULT_AIRPORT_METAR_STATIONS`** in consts is Winnipeg, St. John's (**CYYT**), Vancouver, Toronto, Montreal, Calgary, Chicago (**KORD**), New York (**KJFK**). Omit **`airportMetarStations`** in `rwc-config.json` to use that list; set it to **`[]`** to disable the screen.
+- **Airport METAR:** `MAX_AIRPORT_METAR_STATIONS` is **7** (fits the plate without clipping the last row); **`DEFAULT_AIRPORT_METAR_STATIONS`** is Winnipeg, St. John's (**CYYT**), Vancouver, Toronto, Montreal, Calgary, New York (**KJFK**) — Chicago (**KORD**) dropped from defaults. Omit **`airportMetarStations`**, set it to **`[]`**, or supply only invalid rows, and the channel **falls back to that default list** so the METAR screen and poller never sit on an empty station list. The display client and **`GET /weather/airport-metar`** coerce non-array payloads; METAR rows tolerate missing temperature in the UI.
 - **Logging levels:** Console output is now level-gated with `debug|notice|warn|error|critical`; default is **`warn`** (so debug/notice are muted). Set `misc.logLevel` in `rwc-config.json` (or env `RWC_LOG_LEVEL`) to change verbosity.
+
+### Display / national data
+
+- **Conditions in Ontario:** New screen **`CANADA_TEMP_CONDITIONS_ON`** (same regional list layout as Manitoba). The national JSON API includes an **`on`** array; default flavour runs Ontario after Manitoba.
+- **East / West Canada lists:** Primaries are **seven cities** each — **East:** Toronto, Ottawa, Montreal, Fredericton, Halifax, Charlottetown, St. John’s (Ontario, Quebec, and every Atlantic province; Ontario appears twice). **West:** Vancouver, Calgary, Saskatoon, Brandon, Whitehorse, Yellowknife, Iqaluit (**NU/s0000394**) across BC, AB, SK, MB, YT, NT, NU. Backups unchanged in role (fill when primaries do not report).
 
 ---
 
@@ -162,7 +167,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 **New rotator screen:** **`Screens.AIRPORT_METAR`** (“Airport conditions (METAR)”), included in the **default flavour** after **USA regional conditions**.
 
-**Config (`cfg/rwc-config.json`):** array **`airportMetarStations`** — up to **8** entries: `{ "name": "Winnipeg", "code": "CYWG" }`. ICAO codes are normalized to uppercase; invalid entries are dropped. Default config includes Canadian hubs (e.g. **CYWG**, **CYYT**, **CYVR**, **CYYZ**, **CYUL**, **CYYC**) plus **KORD** / **KJFK**.
+**Config (`cfg/rwc-config.json`):** array **`airportMetarStations`** — up to **7** entries: `{ "name": "Winnipeg", "code": "CYWG" }`. ICAO codes are normalized to uppercase; invalid entries are dropped. Default list includes Canadian hubs (e.g. **CYWG**, **CYYT**, **CYVR**, **CYYZ**, **CYUL**, **CYYC**) plus **KJFK**.
 
 **Server:** batch fetch from the same AWC METAR endpoint (one HTTP request for all configured ids). **`GET /api/v1/weather/airport-metar`** returns the filtered reporting rows and **`X-RWC-Data-Fetched-At`** when any station updated successfully. Display polls on the same **5 min** interval as USA weather; recovery refetch includes airport METAR after SSE reconnect.
 

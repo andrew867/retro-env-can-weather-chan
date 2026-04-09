@@ -12,8 +12,7 @@ module.exports = {
     "node_modules/(?!(xml-js)/)",
   ],
   transform: {
-    "^.+\\.tsx?$": ["ts-jest", { useESM: true }],
-    "^.+\\.ts?$": ["ts-jest", { useESM: true }],
+    "^.+\\.tsx?$": ["ts-jest", { useESM: true, tsconfig: "tsconfig.jest.json" }],
   },
   collectCoverageFrom: [
     "src/**/*.ts",

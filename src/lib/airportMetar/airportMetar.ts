@@ -1,6 +1,7 @@
 import {
   AIRPORT_METAR_FETCH_INTERVAL_MS,
   AIRPORT_METAR_HTTP_TIMEOUT_MS,
+  DEFAULT_AIRPORT_METAR_STATIONS,
   MAX_AIRPORT_METAR_STATIONS,
 } from "consts";
 import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
@@ -31,8 +32,10 @@ class AirportMetarWeather {
   }
 
   private stationConfigs(): { name: string; code: string }[] {
-    const list = initializeConfig().airportMetarStations ?? [];
-    if (!list.length) return [];
+    let list = initializeConfig().airportMetarStations ?? [];
+    if (!list.length) {
+      list = DEFAULT_AIRPORT_METAR_STATIONS.map((row) => ({ ...row }));
+    }
     return list.slice(0, MAX_AIRPORT_METAR_STATIONS);
   }
 
@@ -100,22 +103,25 @@ class AirportMetarWeather {
 
   /** Observations for stations with valid temp + condition (same rules as USA screen). */
   private filteredObservations(): USAStationObservations {
-    return this._observations.filter(
-      (o) =>
-        o.condition &&
-        !o.condition.toLowerCase().includes("unknown") &&
-        o.temperature !== null &&
-        !Number.isNaN(o.temperature)
-    );
+    return this._observations.filter((o) => {
+      const cond = o.condition;
+      if (typeof cond !== "string" || !cond.trim()) return false;
+      if (cond.toLowerCase().includes("unknown")) return false;
+      const t = o.temperature;
+      if (t === null || t === undefined || Number.isNaN(Number(t))) return false;
+      return true;
+    });
   }
 
   public observations(): USAStationObservations {
     const fresh = this.filteredObservations();
-    const merged = fresh.length ? fresh : this._lkg.getIfFresh(rwcLkgMaxAgeMs()) ?? [];
+    const lkg = this._lkg.getIfFresh(rwcLkgMaxAgeMs());
+    const fallback = Array.isArray(lkg) ? lkg : [];
+    const merged = fresh.length ? fresh : fallback;
     if (fresh.length) {
       this._lkg.save(fresh);
     }
-    return merged;
+    return Array.isArray(merged) ? merged : [];
   }
 }
 
