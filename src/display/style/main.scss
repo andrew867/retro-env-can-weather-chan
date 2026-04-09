@@ -250,17 +250,11 @@ ol {
   }
 
   /**
-   * Broadcast analog / VHS-style layer (optional): grain + bottom-band shimmer.
-   * Uses ::before so scanlines can keep ::after (z-index below scanlines).
+   * VHS grain + scanlines live inside `.rwc-channel-stack` (not `#weather_channel::before/::after`) so the
+   * head-switch tear can sit between them; host pseudo-elements paint above all descendants and hid the tear.
    */
-  &.gfx-vhs-analog-on::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 850;
-    mix-blend-mode: overlay;
-    opacity: 0.42;
+  .rwc-channel-stack > .gfx-vhs-analog-grain {
+    animation: gfx-vhs-grain-jitter 0.14s steps(2) infinite;
     background-image: linear-gradient(
         to bottom,
         transparent 0%,
@@ -283,15 +277,15 @@ ol {
         transparent 4px,
         rgba(0, 220, 255, 0.025) 5px
       );
-    animation: gfx-vhs-grain-jitter 0.14s steps(2) infinite;
+    inset: 0;
+    mix-blend-mode: overlay;
+    opacity: 0.42;
+    pointer-events: none;
+    position: absolute;
+    z-index: 850;
   }
 
-  &.gfx-scanlines-on::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 900;
+  .rwc-channel-stack > .gfx-scanlines-overlay {
     background: repeating-linear-gradient(
       to bottom,
       transparent 0,
@@ -299,6 +293,10 @@ ol {
       rgba(0, 0, 0, var(--gfx-scanline-opacity, 0)) 2px,
       rgba(0, 0, 0, var(--gfx-scanline-opacity, 0)) 3px
     );
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 900;
   }
 
   /** Broadcast / no grading (default). */
@@ -345,7 +343,7 @@ ol {
 
   /**
    * VHS head-switch band: horizontal wobble via `--gfx-vhs-tear-x` (low-rate JS, see VhsHeadSwitchTearLayer).
-   * Between analog grain (::before z 850) and scanlines (::after z 900).
+   * Between in-stack grain (z 850) and scanlines (z 900).
    */
   .rwc-channel-stack > .gfx-vhs-head-switch-tear {
     bottom: 0;

@@ -28,11 +28,6 @@ export function GfxRetroApply({ gfx, useOfficialFonts = true }: GfxRetroApplyPro
     const safeTint = GFX_RETRO_PRESET_CLASSES.includes(tint as GfxRetroColourPreset) ? tint : "none";
     GFX_RETRO_PRESET_CLASSES.forEach((p) => el.classList.remove(`gfx-phosphor-${p}`));
     el.classList.add(`gfx-phosphor-${safeTint}`);
-    if (r?.scanlinesOpacity && r.scanlinesOpacity > 0.001) el.classList.add("gfx-scanlines-on");
-    else el.classList.remove("gfx-scanlines-on");
-    if (r?.vhsAnalogLayerEnabled) el.classList.add("gfx-vhs-analog-on");
-    else el.classList.remove("gfx-vhs-analog-on");
-
     const aspectWide = useOfficialFonts && gfx?.displayAspectRatio === "16:9";
     el.classList.remove("rwc-aspect-4-3", "rwc-aspect-16-9");
     el.classList.add(aspectWide ? "rwc-aspect-16-9" : "rwc-aspect-4-3");

@@ -2,6 +2,8 @@ import { CrawlerMessages } from "display/components/crawler";
 import { FontModeApply } from "display/components/fontModeApply";
 import { FooterBar } from "display/components/footerbar";
 import { GfxRetroApply } from "display/components/gfxRetroApply";
+import { GfxScanlinesLayer } from "display/components/gfxScanlinesLayer";
+import { GfxVhsAnalogGrainLayer } from "display/components/gfxVhsAnalogGrainLayer";
 import { VhsHeadSwitchTearLayer } from "display/components/vhsHeadSwitchTearLayer";
 import { NextGenGfxLayer } from "display/components/nextGenGfxLayer";
 import { PlaylistComponent } from "display/components/playlist";
@@ -103,6 +105,11 @@ function WeatherChannel() {
     return <>Connecting…</>;
   }
 
+  const retro = config?.gfx?.retro;
+  const vhsAnalogOn = !!retro?.vhsAnalogLayerEnabled;
+  const scanlinesOn = !!(retro?.scanlinesOpacity && retro.scanlinesOpacity > 0.001);
+  const vhsTearOn = vhsAnalogOn && !!retro?.vhsHeadSwitchTearEnabled;
+
   return (
     <>
       <GfxRetroApply gfx={config?.gfx} useOfficialFonts={config?.config.useOfficialFonts ?? true} />
@@ -146,9 +153,9 @@ function WeatherChannel() {
             ]}
           />
         </div>
-        <VhsHeadSwitchTearLayer
-          enabled={!!config?.gfx?.retro?.vhsAnalogLayerEnabled && !!config?.gfx?.retro?.vhsHeadSwitchTearEnabled}
-        />
+        <GfxVhsAnalogGrainLayer enabled={vhsAnalogOn} />
+        <VhsHeadSwitchTearLayer enabled={vhsTearOn} />
+        <GfxScanlinesLayer enabled={scanlinesOn} />
       </div>
       <div className="gfx-vignette-layer" aria-hidden />
       <PlaylistComponent playlist={config?.music} />
