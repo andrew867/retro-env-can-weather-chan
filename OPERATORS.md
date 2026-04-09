@@ -118,12 +118,20 @@ git remote add github https://github.com/YOUR_USER/retro-env-can-weather-chan.gi
 
 ### Publish (run from the **repository root**, not inside this folder)
 
+**One-liner** (pushes to GitHub’s **`main`** branch):
+
+```bash
+git subtree push --prefix=code/weather-gfx/retro-env-can-weather-chan github main
+```
+
+**Manual split** (same result; use if subtree push misbehaves):
+
 ```bash
 git subtree split --prefix=code/weather-gfx/retro-env-can-weather-chan -b rwc-github-publish
 git push github rwc-github-publish:main --force-with-lease
 git branch -D rwc-github-publish
 ```
 
-Use your GitHub default branch name if it is not `main` (e.g. `master`).
+Use a different remote branch name only if your GitHub default branch is not **`main`** (e.g. legacy **`master`**).
 
 **`origin`** remains your source remote; **`github`** is only for this subtree push. Do not run `git push github` from the full repository without the split step above.
