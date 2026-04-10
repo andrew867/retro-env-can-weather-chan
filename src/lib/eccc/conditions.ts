@@ -35,6 +35,7 @@ import {
 } from "consts/forecast.consts";
 import {
   CONDITIONS_WIND_SPEED_CALM,
+  EVENT_BUS_AUXILIARY_WEATHER_DATA_READY,
   EVENT_BUS_CONFIG_CHANGE_PRIMARY_LOCATION,
   EVENT_BUS_MAIN_STATION_UPDATE_NEW_CONDITIONS,
 } from "consts";
@@ -234,7 +235,7 @@ class CurrentConditions {
     );
     this.generateWindchill(weather.current);
     this.generateForecast(weather.weekly);
-    this.getTempRecordsForDay();
+    void this.getTempRecordsForDay();
 
     this._conditionsFetchedAt = new Date().toISOString();
 
@@ -420,13 +421,27 @@ class CurrentConditions {
     if (sunset) this._sunRiseSet.set = ecccDateStringToTSDate(sunset.textSummary).toISOString();
   }
 
-  private generateAlmanac(almanac: ECCCAlmanac) {
+  private mergedAlmanacTemperatures() {
+    return {
+      ...this._almanac.temperatures,
+      lastYearMin: historicalData.lastYearTemperatures().min,
+      lastYearMax: historicalData.lastYearTemperatures().max,
+    };
+  }
+
+  private generateAlmanac(almanac: ECCCAlmanac | null | undefined) {
     // TODO: fetch records from alternate source
 
-    const retrieveAlmanacTemp = (tempClass: string, parseYear: boolean = true) => {
-      if (!almanac?.temperature?.length || !tempClass) return null;
+    const temps: ECCCAlmanacTemp[] = !almanac?.temperature
+      ? []
+      : Array.isArray(almanac.temperature)
+        ? almanac.temperature
+        : [almanac.temperature];
 
-      const entry = almanac.temperature.find((temp: ECCCAlmanacTemp) => temp.class === tempClass);
+    const retrieveAlmanacTemp = (tempClass: string, parseYear: boolean = true) => {
+      if (!temps.length || !tempClass) return null;
+
+      const entry = temps.find((temp: ECCCAlmanacTemp) => temp.class === tempClass);
       if (!entry) return null;
 
       const num = Number(entry.value);
@@ -522,11 +537,16 @@ class CurrentConditions {
     const tempRecord = await getTempRecordForDate(config.misc.alternateRecordsSource, this.observedDateTimeAtStation());
     if (!tempRecord) return;
 
-    // update hi/lo values
-    if (tempRecord.hi)
+    let updated = false;
+    if (tempRecord.hi) {
       this._almanac.temperatures.extremeMax = { value: tempRecord.hi.value, year: tempRecord.hi.year, unit: "C" };
-    if (tempRecord.lo)
+      updated = true;
+    }
+    if (tempRecord.lo) {
       this._almanac.temperatures.extremeMin = { value: tempRecord.lo.value, year: tempRecord.lo.year, unit: "C" };
+      updated = true;
+    }
+    if (updated) eventbus.emit(EVENT_BUS_AUXILIARY_WEATHER_DATA_READY);
   }
 
   public observed() {
@@ -539,11 +559,7 @@ class CurrentConditions {
       observed: { ...this._conditions, windchill: this._windchill },
       almanac: {
         ...this._almanac,
-        temperatures: {
-          ...this._almanac.temperatures,
-          lastYearMin: historicalData.lastYearTemperatures().min,
-          lastYearMax: historicalData.lastYearTemperatures().max,
-        },
+        temperatures: this.mergedAlmanacTemperatures(),
         sunRiseSet: this._sunRiseSet,
       },
       forecast: this._forecast,
@@ -566,7 +582,11 @@ class CurrentConditions {
       city: this._weatherStationCityName,
       stationTime: this._weatherStationTimeData,
       stationID: this._weatherStationID,
-      almanac: { ...this._almanac, sunRiseSet: this._sunRiseSet },
+      almanac: {
+        ...this._almanac,
+        temperatures: this.mergedAlmanacTemperatures(),
+        sunRiseSet: this._sunRiseSet,
+      },
     };
   }
 

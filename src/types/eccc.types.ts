@@ -59,7 +59,8 @@ export type ECCCDateTime = {
 };
 
 export type ECCCAlmanac = {
-  temperature: ECCCAlmanacTemp[];
+  /** Citypage XML: one `<temperature>` parses as a single object; several parse as an array. */
+  temperature?: ECCCAlmanacTemp | ECCCAlmanacTemp[];
 };
 
 export type ECCCAlmanacTemp = {
