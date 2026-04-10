@@ -20,6 +20,8 @@ All notable changes to this project are documented here. The format follows [Kee
 ### Reliability
 
 - **Datamart hourly directory:** For the **current UTC hour** only, retry when the HTML listing contains **no matching citypage files** yet (same delayed retry pattern as failed GETs), controlled by **`RWC_DATAMART_HOURLY_DIR_*`**.
+- **MSC / NWS HTTP log hygiene:** Datamart hourly listing failures, national citypage fetches, and province-tracking fetches log **short** lines via **`formatFetchError`** instead of dumping full **`AxiosError`** objects.
+- **Airport METAR / AWC / NWS:** AWC batch failures also use **`formatFetchError`**. **`fetchAwcMetarRows`** tries **`https://www.aviationweather.gov/...`** when the bare **`aviationweather.gov`** host fails with **DNS / network** errors (no HTTP response). If the batch still fails, the airport METAR poller falls back to **NWS** **`api.weather.gov/.../observations/latest`** per ICAO (same **`User-Agent`** policy as other NWS calls). USA weather reuses shared **`fetchNwsLatestObservation`** and **`formatFetchError`** for NWS + AWC paths.
 
 ### Config
 

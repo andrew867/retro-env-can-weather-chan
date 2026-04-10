@@ -39,6 +39,7 @@ describe("USA weather station temp/condition", () => {
         response: { ...KGFKResponse, properties: { ...KGFKResponse.properties, temperature: { value: null } } },
       });
       await moxios.requests.at(1).respondWith({ status: 200, response: KFARResponse });
+      await moxios.requests.at(2).respondWith({ status: 404, response: {} });
 
       const currentConditions = usa.weather();
       expect(currentConditions).toStrictEqual([expectedResponse[1]]);
@@ -55,6 +56,7 @@ describe("USA weather station temp/condition", () => {
         response: { ...KGFKResponse, properties: { ...KGFKResponse.properties, temperature: null } },
       });
       await moxios.requests.at(1).respondWith({ status: 200, response: KFARResponse });
+      await moxios.requests.at(2).respondWith({ status: 404, response: {} });
 
       const currentConditions = usa.weather();
       expect(currentConditions).toStrictEqual([expectedResponse[1]]);
@@ -87,6 +89,7 @@ describe("USA weather station temp/condition", () => {
         status: 200,
         response: { ...KFARResponse, properties: { ...KFARResponse.properties, textDescription: null } },
       });
+      await moxios.requests.at(2).respondWith({ status: 404, response: {} });
 
       const currentConditions = usa.weather();
       expect(currentConditions).toStrictEqual([expectedResponse[0]]);

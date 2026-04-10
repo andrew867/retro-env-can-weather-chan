@@ -4,6 +4,7 @@ import {
   formatAwcMetarRestLine,
   padAwcMetarFltCatDisplay,
   parseAwcMetarRow,
+  shouldTryAlternateAwcMetarBase,
   shouldTryAwcAfterNwsFailure,
 } from "lib/usaweather/awcMetar";
 
@@ -25,6 +26,15 @@ describe("awcMetar", () => {
 
   it("shouldTryAwcAfterNwsFailure is false for 404", () => {
     expect(shouldTryAwcAfterNwsFailure(axiosErr(404))).toBe(false);
+  });
+
+  it("shouldTryAlternateAwcMetarBase is true for ENOTFOUND (no HTTP status)", () => {
+    const e = new AxiosError("ENOTFOUND", "ENOTFOUND", undefined, undefined, undefined);
+    expect(shouldTryAlternateAwcMetarBase(e)).toBe(true);
+  });
+
+  it("shouldTryAlternateAwcMetarBase is false when HTTP status present", () => {
+    expect(shouldTryAlternateAwcMetarBase(axiosErr(503))).toBe(false);
   });
 
   it("parseAwcMetarRow maps temp and condition", () => {

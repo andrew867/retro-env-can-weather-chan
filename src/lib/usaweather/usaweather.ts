@@ -10,25 +10,16 @@ import Logger from "lib/logger";
 import axios from "lib/backendAxios";
 import { harshTruncateConditions } from "lib/conditions";
 import eventbus from "lib/eventbus";
-import { generateConditionsUUID } from "lib/eccc/utils";
 import { initializeConfig } from "lib/config";
 import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
 import { LastKnownGood } from "lib/reliability/lastKnownGood";
-import { axiosGetWithRetry } from "lib/reliability/httpRetry";
 import { fetchAwcMetarRows, parseAwcMetarRow, shouldTryAwcAfterNwsFailure } from "lib/usaweather/awcMetar";
+import { formatFetchError } from "lib/eccc/fetchErrors";
+import { fetchNwsLatestObservation } from "lib/usaweather/nwsLatestObservation";
 
 const config = initializeConfig();
 
 const logger = new Logger("USA");
-
-function summarizeFetchError(err: unknown): string {
-  if (err && typeof err === "object") {
-    const e = err as { code?: string; message?: string; response?: { status?: number } };
-    const parts = [e.code, e.response?.status != null ? `HTTP ${e.response.status}` : null, e.message].filter(Boolean);
-    if (parts.length) return parts.join(" · ");
-  }
-  return err instanceof Error ? err.message : String(err);
-}
 
 class USAWeather {
   private _usaStations: USAStationObservations = [];
@@ -131,33 +122,13 @@ class USAWeather {
     };
 
     try {
-      const resp = await axiosGetWithRetry(axios, `https://api.weather.gov/stations/${station.code}/observations/latest`, {
-        timeout: USA_WEATHER_HTTP_TIMEOUT_MS,
-        rwcUpstream: { feed: "nws_observations_latest", key: station.code },
-      });
+      const nws = await fetchNwsLatestObservation(axios, station.code, USA_WEATHER_HTTP_TIMEOUT_MS);
       if (batchId !== this._usaBatchId) return;
-      const weather = resp.data as {
-        properties?: {
-          timestamp?: string;
-          textDescription?: string | null;
-          temperature?: { value?: number | null } | null;
-        };
-      };
-      if (!weather) throw new Error("Unable to parse USA weather data");
-
-      const { properties } = weather;
-      const [timestamp] = properties.timestamp.split("+");
-      const conditionUUID = generateConditionsUUID(timestamp.replace(/[-T:]/g, ""));
-      const { textDescription: condition = null, temperature = null } = properties ?? {};
-      applyObservation(
-        condition ?? null,
-        temperature?.value != null && !isNaN(temperature.value) ? Number(temperature.value) : null,
-        conditionUUID,
-        "nws"
-      );
+      if (!nws) throw new Error("NWS observation missing or incomplete");
+      applyObservation(nws.condition, nws.temperatureC, nws.conditionUUID, "nws");
     } catch (nwsErr) {
       if (!shouldTryAwcAfterNwsFailure(nwsErr)) {
-        logger.warn(`${station.name}: NWS observation fetch failed (${summarizeFetchError(nwsErr)})`);
+        logger.warn(`${station.name}: NWS observation fetch failed (${formatFetchError(nwsErr)})`);
         return;
       }
       try {
@@ -168,7 +139,7 @@ class USAWeather {
         applyObservation(parsed.condition, parsed.temperatureC, parsed.conditionUUID, "awc");
       } catch (awcErr) {
         logger.warn(
-          `${station.name}: NWS + AWC METAR failed (NWS: ${summarizeFetchError(nwsErr)}; AWC: ${summarizeFetchError(awcErr)})`
+          `${station.name}: NWS + AWC METAR failed (NWS: ${formatFetchError(nwsErr)}; AWC: ${formatFetchError(awcErr)})`
         );
       }
     }

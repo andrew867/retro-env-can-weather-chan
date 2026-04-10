@@ -8,7 +8,14 @@ import type { AxiosInstance } from "axios";
 import { generateConditionsUUID } from "lib/eccc/utils";
 import { axiosGetWithRetry } from "lib/reliability/httpRetry";
 
-export const AWC_METAR_API = "https://aviationweather.gov/api/data/metar";
+/** Try bare host first; some resolvers fail `aviationweather.gov` while `www` works (or vice versa). */
+export const AWC_METAR_API_BASES = [
+  "https://aviationweather.gov/api/data/metar",
+  "https://www.aviationweather.gov/api/data/metar",
+] as const;
+
+/** @deprecated Prefer {@link AWC_METAR_API_BASES}; kept for callers that only need a display URL. */
+export const AWC_METAR_API = AWC_METAR_API_BASES[0];
 
 export type AwcMetarRow = {
   icaoId: string;
@@ -30,6 +37,14 @@ export function shouldTryAwcAfterNwsFailure(err: unknown): boolean {
   if (status >= 500 && status <= 599) return true;
   if (status === 408) return true;
   return false;
+}
+
+/** When the first AWC host fails before an HTTP status (DNS, timeout, reset), try the alternate base URL. */
+export function shouldTryAlternateAwcMetarBase(err: unknown): boolean {
+  if (!isAxiosError(err)) return false;
+  if (err.code === "ERR_CANCELED") return false;
+  if (err.response?.status != null) return false;
+  return true;
 }
 
 export function formatAwcMetarConditionLine(row: AwcMetarRow): string {
@@ -96,14 +111,26 @@ export async function fetchAwcMetarRows(
   const out = new Map<string, AwcMetarRow>();
   if (!icaoIds.length) return out;
   const ids = [...new Set(icaoIds.map((c) => c.trim().toUpperCase()).filter(Boolean))];
-  const url = `${AWC_METAR_API}?ids=${ids.map(encodeURIComponent).join(",")}&format=json`;
-  const resp = await axiosGetWithRetry<AwcMetarRow[]>(client, url, {
-    timeout: timeoutMs,
-    rwcUpstream: { feed: "awc_metar", key: ids.slice(0, 8).join(",") },
-  });
-  const rows = Array.isArray(resp.data) ? resp.data : [];
-  for (const r of rows) {
-    if (r?.icaoId) out.set(String(r.icaoId).toUpperCase(), r);
+  const query = `ids=${ids.map(encodeURIComponent).join(",")}&format=json`;
+  let lastErr: unknown;
+  for (let i = 0; i < AWC_METAR_API_BASES.length; i++) {
+    const base = AWC_METAR_API_BASES[i]!;
+    const url = `${base}?${query}`;
+    try {
+      const resp = await axiosGetWithRetry<AwcMetarRow[]>(client, url, {
+        timeout: timeoutMs,
+        rwcUpstream: { feed: "awc_metar", key: ids.slice(0, 8).join(",") },
+      });
+      const rows = Array.isArray(resp.data) ? resp.data : [];
+      for (const r of rows) {
+        if (r?.icaoId) out.set(String(r.icaoId).toUpperCase(), r);
+      }
+      return out;
+    } catch (err) {
+      lastErr = err;
+      const tryNext = i < AWC_METAR_API_BASES.length - 1 && shouldTryAlternateAwcMetarBase(err);
+      if (!tryNext) throw err;
+    }
   }
-  return out;
+  throw lastErr;
 }

@@ -10,6 +10,8 @@ import { USAStationObservations } from "types";
 import { LastKnownGood } from "lib/reliability/lastKnownGood";
 import Logger from "lib/logger";
 import axios from "lib/backendAxios";
+import { formatFetchError } from "lib/eccc/fetchErrors";
+import { fetchNwsLatestObservation } from "lib/usaweather/nwsLatestObservation";
 import { harshTruncateConditions } from "lib/conditions";
 import { initializeConfig } from "lib/config";
 import {
@@ -53,6 +55,16 @@ class AirportMetarWeather {
       return;
     }
 
+    const emptyRow = (st: { name: string; code: string }): USAStationObservations[number] => ({
+      name: st.name,
+      code: st.code,
+      condition: null,
+      abbreviatedCondition: undefined,
+      temperature: null,
+      conditionUUID: undefined,
+      metarFltCatPadded: undefined,
+    });
+
     try {
       const map = await fetchAwcMetarRows(
         axios,
@@ -65,15 +77,7 @@ class AirportMetarWeather {
         const parsed = row ? parseAwcMetarRow(row) : null;
         if (!parsed) {
           logger.warn(`${st.name} (${st.code}): no METAR from AWC`);
-        next.push({
-          name: st.name,
-          code: st.code,
-          condition: null,
-          abbreviatedCondition: undefined,
-          temperature: null,
-          conditionUUID: undefined,
-          metarFltCatPadded: undefined,
-        });
+          next.push(emptyRow(st));
           continue;
         }
         const restRaw = formatAwcMetarRestLine(row);
@@ -92,8 +96,38 @@ class AirportMetarWeather {
       }
       this._observations = next;
       this._fetchedAt = new Date().toISOString();
-    } catch (err) {
-      logger.warn("Airport METAR batch fetch failed", err);
+    } catch (awcErr) {
+      logger.warn(`Airport METAR AWC batch failed (${formatFetchError(awcErr)}); trying NWS per station`);
+      const next: USAStationObservations = [];
+      const nwsRows = await Promise.all(
+        stations.map((st) => fetchNwsLatestObservation(axios, st.code, AIRPORT_METAR_HTTP_TIMEOUT_MS))
+      );
+      let anyOk = false;
+      for (let i = 0; i < stations.length; i++) {
+        const st = stations[i]!;
+        const nws = nwsRows[i];
+        if (!nws) {
+          logger.warn(`${st.name} (${st.code}): no METAR from NWS fallback`);
+          next.push(emptyRow(st));
+          continue;
+        }
+        anyOk = true;
+        next.push({
+          name: st.name,
+          code: st.code,
+          condition: nws.condition,
+          abbreviatedCondition: harshTruncateConditions(nws.condition, AIRPORT_METAR_REST_CONDITION_MAX),
+          temperature: nws.temperatureC,
+          conditionUUID: nws.conditionUUID,
+          metarFltCatPadded: padAwcMetarFltCatDisplay(undefined),
+        });
+      }
+      if (anyOk) {
+        this._observations = next;
+        this._fetchedAt = new Date().toISOString();
+      } else {
+        logger.warn(`Airport METAR: NWS fallback returned no stations (${formatFetchError(awcErr)})`);
+      }
     }
   }
 
