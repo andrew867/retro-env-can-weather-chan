@@ -1,4 +1,4 @@
-import { DISPLAY_MAX_CHARACTERS_PER_LINE } from "consts";
+import { STATS_SCREEN_MAX_CHARACTERS_PER_LINE } from "consts";
 import { addMinutes, format, isValid, parseISO } from "date-fns";
 import { formatObservedMonthDate, getIsWinterSeason } from "lib/date";
 import { useMemo } from "react";
@@ -53,7 +53,7 @@ export function StatsScreen(props: StatsScreenProps) {
   const generatePrecip = (amount: number) => amount.toFixed(1).padStart(5);
 
   const generateDotsForPrecipLine = (dataName: string, usedChars = PRECIP_CHARS_USED_OUTSIDE_OF_DOTS) =>
-    "".padEnd(DISPLAY_MAX_CHARACTERS_PER_LINE - (dataName.length + usedChars), ".");
+    "".padEnd(STATS_SCREEN_MAX_CHARACTERS_PER_LINE - (dataName.length + usedChars), ".");
 
   /** Match server-side seasonal precip window to the station’s observed calendar month (not only the browser clock). */
   const seasonStartMonth = useMemo(() => {
@@ -71,7 +71,7 @@ export function StatsScreen(props: StatsScreenProps) {
   const truncatedColdSpotName = coldSpot?.name?.slice(0, HOT_COLD_SPOT_MAX_NAME_LENGTH) ?? "N/A";
 
   const generateDotsForHotColdSpotLine = (prefix: string) =>
-    "".padEnd(DISPLAY_MAX_CHARACTERS_PER_LINE - (prefix.length + HOT_COLD_SPOT_CHARS_USED_OUTSIDE_OF_DOTS), ".");
+    "".padEnd(STATS_SCREEN_MAX_CHARACTERS_PER_LINE - (prefix.length + HOT_COLD_SPOT_CHARS_USED_OUTSIDE_OF_DOTS), ".");
 
   const formatTempForHotColdSpotLine = (temperature?: number | null) =>
     (!isNaN(temperature) && temperature != null ? Math.round(temperature) : "N/A").toString().padStart(3);
@@ -81,12 +81,13 @@ export function StatsScreen(props: StatsScreenProps) {
   return (
     <div id="stats_screen">
       <div>
-        {"".padStart(2)}
+        {"".padStart(1)}
         {city.slice(0, 10)} statistics - {formattedDate}
       </div>
       <div>
-        Sunrise..{formattedSunrise} am Sunset..{formattedSunset} pm
+        Sunrise..{formattedSunrise} am
       </div>
+      <div>Sunset..{formattedSunset} pm</div>
       <div>{"".padStart(4)}Total precipitation since</div>
       <div>
         {"".padStart(2)}

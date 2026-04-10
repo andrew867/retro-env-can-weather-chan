@@ -213,10 +213,13 @@ ol {
      * without changing copy, line breaks, or character-based widths.
      */
     #stats_screen {
+      align-self: stretch;
       -webkit-font-smoothing: subpixel-antialiased;
       backface-visibility: hidden;
+      min-width: 0;
       text-rendering: geometricPrecision;
       transform: translateZ(0);
+      width: 100%;
     }
 
     #national_weather,
