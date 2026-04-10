@@ -1,4 +1,4 @@
-import { SUNSPOT_CITIES } from "consts";
+import { NWS_GRIDPOINT_FORECAST_USER_AGENT, SUNSPOT_CITIES } from "consts";
 import { SunspotStationConfig, SunspotStationObservation, SunspotStationObservations } from "types";
 import Logger from "lib/logger";
 import axios from "lib/backendAxios";
@@ -64,7 +64,9 @@ class Sunspots {
     batchId: number
   ) {
     axios
-      .get(`https://api.weather.gov/gridpoints/${station.code}/${station.x},${station.y}/forecast`)
+      .get(`https://api.weather.gov/gridpoints/${station.code}/${station.x},${station.y}/forecast`, {
+        headers: { "User-Agent": NWS_GRIDPOINT_FORECAST_USER_AGENT },
+      })
       .then((resp) => {
         if (batchId !== this._sunspotBatchId) return;
         const { data: weather } = resp;

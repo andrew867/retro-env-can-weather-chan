@@ -1,10 +1,10 @@
-import { SunspotStationObservations } from "types";
+import type { SunspotsWeatherPayload } from "types";
 import { usePollingFetch } from "./usePollingFetch";
 
 const FETCH_SUNSPOTS_INTERVAL = 5 * 60 * 1000;
 
 export function useSunspots() {
-  const { data, dataFetchedAt, refetch, hasAttempted } = usePollingFetch<SunspotStationObservations>(
+  const { data, dataFetchedAt, refetch, hasAttempted } = usePollingFetch<SunspotsWeatherPayload>(
     "weather/sunspots",
     FETCH_SUNSPOTS_INTERVAL,
     "sunspots"

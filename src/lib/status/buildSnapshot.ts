@@ -7,6 +7,9 @@ import { initializeNationalWeather } from "lib/national";
 import { initializeProvinceTracking } from "lib/provincetracking";
 import { initializeUSAWeather } from "lib/usaweather";
 import { initializeAirportMetarWeather } from "lib/airportMetar";
+import { isSunSpotSeason } from "lib/date";
+import { initializeSolarCycleSwpc } from "lib/solarCycleSwpc";
+import { initializeSolarFlux } from "lib/solarFlux";
 import { initializeSunspots } from "lib/sunspots";
 import { feedSourceFromTimestamps, type FeedSource } from "lib/status/feedSource";
 import { getMscAmqpStatsSnapshot } from "lib/amqp/mscAmqpStats";
@@ -99,7 +102,21 @@ export function buildStatusSnapshot(): StatusSnapshot {
   const airportServed = airport.getDataFetchedAtForHeader();
   const provinceLive = province.getLastFetchIso();
   const provinceServed = province.getDataFetchedAtForHeader();
-  const sunspotsAt = sunspots.getLastFetchIso();
+  const fluxAt = initializeSolarFlux().getLastFetchIso();
+  const swpcAt = initializeSolarCycleSwpc().getLastFetchIso();
+  const sunspotsObsAt = isSunSpotSeason() ? sunspots.getLastFetchIso() : null;
+  const sunspotsAtRaw =
+    fluxAt && sunspotsObsAt
+      ? fluxAt >= sunspotsObsAt
+        ? fluxAt
+        : sunspotsObsAt
+      : (fluxAt ?? sunspotsObsAt ?? null);
+  const sunspotsAt =
+    sunspotsAtRaw && swpcAt
+      ? sunspotsAtRaw >= swpcAt
+        ? sunspotsAtRaw
+        : swpcAt
+      : (sunspotsAtRaw ?? swpcAt ?? null);
 
   const alertList = alerts.alerts().alerts ?? [];
   const capAmqp = getMscAmqpStatsSnapshot().alerts;
@@ -137,7 +154,12 @@ export function buildStatusSnapshot(): StatusSnapshot {
         dataFetchedAt: sunspotsAt,
         servedDataAsOf: sunspotsAt,
         source: sunspotsAt ? "live" : "none",
-        ...(!sunspotsAt ? { note: "No data yet, or outside sunspot season (operator refresh is a no-op then)." } : {}),
+        ...(!sunspotsAt
+          ? {
+              note:
+                "No tropical outlook, solar-flux, or SWPC solar-cycle snapshot yet (NWS grid is only polled in sunspot season; flux and SWPC load year-round).",
+            }
+          : {}),
       },
       hot_cold: {
         dataFetchedAt: hotCold.getLastFetchIso(),
@@ -200,6 +222,8 @@ export function triggerStatusRefresh(target: StatusRefreshTarget): void {
       return;
     case "sunspots":
       initializeSunspots().requestOperatorRefresh();
+      initializeSolarFlux().requestOperatorRefresh();
+      initializeSolarCycleSwpc().requestOperatorRefresh();
       return;
     case "hot_cold":
       initializeCanadaProvincialHotColdSpot().requestOperatorRefresh();

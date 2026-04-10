@@ -10,6 +10,8 @@ import { initializeProvinceTracking } from "lib/provincetracking";
 import { initializeCanadaProvincialHotColdSpot } from "./canadaHotColdSpot";
 import { initializeUSAWeather } from "lib/usaweather";
 import { initializeAirportMetarWeather } from "lib/airportMetar";
+import { initializeSolarCycleSwpc } from "lib/solarCycleSwpc";
+import { initializeSolarFlux } from "lib/solarFlux";
 import { initializeSunspots } from "lib/sunspots";
 
 const conditions = initializeCurrentConditions();
@@ -20,9 +22,17 @@ const hotColdSpots = initializeCanadaProvincialHotColdSpot();
 const usaWeather = initializeUSAWeather();
 const airportMetar = initializeAirportMetarWeather();
 const sunspots = initializeSunspots();
+const solarFlux = initializeSolarFlux();
+const solarCycleSwpc = initializeSolarCycleSwpc();
 
 function setFetchedAtHeader(res: Response, iso: string | null) {
   if (iso) res.setHeader(RWC_DATA_FETCHED_AT_HEADER, iso);
+}
+
+function maxFetchedAtIso(a: string | null, b: string | null): string | null {
+  if (!a) return b;
+  if (!b) return a;
+  return a >= b ? a : b;
 }
 
 export function getObserved(req: Request, res: Response) {
@@ -85,10 +95,18 @@ export function getAirportMetar(req: Request, res: Response) {
 }
 
 export function getSunspots(req: Request, res: Response) {
-  // Off-season we do not poll; an old _fetchedAt would false-positive the footer stale hint.
-  setFetchedAtHeader(res, isSunSpotSeason() ? sunspots.getLastFetchIso() : null);
-  if (!isSunSpotSeason()) res.json([]);
-  else res.json(sunspots.sunspots());
+  const inSeason = isSunSpotSeason();
+  const observations = inSeason ? sunspots.sunspots() : [];
+  const fluxAt = solarFlux.getLastFetchIso();
+  const obsAt = inSeason ? sunspots.getLastFetchIso() : null;
+  const swpcAt = solarCycleSwpc.getLastFetchIso();
+  const headerAt = maxFetchedAtIso(maxFetchedAtIso(fluxAt, obsAt), swpcAt);
+  setFetchedAtHeader(res, headerAt);
+  res.json({
+    observations,
+    solarFlux: solarFlux.getLatest(),
+    solarCycleSwpc: solarCycleSwpc.getData(),
+  });
 }
 
 export function getProvinceTracking(req: Request, res: Response) {

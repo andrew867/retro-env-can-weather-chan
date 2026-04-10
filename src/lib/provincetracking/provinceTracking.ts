@@ -3,6 +3,7 @@ import fs from "fs";
 import { EVENT_BUS_CONFIG_CHANGE_PROVINCE_TRACKING, PROVINCE_TRACKING_TEMP_TO_TRACK } from "consts";
 import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
 import axios from "lib/backendAxios";
+import { formatFetchError } from "lib/eccc/fetchErrors";
 import { axiosGetWithMscMirror } from "lib/eccc/mscHttpMirror";
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
@@ -297,7 +298,9 @@ class ProvinceTracking {
           station.maxTemp = tempAsNumber;
         }
       })
-      .catch((err) => logger.error(name, url, "failed to fetch data", err));
+      .catch((err) =>
+        logger.warn(`${name}: province tracking fetch failed (${formatFetchError(err)}) url=${url}`)
+      );
   }
 
   private resetTracking(resetTemps: boolean) {

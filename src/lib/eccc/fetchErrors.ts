@@ -13,7 +13,8 @@ export function formatFetchError(err: unknown): string {
   if (axios.isAxiosError(err)) {
     const status = err.response?.status;
     const url = err.config?.url ?? "unknown URL";
-    if (status) return `${status} ${url}`;
+    if (status != null) return `${status} ${url}`;
+    if (err.code) return `${err.code} ${url}`;
     return err.message || "axios error";
   }
   if (err instanceof Error) return err.message;

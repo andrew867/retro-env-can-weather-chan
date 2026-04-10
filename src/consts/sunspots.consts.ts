@@ -1,5 +1,9 @@
 import { SunspotStationConfig } from "types";
 
+/** Required by api.weather.gov — see https://www.weather.gov/documentation/services-web-api */
+export const NWS_GRIDPOINT_FORECAST_USER_AGENT =
+  "(retro-env-can-weather-chan; +https://github.com/andrew867/retro-env-can-weather-chan)";
+
 export const SUNSPOT_CITIES: SunspotStationConfig[] = [
   { name: "Honolulu", code: "HFO", x: 150, y: 145 },
   { name: "Phoenix", code: "PSR", x: 160, y: 56 },

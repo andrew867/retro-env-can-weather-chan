@@ -186,7 +186,7 @@ function WeatherChannel() {
             lastMonthFetchAttempted={lastMonthFetchAttempted}
             usaWeather={usaWeather}
             airportMetar={airportMetar ?? []}
-            sunspots={sunspots}
+            sunspotsPayload={sunspots}
             sunspotsFetchAttempted={sunspotsFetchAttempted}
             airQuality={airQuality}
             configVersion={config?.config.configVersion}

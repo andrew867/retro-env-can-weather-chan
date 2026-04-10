@@ -15,6 +15,7 @@ import { NationalStationConfig, NationalStationObservation, NationalStationObser
 import { LastKnownGood } from "lib/reliability/lastKnownGood";
 import { mergeNationalWithLkg } from "lib/reliability/mergeNationalLkg";
 import Logger from "lib/logger";
+import { formatFetchError } from "lib/eccc/fetchErrors";
 import axios from "lib/backendAxios";
 import { axiosGetWithMscMirror } from "lib/eccc/mscHttpMirror";
 import { harshTruncateConditions } from "lib/conditions";
@@ -185,7 +186,7 @@ class NationalWeatherAggregator {
             });
             this._fetchedAt = new Date().toISOString();
           })
-          .catch((err) => logger.error(station.name, "failed to fetch data", err));
+          .catch((err) => logger.warn(`${station.name}: national citypage fetch failed (${formatFetchError(err)})`));
     });
   }
 

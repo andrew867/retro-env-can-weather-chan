@@ -1,72 +1,77 @@
-[
-  {
-    "name": "Honolulu",
-    "code": "HFO",
-    "x": 150,
-    "y": 145,
-    "forecast": "Mostly Sunny",
-    "abbreviatedForecast": "mostly sunny",
-    "highTemp": 32.22222222222222,
-    "lowTemp": 24.444444444444443
+{
+  "observations": [
+    {
+      "name": "Honolulu",
+      "code": "HFO",
+      "forecast": "Mostly Sunny",
+      "abbreviatedForecast": "mostly sunny",
+      "highTemp": 32.22222222222222,
+      "lowTemp": 24.444444444444443
+    },
+    {
+      "name": "Phoenix",
+      "code": "PSR",
+      "forecast": "Sunny",
+      "abbreviatedForecast": "sunny",
+      "highTemp": 42.22222222222222,
+      "lowTemp": 31.666666666666668
+    },
+    {
+      "name": "Brownsville",
+      "code": "BRO",
+      "forecast": "Scattered Showers And Thunderstorms",
+      "abbreviatedForecast": "sctd showers",
+      "highTemp": 33.333333333333336,
+      "lowTemp": 25.555555555555557
+    },
+    {
+      "name": "Orlando",
+      "code": "MLB",
+      "forecast": "Sunny",
+      "abbreviatedForecast": "sunny",
+      "highTemp": 33.333333333333336,
+      "lowTemp": 24.444444444444443
+    },
+    {
+      "name": "San Diego",
+      "code": "SGX",
+      "forecast": "Mostly Sunny",
+      "abbreviatedForecast": "mostly sunny",
+      "highTemp": 23.333333333333332,
+      "lowTemp": 17.22222222222222
+    },
+    {
+      "name": "Key West",
+      "code": "KEY",
+      "forecast": "Isolated Showers And Thunderstorms",
+      "abbreviatedForecast": "i. shwr/strm",
+      "highTemp": 31.666666666666668,
+      "lowTemp": 28.333333333333332
+    },
+    {
+      "name": "San Juan",
+      "code": "SJU",
+      "forecast": "Scattered Rain Showers",
+      "abbreviatedForecast": "sctd showers",
+      "highTemp": 33.888888888888886,
+      "lowTemp": 26.666666666666668
+    }
+  ],
+  "solarFlux": {
+    "fluxDate": "20260409",
+    "fluxTime": "200000",
+    "observedSfU": 134.1,
+    "adjustedSfU": 132.5,
+    "ursiSfU": 120.0
   },
-  {
-    "name": "Phoenix",
-    "code": "PSR",
-    "x": 160,
-    "y": 56,
-    "forecast": "Sunny",
-    "abbreviatedForecast": "sunny",
-    "highTemp": 42.22222222222222,
-    "lowTemp": 31.666666666666668
-  },
-  {
-    "name": "Brownsville",
-    "code": "BRO",
-    "x": 80,
-    "y": 5,
-    "forecast": "Scattered Showers And Thunderstorms",
-    "abbreviatedForecast": "sctd showers",
-    "highTemp": 33.333333333333336,
-    "lowTemp": 25.555555555555557
-  },
-  {
-    "name": "Orlando",
-    "code": "MLB",
-    "x": 28,
-    "y": 69,
-    "forecast": "Sunny",
-    "abbreviatedForecast": "sunny",
-    "highTemp": 33.333333333333336,
-    "lowTemp": 24.444444444444443
-  },
-  {
-    "name": "San Diego",
-    "code": "SGX",
-    "x": 55,
-    "y": 14,
-    "forecast": "Mostly Sunny",
-    "abbreviatedForecast": "mostly sunny",
-    "highTemp": 23.333333333333332,
-    "lowTemp": 17.22222222222222
-  },
-  {
-    "name": "Key West",
-    "code": "KEY",
-    "x": 61,
-    "y": 47,
-    "forecast": "Isolated Showers And Thunderstorms",
-    "abbreviatedForecast": "i. shwr/strm",
-    "highTemp": 31.666666666666668,
-    "lowTemp": 28.333333333333332
-  },
-  {
-    "name": "San Juan",
-    "code": "SJU",
-    "x": 170,
-    "y": 129,
-    "forecast": "Scattered Rain Showers",
-    "abbreviatedForecast": "sctd showers",
-    "highTemp": 33.888888888888886,
-    "lowTemp": 26.666666666666668
+  "solarCycleSwpc": {
+    "daily": { "obsDateIso": "2026-04-10T00:00:00", "swpcSsn": 48 },
+    "monthlyObserved": {
+      "timeTag": "2026-03",
+      "ssn": 86,
+      "observedSwpcSsn": 90,
+      "f107": 131
+    },
+    "monthlyPredicted": { "timeTag": "2026-04", "predictedSsn": 109, "predictedF107": 146 }
   }
-]
+}

@@ -39,4 +39,13 @@ describe("fetchErrors", () => {
     expect(formatFetchError(err)).toContain("404");
     expect(formatFetchError(err)).toContain("example.com");
   });
+
+  it("formatFetchError uses axios code when no response", () => {
+    const err = Object.assign(new Error("socket hang up"), {
+      isAxiosError: true as const,
+      code: "ECONNRESET",
+      config: { url: "https://example.com/y" },
+    });
+    expect(formatFetchError(err)).toBe("ECONNRESET https://example.com/y");
+  });
 });

@@ -12,6 +12,8 @@ export * from "./provincetracking.consts";
 export * from "./usa.consts";
 export * from "./airportMetar.consts";
 export * from "./sunspots.consts";
+export * from "./solarFlux.consts";
+export * from "./solarCycleSwpc.consts";
 export * from "./airquality.consts";
 export * from "./eventbus.consts";
 export * from "./reliability.consts";

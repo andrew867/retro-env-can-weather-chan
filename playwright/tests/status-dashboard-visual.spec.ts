@@ -35,7 +35,8 @@ const FROZEN_STATUS = {
       dataFetchedAt: null as string | null,
       servedDataAsOf: null as string | null,
       source: "none",
-      note: "No data yet, or outside sunspot season (operator refresh is a no-op then).",
+      note:
+        "No tropical outlook or solar-flux snapshot yet (NWS grid is only polled in sunspot season; flux loads year-round).",
     },
     hot_cold: {
       dataFetchedAt: "2026-04-08T10:00:00.000Z",

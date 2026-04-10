@@ -14,7 +14,7 @@ import {
   NationalWeather,
   ProvinceTracking,
   Season,
-  SunspotStationObservations,
+  SunspotsWeatherPayload,
   NationalStationObservations,
   USAStationObservations,
   WeatherStation,
@@ -53,7 +53,7 @@ type ScreenRotatorProps = {
   usaWeather: USAStationObservations;
   /** ICAO METAR rows when `airportMetarStations` is set in config. */
   airportMetar: NationalStationObservations;
-  sunspots: SunspotStationObservations;
+  sunspotsPayload: SunspotsWeatherPayload | undefined;
   /** After first sunspots poll; avoids skipping before the list loads in sunspot season. */
   sunspotsFetchAttempted: boolean;
   airQuality: AQHIObservationResponse;
@@ -79,7 +79,7 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     lastMonthFetchAttempted,
     usaWeather,
     airportMetar,
-    sunspots,
+    sunspotsPayload,
     sunspotsFetchAttempted,
     airQuality,
     configVersion,
@@ -368,7 +368,7 @@ export function ScreenRotator(props: ScreenRotatorProps) {
       case Screens.SUNSPOTS:
         return (
           <SunspotScreen
-            sunspots={sunspots}
+            sunspotsPayload={sunspotsPayload}
             sunspotsFetchAttempted={sunspotsFetchAttempted}
             weatherStationTime={weatherStationResponse?.stationTime}
             onComplete={switchToNextScreen}

@@ -11,6 +11,7 @@ import {
   axiosHeadWithMscMirror,
   MSC_HPFX_ORIGIN,
 } from "lib/eccc/mscHttpMirror";
+import { formatFetchError } from "lib/eccc/fetchErrors";
 
 const logger = new Logger("Datamart");
 
@@ -83,7 +84,9 @@ async function GetWeatherFileFromECCC(province: string, stationID: string): Prom
         if (attempt < maxDirAttempts - 1 && isMscHourlyDirectoryMaybeNotPublished(err)) {
           continue;
         }
-        logger.error(province, paddedUTCHour, "failed to fetch data", lastDirErr);
+        logger.warn(
+          `Citypage hourly directory ${province}/${paddedUTCHour}Z listing failed (${formatFetchError(lastDirErr)})`
+        );
         continue hourLoop;
       }
 
@@ -91,9 +94,7 @@ async function GetWeatherFileFromECCC(province: string, stationID: string): Prom
         if (hourIx === 0 && attempt < maxDirAttempts - 1) {
           continue;
         }
-        if (lastDirErr != null) {
-          logger.error(province, paddedUTCHour, "failed to fetch data", lastDirErr);
-        }
+        logger.warn(`Citypage hourly directory ${province}/${paddedUTCHour}Z: empty listing body`);
         continue hourLoop;
       }
       if (!directoryResolvedUrl) {
