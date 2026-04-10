@@ -136,7 +136,13 @@ class USAWeather {
         rwcUpstream: { feed: "nws_observations_latest", key: station.code },
       });
       if (batchId !== this._usaBatchId) return;
-      const weather = resp.data;
+      const weather = resp.data as {
+        properties?: {
+          timestamp?: string;
+          textDescription?: string | null;
+          temperature?: { value?: number | null } | null;
+        };
+      };
       if (!weather) throw new Error("Unable to parse USA weather data");
 
       const { properties } = weather;

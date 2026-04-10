@@ -10,7 +10,8 @@ import {
   WEST_WEATHER_STATIONS,
 } from "consts";
 import { rwcLkgMaxAgeMs } from "consts/reliability.consts";
-import { NationalStationConfig, NationalStationObservation, NationalStationObservations, NationalWeather } from "types";
+import type { NationalWeather as NationalWeatherData } from "types";
+import { NationalStationConfig, NationalStationObservation, NationalStationObservations } from "types";
 import { LastKnownGood } from "lib/reliability/lastKnownGood";
 import { mergeNationalWithLkg } from "lib/reliability/mergeNationalLkg";
 import Logger from "lib/logger";
@@ -25,7 +26,7 @@ import { GetWeatherFileFromECCC } from "lib/eccc/datamart";
 const config = initializeConfig();
 
 const logger = new Logger("National");
-class NationalWeather {
+class NationalWeatherAggregator {
   private _manitobaStations: NationalStationObservations = [];
   private _ontarioStations: NationalStationObservations = [];
   private _eastStations: NationalStationObservations = [];
@@ -34,7 +35,7 @@ class NationalWeather {
   private _fetchedAt: string | null = null;
   private _lastBatchStartMs = 0;
   private _nationalBatchId = 0;
-  private readonly _lkg = new LastKnownGood<NationalWeather>();
+  private readonly _lkg = new LastKnownGood<NationalWeatherData>();
 
   constructor() {
     this.periodicUpdate();
@@ -75,7 +76,7 @@ class NationalWeather {
     return null;
   }
 
-  private freshNationalWeather(): NationalWeather {
+  private freshNationalWeather(): NationalWeatherData {
     return {
       mb: this._manitobaStations
         .filter((stationObservation) => this.isStationReporting(stationObservation))
@@ -198,11 +199,11 @@ class NationalWeather {
   }
 }
 
-let nationalWeather: NationalWeather = null;
-export function initializeNationalWeather(): NationalWeather {
-  if (process.env.NODE_ENV === "test") return new NationalWeather();
+let nationalWeather: NationalWeatherAggregator | null = null;
+export function initializeNationalWeather(): NationalWeatherAggregator {
+  if (process.env.NODE_ENV === "test") return new NationalWeatherAggregator();
   if (nationalWeather) return nationalWeather;
 
-  nationalWeather = new NationalWeather();
+  nationalWeather = new NationalWeatherAggregator();
   return nationalWeather;
 }

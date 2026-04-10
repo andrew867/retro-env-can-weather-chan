@@ -9,11 +9,12 @@ import { initializeUSAWeather } from "lib/usaweather";
 import { initializeAirportMetarWeather } from "lib/airportMetar";
 import { initializeSunspots } from "lib/sunspots";
 import { feedSourceFromTimestamps, type FeedSource } from "lib/status/feedSource";
+import { getMscAmqpStatsSnapshot } from "lib/amqp/mscAmqpStats";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { version: packageVersion } = require("../../../package.json") as { version: string };
 
-export const STATUS_SCHEMA_VERSION = 1;
+export const STATUS_SCHEMA_VERSION = 2;
 
 export type StatusRefreshTarget =
   | "observed"
@@ -50,6 +51,10 @@ export type StatusFeedBlock = {
   note?: string;
   observationId?: string | null;
   count?: number;
+  /** MSC AMQP `*.WXO-DD.alerts.cap.#` notifications received this process (includes non-station-relevant CAP). */
+  capAmqpReceived?: number;
+  /** ISO time of last AMQP CAP notification (push), not necessarily ingested as an active alert. */
+  capAmqpLastRxAt?: string | null;
 };
 
 export type StatusSnapshot = {
@@ -97,6 +102,7 @@ export function buildStatusSnapshot(): StatusSnapshot {
   const sunspotsAt = sunspots.getLastFetchIso();
 
   const alertList = alerts.alerts().alerts ?? [];
+  const capAmqp = getMscAmqpStatsSnapshot().alerts;
 
   return {
     statusSchemaVersion: STATUS_SCHEMA_VERSION,
@@ -143,6 +149,8 @@ export function buildStatusSnapshot(): StatusSnapshot {
         servedDataAsOf: alerts.getLastDataAsOf(),
         source: alerts.getLastDataAsOf() ? "live" : "none",
         count: alertList.length,
+        capAmqpReceived: capAmqp.messageCount,
+        capAmqpLastRxAt: capAmqp.lastMessageAt,
         note: "New CAP files arrive via AMQP; refresh runs expiry trim only.",
       },
       historical: {

@@ -43,6 +43,7 @@ describe("awcMetar", () => {
   it("formatAwcMetarConditionLine builds a short line", () => {
     expect(
       formatAwcMetarConditionLine({
+        icaoId: "KXXX",
         fltCat: "MVFR",
         cover: "BKN",
         wdir: 270,

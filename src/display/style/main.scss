@@ -84,6 +84,19 @@ ol {
     width: 100%;
   }
 
+  /**
+   * Vignette must live *inside* the stack *below* grain / tear / scanlines (z 650 vs 850–910).
+   * As a sibling after the stack with z 650 it painted over the whole stack and hid the head-switch band.
+   */
+  .rwc-channel-stack > .gfx-vignette-layer {
+    border-radius: inherit;
+    box-shadow: inset 0 0 min(140px, 22vw) rgba(0, 0, 0, var(--gfx-vignette, 0));
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+    z-index: 650;
+  }
+
   .gfx-nextgen-layer {
     inset: 0;
     pointer-events: none;
@@ -331,28 +344,19 @@ ol {
     --crawler-font: "ws4000", monospace;
   }
 
-  /** Inset shadow on the host was invisible under opaque child rasters; overlay sits above the stack (see channel.tsx). */
-  > .gfx-vignette-layer {
-    border-radius: inherit;
-    box-shadow: inset 0 0 min(140px, 22vw) rgba(0, 0, 0, var(--gfx-vignette, 0));
-    inset: 0;
-    pointer-events: none;
-    position: absolute;
-    z-index: 650;
-  }
-
   /**
    * VHS head-switch band: horizontal wobble via `--gfx-vhs-tear-x` (low-rate JS, see VhsHeadSwitchTearLayer).
-   * Above full-frame scanlines (z 900): the scanline grid sat on top and made the bottom band nearly invisible.
-   * Grain (z 850) still shows through the picture below this layer.
+   * Above full-frame scanlines (z 900). `overlay` reads much more clearly on broadcast blue than `soft-light`.
+   * Diagonal repeats nod to helical-scan tracks; keep opacity in gradients so UI text stays legible.
    */
   .rwc-channel-stack > .gfx-vhs-head-switch-tear {
     bottom: 0;
-    height: 8%;
+    height: 12%;
     left: 0;
-    min-height: 12px;
-    mix-blend-mode: soft-light;
-    opacity: 0.82;
+    max-height: 72px;
+    min-height: 26px;
+    mix-blend-mode: overlay;
+    opacity: 1;
     pointer-events: none;
     position: absolute;
     right: 0;
@@ -360,15 +364,26 @@ ol {
 
     .gfx-vhs-head-switch-tear__band {
       backface-visibility: hidden;
-      background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0), rgba(0, 0, 0, 0.28)),
+      background-image:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(0, 0, 0, 0.22) 45%, rgba(255, 255, 255, 0.14) 100%),
         repeating-linear-gradient(
           90deg,
-          rgba(255, 255, 255, 0.12) 0px,
+          rgba(255, 255, 255, 0.16) 0px,
           transparent 1px,
-          transparent 4px,
-          rgba(0, 0, 0, 0.12) 5px
+          transparent 3px,
+          rgba(0, 0, 0, 0.2) 4px
+        ),
+        repeating-linear-gradient(
+          -24deg,
+          rgba(255, 255, 255, 0.12) 0px,
+          transparent 2px,
+          transparent 5px,
+          rgba(0, 0, 0, 0.28) 6px,
+          rgba(255, 255, 255, 0.06) 8px,
+          transparent 11px
         );
       height: 100%;
+      left: 0;
       position: absolute;
       transform: translate3d(var(--gfx-vhs-tear-x, 0px), 0, 0);
       width: 100%;

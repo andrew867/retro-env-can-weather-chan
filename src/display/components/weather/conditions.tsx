@@ -115,10 +115,17 @@ export function Conditions(props: ConditionsProp) {
   const isShowingExtraData = windchill > 0 || airQuality?.value;
   const formattedVisibility = useMemo(() => {
     if (isLooseNull(visibilityValue)) return "";
-    if (visibilityValue < 1) return `${(visibilityValue * 1000).toString().padStart(4, " ")} M`;
+    const visNum =
+      typeof visibilityValue === "number"
+        ? visibilityValue
+        : typeof visibilityValue === "string" && visibilityValue !== ""
+          ? Number(visibilityValue)
+          : NaN;
+    if (!Number.isFinite(visNum)) return "";
+    if (visNum < 1) return `${(visNum * 1000).toString().padStart(4, " ")} M`;
 
-    return `${Math.round(visibilityValue)} ${visibilityUnits}`;
-  }, [observedDateTime]);
+    return `${Math.round(visNum)} ${visibilityUnits}`;
+  }, [observedDateTime, visibilityValue, visibilityUnits]);
 
   const rv = (step: number) => ({
     visibility: revealStep >= step ? ("visible" as const) : ("hidden" as const),

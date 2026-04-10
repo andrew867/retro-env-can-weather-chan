@@ -1,3 +1,4 @@
-import Connection from "amqp/lib/connection";
-
-export type Connection = typeof Connection;
+/** Minimal shape used by RWC (`amqp` has no official typings). */
+export type Connection = {
+  disconnect(): void;
+};

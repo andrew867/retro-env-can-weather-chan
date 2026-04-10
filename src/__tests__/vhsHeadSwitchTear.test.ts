@@ -3,9 +3,13 @@
 import { act, render } from "@testing-library/react";
 import * as React from "react";
 import { VhsHeadSwitchTearLayer } from "display/components/vhsHeadSwitchTearLayer";
-import { smoothVhsTearOffset } from "lib/display/vhsHeadSwitchTear";
+import { isE2eStaticVhsTear, smoothVhsTearOffset } from "lib/display/vhsHeadSwitchTear";
 
 describe("vhsHeadSwitchTear", () => {
+  it("isE2eStaticVhsTear is false without e2e query", () => {
+    expect(isE2eStaticVhsTear()).toBe(false);
+  });
+
   it("smooths toward target", () => {
     expect(smoothVhsTearOffset(0, 10, 0.5)).toBe(5);
     expect(smoothVhsTearOffset(5, 10, 0.5)).toBe(7.5);

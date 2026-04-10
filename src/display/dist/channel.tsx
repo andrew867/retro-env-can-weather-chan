@@ -28,6 +28,17 @@ import { CLIENT_METRICS_POST_INTERVAL_MS } from "consts";
 import React, { useCallback, useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
 
+/** Init / JSON may surface booleans as strings; treat anything else as false. */
+function rwcBool(v: unknown): boolean {
+  if (v === true) return true;
+  if (v === false || v == null) return false;
+  if (typeof v === "string") {
+    const s = v.trim().toLowerCase();
+    return s === "true" || s === "1" || s === "yes";
+  }
+  return Boolean(v);
+}
+
 function WeatherChannel() {
   const { config, refetchConfig, initAttempted } = useConfig();
   const { nationalWeather, nationalDataFetchedAt, fetchNationalWeather } = useNationalWeather();
@@ -106,9 +117,9 @@ function WeatherChannel() {
   }
 
   const retro = config?.gfx?.retro;
-  const vhsAnalogOn = !!retro?.vhsAnalogLayerEnabled;
+  const vhsAnalogOn = rwcBool(retro?.vhsAnalogLayerEnabled);
   const scanlinesOn = !!(retro?.scanlinesOpacity && retro.scanlinesOpacity > 0.001);
-  const vhsTearOn = vhsAnalogOn && !!retro?.vhsHeadSwitchTearEnabled;
+  const vhsTearOn = vhsAnalogOn && rwcBool(retro?.vhsHeadSwitchTearEnabled);
 
   return (
     <>
@@ -153,11 +164,11 @@ function WeatherChannel() {
             ]}
           />
         </div>
+        <div className="gfx-vignette-layer" aria-hidden />
         <GfxVhsAnalogGrainLayer enabled={vhsAnalogOn} />
         <VhsHeadSwitchTearLayer enabled={vhsTearOn} />
         <GfxScanlinesLayer enabled={scanlinesOn} />
       </div>
-      <div className="gfx-vignette-layer" aria-hidden />
       <PlaylistComponent playlist={config?.music} />
     </>
   );

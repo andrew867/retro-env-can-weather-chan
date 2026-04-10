@@ -281,7 +281,8 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
             <FormHelperText>
               Bottom horizontal band with slow horizontal wobble (head-switch / tracking feel). Turn <strong>off</strong>{" "}
               for clean RF-style broadcast analog with grain only; turn <strong>on</strong> for nth-generation tape
-              captures. Requires the analog layer above.
+              captures. Requires the analog layer above. After you click <strong>Save</strong>, open display tabs refetch
+              graphics over the init SSE stream; if the picture does not update, reload the display page once.
             </FormHelperText>
           </FormControl>
 

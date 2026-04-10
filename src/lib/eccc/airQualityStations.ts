@@ -12,7 +12,9 @@ import { ElementCompact, xml2js } from "xml-js";
 export async function getECCCAirQualityStations(searchTerm: string) {
   const stations: AirQualityStations = [];
   const { data } = await axiosGetWithMscMirror(axios, `${MSC_HPFX_ORIGIN}/today/air_quality/doc/AQHI_XML_File_List.xml`);
-  const parsedData: ElementCompact = xml2js(data, { compact: true });
+  const xml = typeof data === "string" ? data : null;
+  if (xml == null) throw "Unable to parse air quality stations";
+  const parsedData: ElementCompact = xml2js(xml, { compact: true });
   if (!parsedData || !parsedData["dataFile"] || !parsedData["dataFile"]["EC_administrativeZone"]) {
     throw "Unable to parse air quality stations";
   }

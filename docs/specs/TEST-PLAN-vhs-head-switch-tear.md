@@ -20,8 +20,5 @@
 
 ## Regression
 
-- Existing Playwright visual fixtures keep `vhsHeadSwitchTearEnabled: false` (or analog off) so snapshots unchanged.
-
-## Out of scope (v1)
-
-- Pixel-diff baselines of the tear band (too flaky across GPUs / fonts).
+- **`playwright/tests/vhs-head-switch-tear-visual.spec.ts`** — bottom-of-frame clip with analog + scanlines + tear on (4:3 SD). Uses **`?e2eVhsTear=1`** so horizontal offset is fixed (`isE2eStaticVhsTear`) and the PNG baseline stays stable.
+- Other Playwright fixtures (e.g. forecast pagination) keep `vhsHeadSwitchTearEnabled: false` so their snapshots stay unchanged.

@@ -1,11 +1,11 @@
-import { INIT_SSE_CRAWLER_EVENT } from "consts";
+import { INIT_SSE_CRAWLER_EVENT, INIT_SSE_INIT_REFRESH_EVENT } from "consts";
 import { InitChannel } from "types";
 import { useEffect, useRef } from "react";
 import { usePollingFetch } from "./usePollingFetch";
 
 /**
  * How often the display refetches crawler / flavour / playlist from `GET /api/v1/init`.
- * Crawler lines also push over `GET /api/v1/init/stream` (SSE `crawler_update`), so this can stay relaxed.
+ * Crawler and graphics saves push over `GET /api/v1/init/stream` (`crawler_update`, `init_refresh`), so this can stay relaxed.
  */
 const FETCH_CONFIG_INTERVAL = 30 * 1000;
 
@@ -55,11 +55,13 @@ export function useConfig() {
       if (closed) return;
       clearReconnect();
       es?.close();
-      es = new EventSource("api/v1/init/stream");
+      es = new EventSource(`${window.location.origin}/api/v1/init/stream`);
 
-      es.addEventListener(INIT_SSE_CRAWLER_EVENT, () => {
+      const bumpInit = () => {
         refetchRef.current();
-      });
+      };
+      es.addEventListener(INIT_SSE_CRAWLER_EVENT, bumpInit);
+      es.addEventListener(INIT_SSE_INIT_REFRESH_EVENT, bumpInit);
 
       es.onopen = () => {
         reconnectAttempt = 0;

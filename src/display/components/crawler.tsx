@@ -1,9 +1,9 @@
 import Marquee from "react-fast-marquee";
 import { coerceArray } from "lib/display/safeData";
-import { CrawlerMessages } from "types";
+import type { CrawlerMessages as CrawlerMessagesType } from "types";
 
 type CrawlerMessagesProps = {
-  crawler: CrawlerMessages;
+  crawler: CrawlerMessagesType;
 };
 
 export function CrawlerMessages({ crawler }: CrawlerMessagesProps) {

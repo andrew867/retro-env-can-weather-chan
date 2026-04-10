@@ -2,7 +2,7 @@ import { adjustObservedDateTimeToStationTime } from "lib/date";
 import { coerceArray } from "lib/display/safeData";
 import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo } from "react";
-import { ProvinceTracking, WeatherStationTimeData } from "types";
+import { ProvinceStationTracking, ProvinceTracking, WeatherStationTimeData } from "types";
 import { AutomaticScreenProps } from "types/screen.types";
 
 type ProvinceTrackingProps = {
@@ -14,7 +14,7 @@ export function ProvinceTrackingScreen(props: ProvinceTrackingProps) {
   const { tracking, weatherStationTime, onComplete } = props ?? {};
   const onCompleteRef = useStableOnCompleteRef(onComplete);
   const { tracking: stationsRaw, isOvernight = true, yesterdayPrecipDate } = tracking ?? {};
-  const stations = coerceArray(stationsRaw);
+  const stations = coerceArray<ProvinceStationTracking>(stationsRaw);
 
   useEffect(() => {
     if (!stations.length) onCompleteRef.current();

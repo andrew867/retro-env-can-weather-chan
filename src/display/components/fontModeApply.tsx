@@ -1,7 +1,7 @@
 import { useLayoutEffect } from "react";
 
 /** Applies legacy vs official font CSS variables on `#weather_channel` (see `main.scss`). */
-export function FontModeApply({ useOfficialFonts }: { useOfficialFonts: boolean }) {
+export function FontModeApply({ useOfficialFonts }: { useOfficialFonts: boolean }): null {
   useLayoutEffect(() => {
     const el = document.getElementById("weather_channel");
     if (!el) return;

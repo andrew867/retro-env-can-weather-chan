@@ -30,6 +30,8 @@ type FeedBlock = {
   note?: string;
   observationId?: string | null;
   count?: number;
+  capAmqpReceived?: number;
+  capAmqpLastRxAt?: string | null;
 };
 
 type StatusPayload = {
@@ -127,6 +129,34 @@ function formatTime(iso: string | null | undefined): string {
   }
 }
 
+/** Local wall time as `YYYY/MM/DD h:mm:ss AM/PM` for CAP AMQP “last Rx” in Details. */
+function formatAlertsLastRx(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  try {
+    const d = new Date(iso);
+    const y = d.getFullYear();
+    const mo = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    const h24 = d.getHours();
+    const pm = h24 >= 12;
+    const h12 = h24 % 12 || 12;
+    const mi = String(d.getMinutes()).padStart(2, "0");
+    const s = String(d.getSeconds()).padStart(2, "0");
+    return `${y}/${mo}/${day} ${h12}:${mi}:${s} ${pm ? "PM" : "AM"}`;
+  } catch {
+    return "—";
+  }
+}
+
+function alertsDetails(block: FeedBlock | undefined): string {
+  if (block == null) return "—";
+  if (block.count == null) return block.note ?? "—";
+  const n = block.count;
+  const rx = block.capAmqpReceived ?? 0;
+  const last = formatAlertsLastRx(block.capAmqpLastRxAt);
+  return `${n} active, ${rx} received, last Rx ${last}`;
+}
+
 const StatusScreen = () => {
   const [tokenInput, setTokenInput] = useState("");
   const [snapshot, setSnapshot] = useState<StatusPayload | null>(null);
@@ -145,7 +175,7 @@ const StatusScreen = () => {
       if (t) cfg.headers.Authorization = `Bearer ${t}`;
       return cfg;
     });
-    return () => axios.interceptors.eject(id);
+    return () => axios.interceptors.request.eject(id);
   }, []);
 
   const load = useCallback(() => {
@@ -307,8 +337,8 @@ const StatusScreen = () => {
                   const details =
                     row.feedKey === "citypage" && block?.observationId
                       ? `obs ${block.observationId}`
-                      : row.feedKey === "alerts" && block?.count != null
-                        ? `${block.count} active`
+                      : row.feedKey === "alerts"
+                        ? alertsDetails(block)
                         : block?.note ?? "—";
                   const open = expandedKey === row.feedKey;
                   const loading = payloadLoading === row.feedKey;

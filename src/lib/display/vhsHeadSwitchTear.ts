@@ -9,3 +9,13 @@ export const VHS_TEAR_TICK_MS = 90;
 export const VHS_TEAR_ALPHA = 0.36;
 /** Peak horizontal offset amplitude (px); keep small so it reads as tracking wobble, not slide show. */
 export const VHS_TEAR_AMPLITUDE_PX = 5.5;
+
+/** Playwright / visual regression: `?e2eVhsTear=1` freezes horizontal offset so bottom-band screenshots are stable. */
+export function isE2eStaticVhsTear(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return new URLSearchParams(window.location.search).get("e2eVhsTear") === "1";
+  } catch {
+    return false;
+  }
+}

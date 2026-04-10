@@ -3,7 +3,8 @@
  * See https://hpfx.collab.science.gc.ca/ — long-term, consider Sarracenia/AMQP delivery:
  * https://metpx.github.io/sarracenia/How2Guides/subscriber.html
  */
-import { AxiosInstance, AxiosRequestConfig, AxiosResponse, isAxiosError } from "axios";
+import { AxiosInstance, AxiosResponse, isAxiosError } from "axios";
+import type { RwcAxiosRequestConfig } from "types/rwcAxiosConfig";
 import {
   rwcHttpRetryBackoffMaxMs,
   rwcHttpRetryBackoffMinMs,
@@ -95,7 +96,7 @@ function defaultMscUpstreamMeta(url: string): { feed: string; key: string } {
 export async function axiosGetWithMscMirror<T = unknown>(
   client: AxiosInstance,
   url: string,
-  config?: AxiosRequestConfig
+  config?: RwcAxiosRequestConfig
 ): Promise<AxiosResponse<T>> {
   const maxExtraAttempts = rwcHttpRetryCount();
   const candidates = [...new Set(mscMirrorTryOrder(url))];
@@ -112,7 +113,7 @@ export async function axiosGetWithMscMirror<T = unknown>(
         continue;
       }
       try {
-        const merged: AxiosRequestConfig = {
+        const merged: RwcAxiosRequestConfig = {
           ...config,
           rwcUpstream: config?.rwcUpstream ?? defaultMscUpstreamMeta(u),
         };
@@ -134,7 +135,7 @@ export async function axiosGetWithMscMirror<T = unknown>(
 export async function axiosGetWithMscMirrorResolved<T = unknown>(
   client: AxiosInstance,
   url: string,
-  config?: AxiosRequestConfig
+  config?: RwcAxiosRequestConfig
 ): Promise<{ response: AxiosResponse<T>; resolvedUrl: string }> {
   const maxExtraAttempts = rwcHttpRetryCount();
   const candidates = [...new Set(mscMirrorTryOrder(url))];
@@ -151,7 +152,7 @@ export async function axiosGetWithMscMirrorResolved<T = unknown>(
         continue;
       }
       try {
-        const merged: AxiosRequestConfig = {
+        const merged: RwcAxiosRequestConfig = {
           ...config,
           rwcUpstream: config?.rwcUpstream ?? defaultMscUpstreamMeta(u),
         };
@@ -173,7 +174,7 @@ export async function axiosGetWithMscMirrorResolved<T = unknown>(
 export async function axiosHeadWithMscMirror(
   client: AxiosInstance,
   url: string,
-  config?: AxiosRequestConfig
+  config?: RwcAxiosRequestConfig
 ): Promise<AxiosResponse<unknown>> {
   const maxExtraAttempts = rwcHttpRetryCount();
   const candidates = [...new Set(mscMirrorTryOrder(url))];
@@ -190,12 +191,13 @@ export async function axiosHeadWithMscMirror(
         continue;
       }
       try {
-        const response = await client.request<unknown>({
+        const headConfig: RwcAxiosRequestConfig = {
           ...config,
           method: "HEAD",
           url: u,
           rwcUpstream: config?.rwcUpstream ?? { feed: "msc-head", key: new URL(u).pathname.slice(0, 120) },
-        });
+        };
+        const response = await client.request<unknown>(headConfig);
         upstreamCircuitRecordSuccess(u);
         return response;
       } catch (err) {

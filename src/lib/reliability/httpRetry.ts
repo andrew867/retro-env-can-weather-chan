@@ -1,4 +1,5 @@
-import type { AxiosInstance, AxiosRequestConfig, AxiosResponse } from "axios";
+import type { AxiosInstance, AxiosResponse } from "axios";
+import type { RwcAxiosRequestConfig } from "types/rwcAxiosConfig";
 import {
   rwcHttpRetryBackoffMaxMs,
   rwcHttpRetryBackoffMinMs,
@@ -33,7 +34,7 @@ function shouldRetryUpstream(err: unknown): boolean {
 export async function axiosGetWithRetry<T = unknown>(
   client: AxiosInstance,
   url: string,
-  config?: AxiosRequestConfig
+  config?: RwcAxiosRequestConfig
 ): Promise<AxiosResponse<T>> {
   const maxExtra = rwcHttpRetryCount();
   let lastError: unknown;

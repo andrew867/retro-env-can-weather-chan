@@ -21,6 +21,7 @@ import {
 import { FlavourLoader } from "lib/flavour";
 import Logger, { normalizeLogLevel, setLogLevel } from "lib/logger";
 import {
+  AirportMetarStation,
   AuthenticRefreshConfig,
   ClimateNormals,
   ECCCWeatherStation,

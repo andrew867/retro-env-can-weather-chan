@@ -134,6 +134,12 @@ Backend work:
 yarn dev
 ```
 
+TypeScript (full check; also runs in CI—`yarn start` does not type-check):
+
+```
+yarn typecheck
+```
+
 Display work:
 
 ```

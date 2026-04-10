@@ -13,3 +13,5 @@ export const CONDITIONS_WIND_SPEED_CALM = "calm";
 
 /** `GET /api/v1/init/stream` — EventSource event when crawler lines change (RDS / config POST). */
 export const INIT_SSE_CRAWLER_EVENT = "crawler_update";
+/** `GET /api/v1/init/stream` — tell display tabs to refetch `GET /init` (e.g. after Graphics save). */
+export const INIT_SSE_INIT_REFRESH_EVENT = "init_refresh";

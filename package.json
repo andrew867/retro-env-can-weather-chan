@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "dev": "ts-node-dev -r tsconfig-paths/register src/server.ts",
     "start": "tsx src/server.ts",
     "display": "yarn parcel watch src/display/dist/index.html src/display/dist/config.html src/display/dist/status.html --dist-dir dist/ --public-url ../ --no-source-maps",

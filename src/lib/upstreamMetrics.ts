@@ -1,4 +1,4 @@
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosInstance } from "axios";
 import axios from "axios";
 import type { MscAmqpListenerRole, MscAmqpListenerStats } from "lib/amqp/mscAmqpStats";
 import { getMscAmqpStatsSnapshot, resetMscAmqpStatsForTests } from "lib/amqp/mscAmqpStats";
@@ -60,7 +60,7 @@ function classifyAxiosError(err: unknown): void {
 }
 
 /** Attach once to the shared backend axios instance. */
-export function attachBackendAxiosMetrics(client: typeof axios): void {
+export function attachBackendAxiosMetrics(client: AxiosInstance): void {
   client.interceptors.response.use(
     (res) => {
       backend.requestCount += 1;

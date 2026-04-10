@@ -1,5 +1,5 @@
 import { Screens } from "consts";
-import { buildChannelPlaylist } from "lib/display/channelPlaylist";
+import { buildChannelPlaylist, type ChannelPlaylistContext } from "lib/display/channelPlaylist";
 import type { FlavourScreen } from "types";
 
 /** Minimal station so FORECAST and OUTLOOK can expand (playlist not empty when those screens are used). */
@@ -57,7 +57,7 @@ describe("buildChannelPlaylist — one entry per flavour screen type", () => {
 
   it.each(allScreenIds)("screen %i produces a non-empty playlist when data supports it", (screenId) => {
     const screens: FlavourScreen[] = [{ id: screenId, duration: 14 }];
-    const ctx = { weatherStationResponse: readyStation(), alert: undefined };
+    const ctx: ChannelPlaylistContext = { weatherStationResponse: readyStation(), alert: undefined };
     const pl = buildChannelPlaylist(screens, ctx);
     expect(pl.length).toBeGreaterThan(0);
     if (screenId === Screens.FORECAST) {

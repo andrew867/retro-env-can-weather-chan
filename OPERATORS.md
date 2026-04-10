@@ -58,7 +58,7 @@ See [docs/specs/ADR-002-sarracenia-amqp-and-phase0.md](./docs/specs/ADR-002-sarr
 | `GET` | `/metrics` | Same **`mscAmqp`** as health, **`upstreamCircuits`**, plus **server** outbound HTTP (`backendAxios`) since process start, and **last reported** display-bundle counters (`displayAxiosFromClient`, `displayAxiosReportedAt`) if a browser has posted to `/metrics/client`. Disabled when **`RWC_METRICS_DISABLED=1`**. |
 | `POST` | `/metrics/client` | Body: `{ "displayAxios": { "requestCount", "successCount", "errorCount", "timeoutCount", "status4xx", "status5xx", "networkError" } }`. The display posts about every 30 seconds while `/` is open. Same auth as `GET /metrics` when `RWC_METRICS_TOKEN` is set. |
 | `GET` | `/init` | Display bootstrap: flavour, crawler, `gfx`, and look-and-feel flags (including footer freshness and font mode). |
-| `GET` | `/status` | JSON feed snapshot: last fetch times, citypage observation id, LKG hints, **`statusSchemaVersion`**. Disabled in production without **`RWC_STATUS_ENABLED=1`** (404). Optional bearer: **`RWC_STATUS_TOKEN`** or **`RWC_METRICS_TOKEN`**. |
+| `GET` | `/status` | JSON feed snapshot: last fetch times, citypage observation id, LKG hints, **`statusSchemaVersion`** (alerts block includes AMQP **received** count and **last Rx** for CAP notifications). Disabled in production without **`RWC_STATUS_ENABLED=1`** (404). Optional bearer: **`RWC_STATUS_TOKEN`** or **`RWC_METRICS_TOKEN`**. |
 | `POST` | `/status/refresh` | Body **`{ "scope": "all" }`** or **`{ "scope": "single", "target": "<feed>" }`** (`observed`, `national`, `usa`, `airport_metar`, `province`, `sunspots`, `hot_cold`, `alerts`, `historical`, `climate_normals`, `aqhi`). **202**; work is async. Same enable/auth as **`GET /api/v1/status`**. |
 
 ## Look and feel (config UI)
@@ -76,15 +76,15 @@ Under **Graphics**:
 
 - **`gfx.retro.reloadLineMs`** — Delay between each staggered line on forecast observation reload (default **100**, clamped **30–500**). Persisted in `rwc-config.json`; the display sets CSS `--gfx-reload-line-ms` on `#weather_channel`.
 - **`gfx.retro.vhsAnalogLayerEnabled`** — Optional **broadcast analog** layer (grain + subtle bottom-band shimmer), full colour—not mono terminal. Pairs with scanlines.
-- **`gfx.retro.vhsHeadSwitchTearEnabled`** — Bottom **head-switch / tracking** band (slow horizontal wobble). Only active when **`vhsAnalogLayerEnabled`** is **on**. Use **off** for RF-style analog (grain only); **on** for tape-dub / nth-gen VHS capture flavour.
-- **`gfx.retro.vignetteStrength`** — Edge darkening (0–1). The vignette is drawn in a **dedicated overlay** above the 4:3 raster so it stays visible (inset shadow on the host alone sat under opaque fills). Default **0.12** in new installs; set **0** in Graphics to disable.
+- **`gfx.retro.vhsHeadSwitchTearEnabled`** — Bottom **head-switch / tracking** band (slow horizontal wobble, diagonal streak texture). Only active when **`vhsAnalogLayerEnabled`** is **on**. Use **off** for RF-style analog (grain only); **on** for tape-dub / nth-gen VHS capture flavour. For static captures, append **`?e2eVhsTear=1`** to the display URL to freeze horizontal offset (Playwright regression uses this).
+- **`gfx.retro.vignetteStrength`** — Edge darkening (0–1). The vignette is a **dedicated overlay** inside **`.rwc-channel-stack`** (same inset as the picture) **below** grain / scanlines / optional head-switch tear so edge darkening stays visible without covering the VHS bottom band. Default **0.12** in new installs; set **0** in Graphics to disable.
 
 ## Config on disk
 
 - Main JSON: `./cfg/rwc-config.json` (created on first run).
 - Crawler lines: `./cfg/crawler.txt`.
 
-Saving from the config UI persists these files; the display picks up changes via `GET /init` (slow poll) and **immediately** for crawler lines via **`GET /init/stream`** (SSE `crawler_update` after `POST /api/v1/config/crawler`).
+Saving from the config UI persists these files; the display picks up changes via `GET /init` (30s poll) and **immediately** when **`GET /api/v1/init/stream`** fires **`crawler_update`** (crawler POST) or **`init_refresh`** (Graphics POST and other init-affecting saves).
 
 ## Publishing to the public GitHub mirror
 

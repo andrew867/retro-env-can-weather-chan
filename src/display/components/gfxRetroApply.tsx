@@ -11,7 +11,7 @@ type GfxRetroApplyProps = {
 };
 
 /** Applies `gfx` to `#weather_channel` (host div) via CSS variables + classes. */
-export function GfxRetroApply({ gfx, useOfficialFonts = true }: GfxRetroApplyProps) {
+export function GfxRetroApply({ gfx, useOfficialFonts = true }: GfxRetroApplyProps): null {
   useLayoutEffect(() => {
     const el = document.getElementById("weather_channel");
     if (!el) return;

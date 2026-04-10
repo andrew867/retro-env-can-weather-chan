@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [2.6.7] - 2026-04-08
+## [2.6.7] - 2026-04-10
 
 ### Config
 
@@ -13,6 +13,28 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - **Conditions in Ontario:** New screen **`CANADA_TEMP_CONDITIONS_ON`** (same regional list layout as Manitoba). The national JSON API includes an **`on`** array; default flavour runs Ontario after Manitoba.
 - **East / West Canada lists:** Primaries are **seven cities** each — **East:** Toronto, Ottawa, Montreal, Fredericton, Halifax, Charlottetown, St. John’s (Ontario, Quebec, and every Atlantic province; Ontario appears twice). **West:** Vancouver, Calgary, Saskatoon, Brandon, Whitehorse, Yellowknife, Iqaluit (**NU/s0000394**) across BC, AB, SK, MB, YT, NT, NU. Backups unchanged in role (fill when primaries do not report).
+- **VHS head-switch tear (bottom band):** Stronger **overlay** blend (vs soft-light), taller band, and **diagonal** streak layer so the effect reads on broadcast blue in browser/OBS. **`?e2eVhsTear=1`** freezes horizontal offset for captures; Playwright **`vhs-head-switch-tear-visual.spec.ts`** clips the bottom strip for regression.
+- **Init / Graphics:** Saving **Graphics** now emits SSE **`init_refresh`** on **`/api/v1/init/stream`** so open display tabs refetch **`GET /init` immediately** (previously only crawler updates did; gfx could lag up to **30s**).
+- **Vignette vs head-switch tear:** **`gfx-vignette-layer`** now lives **inside** **`.rwc-channel-stack`** with **lower z-order** than grain / scanlines / tear so the bottom **head-switch** band is not covered by the vignette overlay (sibling-after-stack placement had hidden or crushed the effect).
+- **Init SSE URL:** Display **`EventSource`** for init uses **`${window.location.origin}/api/v1/init/stream`** so the stream works when the bundle is not served from `/`.
+- **Gfx booleans:** **`vhsAnalogLayerEnabled`** / **`vhsHeadSwitchTearEnabled`** are coerced with a small helper so string values from JSON cannot leave the tear stuck off.
+
+### Operator status dashboard
+
+- **Alerts row (Details):** Shows **active** CAP count, **MSC AMQP CAP notifications received** since process start, and **last Rx** (local wall time). Snapshot adds **`capAmqpReceived`**, **`capAmqpLastRxAt`**; **`statusSchemaVersion`** is **2**.
+- **Status page auth cleanup:** Request interceptor teardown uses **`axios.interceptors.request.eject`** (Axios 1.x).
+
+### Tooling & TypeScript
+
+- **`yarn typecheck`** runs **`tsc --noEmit`** (full project typecheck). **`yarn start`** uses **`tsx`** and does **not** type-check; **`yarn dev`** uses **`ts-node-dev`** and does—CI and local **`typecheck`** catch drift.
+- **GitHub Actions:** **`typecheck`** job runs after dependency install; **`unit-test`** waits on **eslint** and **typecheck**.
+- **Axios config:** Shared **`RwcAxiosRequestConfig`** (**`types/rwcAxiosConfig.ts`**) carries optional **`rwcUpstream`** metadata for MSC mirror / retry helpers without fragile declaration merging under **`ts-node-dev`**.
+- **National module:** Service class renamed **`NationalWeatherAggregator`** to avoid shadowing the **`NationalWeather`** payload type from **`types`**.
+- **Metrics attach:** **`attachBackendAxiosMetrics`** / **`attachDisplayAxiosMetrics`** take **`AxiosInstance`** (not **`AxiosStatic`**).
+- **AMQP typings:** Minimal **`Connection`** shape, **`listen()`** declaration for **`sarra-canada-amqp.js`**, and **`amqp`** module stubs for tests.
+- **XML / JSON guards:** MSC **`axios` `data`** narrowed to **string** before **`xml2js`** (citypage site list, AQHI list/observation, CAP body, provincial hot/cold); NWS latest observation response typed for **`properties`**.
+- **Display bundle:** Type-only **`CrawlerMessages`** import; explicit **`null`** returns on small layout helpers; **`coerceArray<T>`** at national / airport METAR / province / sunspots; visibility formatting tolerates **`unknown`** unit values from merged payloads.
+- **Tests / fixtures:** Playwright weather fixtures use **`units`** on ECCC **`{ value, units }`** blobs; AWC line test includes **`icaoId`**; **`fetchMeta`** doubles **`unknown`**; playlist test uses **`ChannelPlaylistContext`**.
 
 ---
 

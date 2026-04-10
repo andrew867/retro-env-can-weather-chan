@@ -1,4 +1,4 @@
-import type { AxiosError } from "axios";
+import type { AxiosError, AxiosInstance } from "axios";
 import axios from "axios";
 import type { OutboundAxiosMetricsBucket } from "lib/upstreamMetrics";
 
@@ -33,7 +33,7 @@ function classifyAxiosError(err: unknown): void {
 }
 
 /** Attach once to the display `axios` instance (`lib/axios`). */
-export function attachDisplayAxiosMetrics(client: typeof axios): void {
+export function attachDisplayAxiosMetrics(client: AxiosInstance): void {
   client.interceptors.response.use(
     (res) => {
       display.requestCount += 1;

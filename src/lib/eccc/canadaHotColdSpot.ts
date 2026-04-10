@@ -88,9 +88,10 @@ class CanadaProvincialHotColdSpots {
     axiosGetWithMscMirror(axios, this._apiURL)
       .then((resp) => {
         const data = resp.data;
-        if (!data) return;
+        const xml = typeof data === "string" ? data : null;
+        if (!xml) return;
 
-        const provinceTodayData: ElementCompact = xml2js(data, { compact: true });
+        const provinceTodayData: ElementCompact = xml2js(xml, { compact: true });
         if (!provinceTodayData) return;
 
         const collection = provinceTodayData["om:ObservationCollection"];

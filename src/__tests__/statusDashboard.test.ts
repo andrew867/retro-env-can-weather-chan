@@ -52,6 +52,6 @@ describe("status dashboard helpers", () => {
   });
 
   it("exports a stable schema version", () => {
-    expect(STATUS_SCHEMA_VERSION).toBe(1);
+    expect(STATUS_SCHEMA_VERSION).toBe(2);
   });
 });

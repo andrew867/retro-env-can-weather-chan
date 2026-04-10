@@ -1,4 +1,5 @@
 import {
+  isE2eStaticVhsTear,
   smoothVhsTearOffset,
   VHS_TEAR_ALPHA,
   VHS_TEAR_AMPLITUDE_PX,
@@ -30,11 +31,19 @@ type VhsHeadSwitchTearLayerProps = {
  */
 export function VhsHeadSwitchTearLayer({ enabled }: VhsHeadSwitchTearLayerProps) {
   const reducedMotion = usePrefersReducedMotion();
-  const drive = enabled && !reducedMotion;
+  const e2eStatic = isE2eStaticVhsTear();
+  const drive = enabled && !reducedMotion && !e2eStatic;
 
   useEffect(() => {
     const host = document.getElementById("weather_channel");
     if (!host || !enabled) return;
+
+    if (e2eStatic) {
+      host.style.setProperty("--gfx-vhs-tear-x", "5px");
+      return () => {
+        host.style.removeProperty("--gfx-vhs-tear-x");
+      };
+    }
 
     if (!drive) {
       host.style.setProperty("--gfx-vhs-tear-x", "0px");
@@ -57,7 +66,7 @@ export function VhsHeadSwitchTearLayer({ enabled }: VhsHeadSwitchTearLayerProps)
       window.clearInterval(id);
       host.style.removeProperty("--gfx-vhs-tear-x");
     };
-  }, [enabled, drive]);
+  }, [enabled, drive, e2eStatic]);
 
   if (!enabled) return null;
 

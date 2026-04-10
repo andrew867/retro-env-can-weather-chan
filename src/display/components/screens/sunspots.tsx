@@ -3,7 +3,12 @@ import { formatSunspotDate, isSunSpotSeason } from "lib/date";
 import { coerceArray } from "lib/display/safeData";
 import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo } from "react";
-import { SunspotStationObservations, WeatherStationTimeData, AutomaticScreenProps } from "types";
+import {
+  SunspotStationObservation,
+  SunspotStationObservations,
+  WeatherStationTimeData,
+  AutomaticScreenProps,
+} from "types";
 
 type SunspotScreenProps = {
   sunspots: SunspotStationObservations | undefined;
@@ -13,7 +18,7 @@ type SunspotScreenProps = {
 
 export function SunspotScreen(props: SunspotScreenProps) {
   const { sunspots: sunspotsRaw, sunspotsFetchAttempted, weatherStationTime, onComplete } = props ?? {};
-  const sunspots = coerceArray(sunspotsRaw);
+  const sunspots = coerceArray<SunspotStationObservation>(sunspotsRaw);
   const onCompleteRef = useStableOnCompleteRef(onComplete);
   const inSeason = isSunSpotSeason();
 

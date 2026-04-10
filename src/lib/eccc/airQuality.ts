@@ -62,7 +62,9 @@ class AirQuality {
         if (!data) throw "Invalid response";
 
         // convert xml to js object
-        const aqhiObservationXML: ElementCompact = xml2js(data, { compact: true });
+        const xml = typeof data === "string" ? data : null;
+        if (xml == null) throw "Invalid response";
+        const aqhiObservationXML: ElementCompact = xml2js(xml, { compact: true });
         if (!aqhiObservationXML) return;
 
         // drill down into it to get the data we're after

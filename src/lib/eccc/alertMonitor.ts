@@ -63,10 +63,11 @@ class AlertMonitor {
     axiosGetWithMscMirror(axios, url)
       .then((resp) => {
         const { data } = resp;
-        if (!data) return;
+        const capXml = typeof data === "string" ? data : null;
+        if (!capXml) return;
 
         // parse the cap file
-        const cap = new CAPCPFile(data, url);
+        const cap = new CAPCPFile(capXml, url);
         if (!cap) return;
 
         // check if its relevant

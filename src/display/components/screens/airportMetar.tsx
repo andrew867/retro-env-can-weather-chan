@@ -7,7 +7,7 @@ import { formatObservedLong } from "lib/date";
 import { coerceArray } from "lib/display/safeData";
 import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo, useState } from "react";
-import { NationalStationObservations, WeatherStationTimeData } from "types";
+import { NationalStationObservation, NationalStationObservations, WeatherStationTimeData } from "types";
 import { AutomaticScreenProps } from "types/screen.types";
 
 type AirportMetarScreenProps = {
@@ -18,7 +18,7 @@ type AirportMetarScreenProps = {
 /** ICAO METAR list (AWC); same row layout as national/USA regional screens. */
 export function AirportMetarScreen(props: AirportMetarScreenProps) {
   const { observations: observationsRaw, weatherStationTime, onComplete } = props ?? {};
-  const observations = coerceArray(observationsRaw);
+  const observations = coerceArray<NationalStationObservation>(observationsRaw);
   const onCompleteRef = useStableOnCompleteRef(onComplete);
   const title = useMemo(
     () => formatObservedLong(weatherStationTime, true, " "),

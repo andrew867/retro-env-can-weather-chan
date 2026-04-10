@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 /** Frozen snapshot so the status page screenshot does not drift on timestamps/uptime. */
 const FROZEN_STATUS = {
-  statusSchemaVersion: 1,
+  statusSchemaVersion: 2,
   server: { uptimeSec: 42, packageVersion: "9.9.9-test", nodeEnv: "test" },
   feeds: {
     citypage: {
@@ -32,8 +32,8 @@ const FROZEN_STATUS = {
       source: "live",
     },
     sunspots: {
-      dataFetchedAt: null,
-      servedDataAsOf: null,
+      dataFetchedAt: null as string | null,
+      servedDataAsOf: null as string | null,
       source: "none",
       note: "No data yet, or outside sunspot season (operator refresh is a no-op then).",
     },
@@ -47,6 +47,8 @@ const FROZEN_STATUS = {
       servedDataAsOf: "2026-04-08T09:00:00.000Z",
       source: "live",
       count: 0,
+      capAmqpReceived: 12,
+      capAmqpLastRxAt: "2026-04-08T09:15:30.000Z",
       note: "New CAP files arrive via AMQP; refresh runs expiry trim only.",
     },
     historical: {
@@ -60,8 +62,8 @@ const FROZEN_STATUS = {
       source: "live",
     },
     aqhi: {
-      dataFetchedAt: null,
-      servedDataAsOf: null,
+      dataFetchedAt: null as string | null,
+      servedDataAsOf: null as string | null,
       source: "none",
       note: "No station configured or observation empty.",
     },

@@ -12,7 +12,9 @@ import { ElementCompact, xml2js } from "xml-js";
 export async function getECCCWeatherStations(searchTerm: string) {
   const stations = [];
   const { data } = await axiosGetWithMscMirror(axios, `${MSC_HPFX_ORIGIN}/today/citypage_weather/siteList.xml`);
-  const parsedData: ElementCompact = xml2js(data, { compact: true });
+  const xml = typeof data === "string" ? data : null;
+  if (xml == null) throw "Unable to parse weather stations: expected XML body";
+  const parsedData: ElementCompact = xml2js(xml, { compact: true });
   if (!parsedData || !parsedData["siteList"] || !parsedData["siteList"]["site"]) {
     throw "Unable to parse weather stations";
   }

@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { initializeConfig } from "./config";
-import { broadcastCrawlerUpdate, registerInitSseClient } from "./initSseHub";
+import { broadcastCrawlerUpdate, broadcastInitRefresh, registerInitSseClient } from "./initSseHub";
 import { getECCCWeatherStations } from "lib/eccc/weatherStations";
 import { AuthenticRefreshConfig, GfxRuntimeConfig } from "types";
 
@@ -214,6 +214,7 @@ export function postGfx(req: Request, res: Response) {
         config.setAuthenticRefresh(authenticRefresh);
       }
     });
+    broadcastInitRefresh();
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: String(e) });
