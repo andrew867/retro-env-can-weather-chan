@@ -1,3 +1,7 @@
+import {
+  PROVINCE_TRACKING_NAME_FIELD_WIDTH,
+  PROVINCE_TRACKING_TEMP_PRECIP_GAP_WIDTH,
+} from "consts/provincetracking.consts";
 import { adjustObservedDateTimeToStationTime } from "lib/date";
 import { coerceArray } from "lib/display/safeData";
 import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
@@ -53,9 +57,10 @@ export function ProvinceTrackingScreen(props: ProvinceTrackingProps) {
     return `${Math.round(tempNumber)}`;
   };
 
-  /** Same column widths as each `<li>` row so headers line up (10 + 10 + gap + precip). */
+  /** Same column widths as each `<li>` row so headers line up (name + temp + gap + precip). */
+  const nameColW = PROVINCE_TRACKING_NAME_FIELD_WIDTH;
   const tempColW = 10;
-  const gapColW = 3;
+  const gapColW = PROVINCE_TRACKING_TEMP_PRECIP_GAP_WIDTH;
   const headHighLow = isOvernight ? "Overnight" : "High";
   const headYesterdayToday = isOvernight
     ? "Low:"
@@ -66,13 +71,13 @@ export function ProvinceTrackingScreen(props: ProvinceTrackingProps) {
   return (
     <div id="province_tracking_screen">
       <div>
-        <span>{"".padEnd(10)}</span>
+        <span>{"".padEnd(nameColW)}</span>
         <span>{headHighLow.padStart(tempColW)}</span>
         <span>{"".padEnd(gapColW)}</span>
         <span>24H PRECIP</span>
       </div>
       <div>
-        <span>{"".padEnd(10)}</span>
+        <span>{"".padEnd(nameColW)}</span>
         <span>{headYesterdayToday.padStart(tempColW)}</span>
         <span>{"".padEnd(gapColW)}</span>
         <span>for {yesterdayPrecipDate}</span>
@@ -80,7 +85,12 @@ export function ProvinceTrackingScreen(props: ProvinceTrackingProps) {
       <ol>
         {stations.map((station, ix) => (
           <li key={station?.station?.code != null ? String(station.station.code) : `pt-${ix}`}>
-            <span>{(station?.station?.name ?? "").slice(0, 10).replace(/[-_/]/g, "").padEnd(10)}</span>
+            <span>
+              {(station?.station?.name ?? "")
+                .slice(0, nameColW)
+                .replace(/[-_/]/g, "")
+                .padEnd(nameColW)}
+            </span>
             <span>{formatTemp(station?.displayTemp ?? 0).padStart(tempColW)}</span>
             <span>{"".padEnd(gapColW)}</span>
             <span>{precipString(station?.yesterdayPrecip, station?.yesterdayPrecipUnit)}</span>

@@ -35,15 +35,15 @@ const minimalInit = {
     respectReducedMotion: true,
     streamUnit: "grapheme",
   },
-  crawler: [],
+  crawler: [] as unknown[],
   flavour: {
     name: "e2e",
     created: "2026-01-01T00:00:00.000Z",
     modified: "2026-01-01T00:00:00.000Z",
     screens: [{ id: 1, duration: 60 }],
   },
-  music: [],
-  infoScreen: [],
+  music: [] as unknown[],
+  infoScreen: [] as unknown[],
 };
 
 test.describe("airport METAR plate layout", () => {

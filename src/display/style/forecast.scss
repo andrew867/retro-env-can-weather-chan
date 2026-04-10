@@ -107,12 +107,11 @@
 
 /** Province temp/precip: header rows use the same span column grid as `<li>` rows (avoids padStart(19)+mixed gaps jumbling). */
 #province_tracking_screen {
-  /** ~35 monospace columns; at default 30px body size this exceeds the 10%+safe padded width — scale so rows stay inside `#display`. */
-  font-size: 0.8em;
   line-height: 1.02;
   margin-inline: auto;
   max-width: 34ch;
   min-width: 0;
+  overflow-x: hidden;
   text-align: left;
   white-space: pre;
   width: min(100%, 34ch);

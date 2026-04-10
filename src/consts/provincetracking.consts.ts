@@ -17,5 +17,11 @@ export const PROVINCE_TRACKING_TEMP_TO_TRACK = {
 
 export const PROVINCE_TRACKING_MAX_STATIONS = 6;
 
+/** Monospace name column on the 24h precip / high-low screen (was 10ch; tighter so the plate fits at normal body size). */
+export const PROVINCE_TRACKING_NAME_FIELD_WIDTH = 8;
+
+/** Spaces between the temperature column and the precip string (was 3). */
+export const PROVINCE_TRACKING_TEMP_PRECIP_GAP_WIDTH = 1;
+
 /** Display poll interval — align with backend `ProvinceTracking` refresh (~5 min). */
 export const PROVINCE_TRACKING_CLIENT_POLL_MS = 5 * 60 * 1000;
