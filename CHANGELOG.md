@@ -18,6 +18,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Vignette vs head-switch tear:** **`gfx-vignette-layer`** now lives **inside** **`.rwc-channel-stack`** with **lower z-order** than grain / scanlines / tear so the bottom **head-switch** band is not covered by the vignette overlay (sibling-after-stack placement had hidden or crushed the effect).
 - **Init SSE URL:** Display **`EventSource`** for init uses **`${window.location.origin}/api/v1/init/stream`** so the stream works when the bundle is not served from `/`.
 - **Gfx booleans:** **`vhsAnalogLayerEnabled`** / **`vhsHeadSwitchTearEnabled`** are coerced with a small helper so string values from JSON cannot leave the tear stuck off.
+- **Head-switch band geometry & strength:** Band height is **one quarter** of the prior build (**3%** frame height, **max 18px** / **min 7px**); gradient streaks are **stronger** so the thinner line still reads on air. New **`gfx.retro.vhsHeadSwitchTearOpacity`** (0–1, default **1**) drives **`--gfx-vhs-tear-opacity`**; **Graphics** config includes a slider (when analog + tear are on).
 
 ### Operator status dashboard
 

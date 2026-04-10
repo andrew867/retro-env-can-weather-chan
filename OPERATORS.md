@@ -77,6 +77,7 @@ Under **Graphics**:
 - **`gfx.retro.reloadLineMs`** — Delay between each staggered line on forecast observation reload (default **100**, clamped **30–500**). Persisted in `rwc-config.json`; the display sets CSS `--gfx-reload-line-ms` on `#weather_channel`.
 - **`gfx.retro.vhsAnalogLayerEnabled`** — Optional **broadcast analog** layer (grain + subtle bottom-band shimmer), full colour—not mono terminal. Pairs with scanlines.
 - **`gfx.retro.vhsHeadSwitchTearEnabled`** — Bottom **head-switch / tracking** band (slow horizontal wobble, diagonal streak texture). Only active when **`vhsAnalogLayerEnabled`** is **on**. Use **off** for RF-style analog (grain only); **on** for tape-dub / nth-gen VHS capture flavour. For static captures, append **`?e2eVhsTear=1`** to the display URL to freeze horizontal offset (Playwright regression uses this).
+- **`gfx.retro.vhsHeadSwitchTearOpacity`** — **0–1** strength for that band (CSS opacity on the overlay; default **1**). The band is a **thin** slice of the frame; use the Graphics slider to dim it in browser/OBS if needed.
 - **`gfx.retro.vignetteStrength`** — Edge darkening (0–1). The vignette is a **dedicated overlay** inside **`.rwc-channel-stack`** (same inset as the picture) **below** grain / scanlines / optional head-switch tear so edge darkening stays visible without covering the VHS bottom band. Default **0.12** in new installs; set **0** in Graphics to disable.
 
 ## Config on disk

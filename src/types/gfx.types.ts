@@ -44,6 +44,8 @@ export type GfxRetroLook = {
    * Only applied when {@link vhsAnalogLayerEnabled} is true; off for “RF broadcast” style with grain only.
    */
   vhsHeadSwitchTearEnabled?: boolean;
+  /** 0–1 overall strength for the head-switch band (CSS `opacity`). Default 1. */
+  vhsHeadSwitchTearOpacity?: number;
   /**
    * Delay between each `.reload-animation` step on forecast reload (ms). Clamped server-side.
    * Exposed as `--gfx-reload-line-ms` on `#weather_channel`.

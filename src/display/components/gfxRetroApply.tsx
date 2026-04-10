@@ -1,5 +1,5 @@
 import { useLayoutEffect } from "react";
-import { clampReloadLineMs, SCREEN_BACKGROUND_BLUE } from "consts";
+import { clampReloadLineMs, GFX_DEFAULT_VHS_HEAD_SWITCH_TEAR_OPACITY, SCREEN_BACKGROUND_BLUE } from "consts";
 import type { GfxRetroColourPreset, GfxRuntimeConfig } from "types";
 
 const GFX_RETRO_PRESET_CLASSES: GfxRetroColourPreset[] = ["none", "nes", "c64", "green", "amber"];
@@ -24,6 +24,11 @@ export function GfxRetroApply({ gfx, useOfficialFonts = true }: GfxRetroApplyPro
     el.style.setProperty("--gfx-safe-left", String(sa?.left ?? 0.02));
     el.style.setProperty("--gfx-safe-right", String(sa?.right ?? 0.02));
     el.style.setProperty("--gfx-reload-line-ms", String(clampReloadLineMs(r?.reloadLineMs)));
+    const tearOp = Number(r?.vhsHeadSwitchTearOpacity);
+    el.style.setProperty(
+      "--gfx-vhs-tear-opacity",
+      String(Number.isFinite(tearOp) ? Math.min(1, Math.max(0, tearOp)) : GFX_DEFAULT_VHS_HEAD_SWITCH_TEAR_OPACITY)
+    );
     const tint = r?.phosphorTint ?? "none";
     const safeTint = GFX_RETRO_PRESET_CLASSES.includes(tint as GfxRetroColourPreset) ? tint : "none";
     GFX_RETRO_PRESET_CLASSES.forEach((p) => el.classList.remove(`gfx-phosphor-${p}`));

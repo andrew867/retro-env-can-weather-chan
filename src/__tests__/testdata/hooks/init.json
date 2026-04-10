@@ -24,6 +24,7 @@
       "vignetteStrength": 0.12,
       "vhsAnalogLayerEnabled": true,
       "vhsHeadSwitchTearEnabled": false,
+      "vhsHeadSwitchTearOpacity": 1,
       "reloadLineMs": 100
     }
   },

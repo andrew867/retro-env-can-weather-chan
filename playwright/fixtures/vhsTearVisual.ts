@@ -72,6 +72,7 @@ export function buildVhsTearInit(): InitChannel {
         vignetteStrength: 0.12,
         vhsAnalogLayerEnabled: true,
         vhsHeadSwitchTearEnabled: true,
+        vhsHeadSwitchTearOpacity: 1,
         reloadLineMs: 100,
       },
     },

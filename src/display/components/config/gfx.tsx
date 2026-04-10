@@ -17,6 +17,7 @@ import {
 } from "@chakra-ui/react";
 import {
   GFX_DEFAULT_SCANLINES_OPACITY,
+  GFX_DEFAULT_VHS_HEAD_SWITCH_TEAR_OPACITY,
   GFX_RELOAD_LINE_MS_DEFAULT,
   GFX_RELOAD_LINE_MS_MAX,
   GFX_RELOAD_LINE_MS_MIN,
@@ -54,6 +55,9 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
   const [safeRight, setSafeRight] = useState(gfx?.safeArea?.right ?? 0.02);
   const [vhsAnalog, setVhsAnalog] = useState(!!gfx?.retro?.vhsAnalogLayerEnabled);
   const [vhsHeadSwitchTear, setVhsHeadSwitchTear] = useState(!!gfx?.retro?.vhsHeadSwitchTearEnabled);
+  const [vhsHeadSwitchTearOpacity, setVhsHeadSwitchTearOpacity] = useState(
+    gfx?.retro?.vhsHeadSwitchTearOpacity ?? GFX_DEFAULT_VHS_HEAD_SWITCH_TEAR_OPACITY
+  );
   const [reloadLineMs, setReloadLineMs] = useState(gfx?.retro?.reloadLineMs ?? GFX_RELOAD_LINE_MS_DEFAULT);
   const [displayAspect, setDisplayAspect] = useState<GfxDisplayAspectRatio>(gfx?.displayAspectRatio ?? "4:3");
   const [displayResolution, setDisplayResolution] = useState<GfxDisplayResolution>(gfx?.displayResolution ?? "sd");
@@ -75,6 +79,7 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
     setSafeRight(gfx?.safeArea?.right ?? 0.02);
     setVhsAnalog(!!gfx?.retro?.vhsAnalogLayerEnabled);
     setVhsHeadSwitchTear(!!gfx?.retro?.vhsHeadSwitchTearEnabled);
+    setVhsHeadSwitchTearOpacity(gfx?.retro?.vhsHeadSwitchTearOpacity ?? GFX_DEFAULT_VHS_HEAD_SWITCH_TEAR_OPACITY);
     setReloadLineMs(gfx?.retro?.reloadLineMs ?? GFX_RELOAD_LINE_MS_DEFAULT);
     setDisplayAspect(gfx?.displayAspectRatio === "16:9" ? "16:9" : "4:3");
     setDisplayResolution(gfx?.displayResolution === "hd" ? "hd" : "sd");
@@ -104,6 +109,7 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
         phosphorTint: colourPreset,
         vhsAnalogLayerEnabled: vhsAnalog,
         vhsHeadSwitchTearEnabled: vhsHeadSwitchTear,
+        vhsHeadSwitchTearOpacity: Math.min(1, Math.max(0, Number(vhsHeadSwitchTearOpacity) || 0)),
         reloadLineMs: Math.min(
           GFX_RELOAD_LINE_MS_MAX,
           Math.max(GFX_RELOAD_LINE_MS_MIN, Math.round(Number(reloadLineMs)) || GFX_RELOAD_LINE_MS_DEFAULT)
@@ -283,6 +289,26 @@ export function GfxConfig({ gfx, authenticRefresh: initAuthentic, useOfficialFon
               for clean RF-style broadcast analog with grain only; turn <strong>on</strong> for nth-generation tape
               captures. Requires the analog layer above. After you click <strong>Save</strong>, open display tabs refetch
               graphics over the init SSE stream; if the picture does not update, reload the display page once.
+            </FormHelperText>
+          </FormControl>
+          <FormControl>
+            <FormLabel>Head-switch band opacity ({vhsHeadSwitchTearOpacity.toFixed(2)})</FormLabel>
+            <Slider
+              min={0}
+              max={1}
+              step={0.02}
+              value={vhsHeadSwitchTearOpacity}
+              onChange={setVhsHeadSwitchTearOpacity}
+              isDisabled={!vhsAnalog || !vhsHeadSwitchTear}
+            >
+              <SliderTrack>
+                <SliderFilledTrack />
+              </SliderTrack>
+              <SliderThumb />
+            </Slider>
+            <FormHelperText>
+              Strength of the thin bottom band (0 = invisible). Thinner band than earlier builds; raise this if you want
+              it to read more in OBS.
             </FormHelperText>
           </FormControl>
 

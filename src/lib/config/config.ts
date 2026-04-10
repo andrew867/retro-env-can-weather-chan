@@ -14,6 +14,7 @@ import {
   MAX_AIRPORT_METAR_STATIONS,
   PROVINCE_TRACKING_DEFAULT_STATIONS,
   GFX_DEFAULT_SCANLINES_OPACITY,
+  GFX_DEFAULT_VHS_HEAD_SWITCH_TEAR_OPACITY,
   GFX_RELOAD_LINE_MS_DEFAULT,
   GFX_RELOAD_LINE_MS_MAX,
   GFX_RELOAD_LINE_MS_MIN,
@@ -99,6 +100,7 @@ const DEFAULT_GFX: GfxRuntimeConfig = {
     vignetteStrength: 0.12,
     vhsAnalogLayerEnabled: true,
     vhsHeadSwitchTearEnabled: false,
+    vhsHeadSwitchTearOpacity: GFX_DEFAULT_VHS_HEAD_SWITCH_TEAR_OPACITY,
     reloadLineMs: GFX_RELOAD_LINE_MS_DEFAULT,
   },
 };
@@ -539,6 +541,10 @@ class Config {
       : GFX_RELOAD_LINE_MS_DEFAULT;
     if (retro.vhsAnalogLayerEnabled === undefined) retro.vhsAnalogLayerEnabled = false;
     if (retro.vhsHeadSwitchTearEnabled === undefined) retro.vhsHeadSwitchTearEnabled = false;
+    const tearOp = Number(retro.vhsHeadSwitchTearOpacity);
+    retro.vhsHeadSwitchTearOpacity = Number.isFinite(tearOp)
+      ? Math.min(1, Math.max(0, tearOp))
+      : GFX_DEFAULT_VHS_HEAD_SWITCH_TEAR_OPACITY;
   }
 
   public setAirQualityStation(station: string) {
