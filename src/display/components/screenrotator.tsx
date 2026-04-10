@@ -116,14 +116,19 @@ export function ScreenRotator(props: ScreenRotatorProps) {
   const playlistInputRef = useRef({ screens, weatherStationResponse, alerts });
   playlistInputRef.current = { screens, weatherStationResponse, alerts };
 
-  // basic rotation of screens
+  // Basic rotation: advance dwell timers when the displayed index or playlist length changes.
+  // Do **not** depend on `configVersion` here: it changes on every API process start (new UUID). The
+  // `playlistGenerationKey` effect already resets the playlist and sets `conditionsOrConfigUpdated`.
+  // Including `configVersion` caused that effect and this one to run in the same flush with stale
+  // state, so `prepareSwitchToNextScreen` ran with `conditionsOrConfigUpdated === false` and fired
+  // `switchBackgroundColour` repeatedly (blue/red flash) until full reload.
   useEffect(() => {
     if (!channelPlaylist?.length) return;
 
     // displayed screen is set to -1 so we need to start displaying something
     if (displayedPlaylistIx === -1) setDisplayedPlaylistIx(0);
     else prepareSwitchToNextScreen();
-  }, [displayedPlaylistIx, channelPlaylist.length, configVersion]);
+  }, [displayedPlaylistIx, channelPlaylist.length]);
 
   // used to clear the screen switching timeout
   useEffect(() => {

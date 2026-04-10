@@ -30,6 +30,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Display / national data
 
+- **Screen rotator after API restart:** Removed **`configVersion`** from the rotator effect that calls **`prepareSwitchToNextScreen`**. A new **`configVersion`** UUID on every server process start was firing that effect in the same flush as the playlist-reset effect, while **`conditionsOrConfigUpdated`** was still stale **`false`**, so **`switchBackgroundColour`** ran repeatedly and the raster flashed **blue/red** until the display tab was reloaded.
 - **Conditions in Ontario:** New screen **`CANADA_TEMP_CONDITIONS_ON`** (same regional list layout as Manitoba). The national JSON API includes an **`on`** array; default flavour runs Ontario after Manitoba.
 - **East / West Canada lists:** Primaries are **seven cities** each — **East:** Toronto, Ottawa, Montreal, Fredericton, Halifax, Charlottetown, St. John’s (Ontario, Quebec, and every Atlantic province; Ontario appears twice). **West:** Vancouver, Calgary, Saskatoon, Brandon, Whitehorse, Yellowknife, Iqaluit (**NU/s0000394**) across BC, AB, SK, MB, YT, NT, NU. Backups unchanged in role (fill when primaries do not report).
 - **VHS head-switch tear (bottom band):** Stronger **overlay** blend (vs soft-light), taller band, and **diagonal** streak layer so the effect reads on broadcast blue in browser/OBS. **`?e2eVhsTear=1`** freezes horizontal offset for captures; Playwright **`vhs-head-switch-tear-visual.spec.ts`** clips the bottom strip for regression.
