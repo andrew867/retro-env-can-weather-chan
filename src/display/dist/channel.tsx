@@ -7,6 +7,7 @@ import { GfxVhsAnalogGrainLayer } from "display/components/gfxVhsAnalogGrainLaye
 import { VhsHeadSwitchTearLayer } from "display/components/vhsHeadSwitchTearLayer";
 import { NextGenGfxLayer } from "display/components/nextGenGfxLayer";
 import { PlaylistComponent } from "display/components/playlist";
+import { AirportMetarScreen } from "display/components/screens/airportMetar";
 import { ScreenRotator } from "display/components/screenrotator";
 import {
   useAlerts,
@@ -23,10 +24,16 @@ import {
 import { useAirQuality } from "hooks/airQuality";
 import { useConfig } from "hooks/init";
 import axios from "lib/axios";
+import {
+  E2E_AIRPORT_METAR_OBSERVATIONS,
+  E2E_AIRPORT_METAR_WEATHER_TIME,
+  isE2eAirportMetarFixture,
+} from "lib/display/e2eAirportMetarFixture";
 import { getDisplayAxiosSnapshot } from "lib/displayUpstreamMetrics";
-import { CLIENT_METRICS_POST_INTERVAL_MS } from "consts";
+import { CLIENT_METRICS_POST_INTERVAL_MS, SCREEN_BACKGROUND_BLUE } from "consts";
 import React, { useCallback, useEffect, useRef } from "react";
 import ReactDOM from "react-dom/client";
+import type { InitChannel } from "types";
 
 /** Init / JSON may surface booleans as strings; treat anything else as false. */
 function rwcBool(v: unknown): boolean {
@@ -37,6 +44,41 @@ function rwcBool(v: unknown): boolean {
     return s === "true" || s === "1" || s === "yes";
   }
   return Boolean(v);
+}
+
+/** Visual-regression entry: `?e2eAirportMetar=1` — METAR plate only, no SSE (see Playwright `airport-metar-layout.spec.ts`). */
+function E2eAirportMetarChannel({ config }: { config: InitChannel }) {
+  const retro = config?.gfx?.retro;
+  const vhsAnalogOn = rwcBool(retro?.vhsAnalogLayerEnabled);
+  const scanlinesOn = !!(retro?.scanlinesOpacity && retro.scanlinesOpacity > 0.001);
+  const vhsTearOn = vhsAnalogOn && rwcBool(retro?.vhsHeadSwitchTearEnabled);
+
+  return (
+    <>
+      <GfxRetroApply gfx={config?.gfx} useOfficialFonts={config?.config.useOfficialFonts ?? true} />
+      <FontModeApply useOfficialFonts={config?.config.useOfficialFonts ?? true} />
+      <div className="rwc-channel-stack">
+        <div className="rwc-channel-frame">
+          <NextGenGfxLayer enabled={!!config?.gfx?.features?.nextGenVisualLayersEnabled} />
+          <CrawlerMessages crawler={config?.crawler ?? []} />
+          <div id="display" style={{ backgroundColor: SCREEN_BACKGROUND_BLUE }}>
+            <div id="rwc-screen-body">
+              <AirportMetarScreen
+                observations={E2E_AIRPORT_METAR_OBSERVATIONS}
+                weatherStationTime={E2E_AIRPORT_METAR_WEATHER_TIME}
+                onComplete={() => {}}
+              />
+            </div>
+          </div>
+        </div>
+        <div className="gfx-vignette-layer" aria-hidden />
+        <GfxVhsAnalogGrainLayer enabled={vhsAnalogOn} />
+        <VhsHeadSwitchTearLayer enabled={vhsTearOn} />
+        <GfxScanlinesLayer enabled={scanlinesOn} />
+      </div>
+      <PlaylistComponent playlist={config?.music} />
+    </>
+  );
 }
 
 function WeatherChannel() {
@@ -111,6 +153,9 @@ function WeatherChannel() {
    */
   if (!config) {
     return <>{initAttempted ? "Channel offline" : "Connecting…"}</>;
+  }
+  if (isE2eAirportMetarFixture()) {
+    return <E2eAirportMetarChannel config={config} />;
   }
   if (!currentConditions) {
     return <>Connecting…</>;

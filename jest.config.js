@@ -25,5 +25,5 @@ module.exports = {
     "!src/types/**",
   ],
   watchPathIgnorePatterns: ["db/*", "cfg/*"],
-  testMatch: ["**/__tests__/**/*.test.ts"],
+  testMatch: ["**/__tests__/**/*.test.ts", "**/__tests__/**/*.test.tsx"],
 };
