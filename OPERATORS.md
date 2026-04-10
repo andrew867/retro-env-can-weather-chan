@@ -30,6 +30,8 @@ A dirty `yarn.lock` does **not** by itself mean the server missed pushed commits
 | **`RWC_LKG_MAX_AGE_MS`** | Max age for in-memory **last-known-good** snapshots for national / USA / airport METAR / province tracking when upstream fails (default **5400000** ms = 90 min). |
 | **`RWC_HTTP_RETRY_COUNT`** | Extra **waves** for idempotent GET retries (NWS, AWC, MSC mirror outer loop). Default **2** (total attempts = 1 + this for single-URL helpers; MSC mirror also tries HPFX + Datamart per wave). Max **5**. |
 | **`RWC_HTTP_RETRY_BACKOFF_MIN_MS`** / **`RWC_HTTP_RETRY_BACKOFF_MAX_MS`** | Jittered backoff between retry waves (defaults **100** / **2000**). |
+| **`RWC_DATAMART_HOURLY_DIR_EXTRA_RETRIES`** | Extra **full** GET cycles for the **current UTC hour only** when resolving MSC citypage hourly directory listings (`/today/citypage_weather/<prov>/<HH>/`). Mirrors often return **404** or an **empty / not-yet-populated listing** for a short window after the hour. Default **2** (i.e. **3** attempts total for that hour). Max **5** extra (clamped in code). |
+| **`RWC_DATAMART_HOURLY_DIR_RETRY_DELAY_MS`** | Base delay between those publication-lag attempts (default **12000** ms). The client adds **0–2 s** jitter per wait. |
 | **`RWC_CIRCUIT_FAILURE_THRESHOLD`** | Consecutive failures before a host enters cool-off (default **5**, clamped 2–20). |
 | **`RWC_CIRCUIT_COOL_OFF_MS`** | Cool-off duration (default **120000** ms). |
 | **`RWC_MIN_DISK_FREE_MIB`** | If set **> 0** and Node provides `fs.statfsSync`, emit one **WARN** at startup when free space is below this many MiB. **0** = disabled. |
@@ -38,14 +40,28 @@ A dirty `yarn.lock` does **not** by itself mean the server missed pushed commits
 
 See [docs/specs/ADR-002-sarracenia-amqp-and-phase0.md](./docs/specs/ADR-002-sarracenia-amqp-and-phase0.md) for Sarracenia / Phase 0 context.
 
+### Deployment & network exposure
+
+- **Bind address:** The API listens on **all interfaces** on **`API_PORT`** (default **8600**) unless you change `src/api/main.ts` / process manager config. For headless display hosts, prefer **localhost-only** or a **firewall** that allows only your studio subnet.
+- **Unauthenticated writes:** **`POST /api/v1/config/*`**, **`POST`/`PUT /api/v1/flavour`**, and similar routes accept changes **without** a bearer token. Anyone who can reach the port can change on-air configuration. Use **network segmentation**, **reverse proxy + auth**, or **VPN** for remote access.
+- **Optional bearer protection:** **`RWC_METRICS_TOKEN`** gates **`/api/v1/metrics`**; **`RWC_STATUS_TOKEN`** (or the metrics token) gates **`/api/v1/status`** when set. This does **not** protect config or weather JSON.
+
 ### Reliability runbook (short)
 
 - **AMQP down:** Citypage and CAP still recover via HTTP — bootstrap fetch on startup, **stale fallback** on a timer (`RWC_CITYPAGE_STALE_*`), and alert HTTP poll in the display bundle. Check firewall **5671/tcp** to `RWC_AMQP_HOST`.
 - **HPFX TLS issues:** Set **`RWC_MSC_TRY_DATAMART_FIRST=1`** so **`dd.weather.gc.ca`** is tried before **`hpfx.collab.science.gc.ca`** for MSC mirror pairs.
 - **Logs:** Logger categories include `upstream` (structured lines), `CONFIG` (validation), `Storage` (disk warn). No tokens or passwords are logged.
 - **Metrics / circuits:** `GET /api/v1/metrics` includes **`upstreamCircuits`** (per-host cool-off state). **`GET /api/v1/health`** includes **`degraded`** flags; **`GET /api/v1/ready`** returns **503** if the last successful **citypage parse** is older than **`RWC_CITYPAGE_STALE_FALLBACK_AFTER_MS`** (same threshold used by the periodic stale checker).
-- **Restart order:** Start API (`yarn start` or process manager) after config under `./cfg/` exists; run **`yarn smoke`** (or `node scripts/post-deploy-smoke.mjs`) against `BASE_URL` after deploy.
+- **Restart order:** Start API (`yarn start` or process manager) after config under `./cfg/` exists; run **`yarn smoke`** against `BASE_URL` after deploy. Smoke checks **`/health`**, **`/ready`**, **`/weather/*`**, **`/init`**, **`/metrics`** (200 / 401 / 404), and **`/status`** (200 / 401 / 404).
 - **Escalation:** *On-call / owner — set per deployment.*
+
+### Release candidate checklist
+
+1. **`yarn gate:rc`** — runs **`yarn typecheck`** and **`yarn test`** (no server required).
+2. **Smoke against a running instance:** `BASE_URL=http://127.0.0.1:8600 yarn smoke`. If **`RWC_METRICS_TOKEN`** is set on the server, run `METRICS_TOKEN=<same> BASE_URL=... yarn smoke` so **`GET /api/v1/metrics`** is checked with auth.
+3. **`yarn gate:rc:e2e`** (optional but recommended): unit gate plus **Playwright** (starts **`yarn build:display && yarn start`**, sets **`RWC_STATUS_ENABLED=1`** for status routes).
+
+Machine-readable API description: [docs/api/openapi.yaml](./docs/api/openapi.yaml). Curl examples: [docs/api/REST-COOKBOOK.md](./docs/api/REST-COOKBOOK.md).
 
 **Citypage ingest:** Under normal operation, new XML is fetched when MSC public AMQP announces your station’s citypage file. If the broker delivers nothing for a long time (firewall change, client bug, or rare MSC gaps), the stale fallback above still pulls the current file from HTTP mirrors so the display and SSE clients can update. The browser also refetches other feeds on **`/weather/live`** reconnect; CAP/alerts additionally use a **10-minute** HTTP poll fallback in the display bundle.
 
@@ -58,6 +74,12 @@ See [docs/specs/ADR-002-sarracenia-amqp-and-phase0.md](./docs/specs/ADR-002-sarr
 | `GET` | `/metrics` | Same **`mscAmqp`** as health, **`upstreamCircuits`**, plus **server** outbound HTTP (`backendAxios`) since process start, and **last reported** display-bundle counters (`displayAxiosFromClient`, `displayAxiosReportedAt`) if a browser has posted to `/metrics/client`. Disabled when **`RWC_METRICS_DISABLED=1`**. |
 | `POST` | `/metrics/client` | Body: `{ "displayAxios": { "requestCount", "successCount", "errorCount", "timeoutCount", "status4xx", "status5xx", "networkError" } }`. The display posts about every 30 seconds while `/` is open. Same auth as `GET /metrics` when `RWC_METRICS_TOKEN` is set. |
 | `GET` | `/init` | Display bootstrap: flavour, crawler, `gfx`, and look-and-feel flags (including footer freshness and font mode). |
+| `GET` | `/config` | Full **`rwc-config`** snapshot plus crawler lines and music playlist (same persistence as the config UI). |
+| `POST` | `/config/*` | Station search, primary location, province grid, historical/climate IDs, misc, look-and-feel, AQHI station, **crawler**, playlist, **gfx** — see [docs/api/openapi.yaml](./docs/api/openapi.yaml) and [docs/api/REST-COOKBOOK.md](./docs/api/REST-COOKBOOK.md). **Unauthenticated** unless you front the API with your own auth. |
+| `PUT` / `POST` | `/flavour` | Create (**PUT**) or update (**POST**) a flavour JSON file under `cfg/flavours/`. |
+| `GET` | `/flavour/:name` | Load one flavour by file-safe name. |
+| `GET` | `/season`, `/season/lastMonth` | Seasonal / last-month stats screens. |
+| `GET` / `POST` | `/airquality`, `/airquality/stations` | AQHI snapshot and station search. |
 | `GET` | `/status` | JSON feed snapshot: last fetch times, citypage observation id, LKG hints, **`statusSchemaVersion`** (alerts block includes AMQP **received** count and **last Rx** for CAP notifications). Disabled in production without **`RWC_STATUS_ENABLED=1`** (404). Optional bearer: **`RWC_STATUS_TOKEN`** or **`RWC_METRICS_TOKEN`**. |
 | `POST` | `/status/refresh` | Body **`{ "scope": "all" }`** or **`{ "scope": "single", "target": "<feed>" }`** (`observed`, `national`, `usa`, `airport_metar`, `province`, `sunspots`, `hot_cold`, `alerts`, `historical`, `climate_normals`, `aqhi`). **202**; work is async. Same enable/auth as **`GET /api/v1/status`**. |
 

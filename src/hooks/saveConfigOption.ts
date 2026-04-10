@@ -7,20 +7,25 @@ export function useSaveConfigOption<T = any>(endpoint: string, baseURL: string =
   const [wasError, setWasError] = useState(false);
   const [response, setResponse] = useState<T>();
 
-  const saveConfigOption = async (body: object, isNew: boolean = false) => {
-    if (!body || !endpoint) return;
+  const saveConfigOption = async (body: object, isNew: boolean = false): Promise<T | undefined> => {
+    if (!body || !endpoint) return undefined;
 
     resetState();
     setIsSaving(true);
 
     const method = isNew ? "put" : "post";
-    await axios[method](`${baseURL}/${endpoint}`, body)
-      .then((resp) => {
-        if (resp.data) setResponse(resp.data);
-        setWasSuccess(true);
-      })
-      .catch(() => setWasError(true))
-      .finally(() => setIsSaving(false));
+    try {
+      const resp = await axios[method](`${baseURL}/${endpoint}`, body);
+      const data = resp.data as T | undefined;
+      if (data !== undefined && data !== null) setResponse(data);
+      setWasSuccess(true);
+      return data;
+    } catch {
+      setWasError(true);
+      return undefined;
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const resetState = () => {

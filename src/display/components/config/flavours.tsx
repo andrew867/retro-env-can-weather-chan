@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import {
   Stack,
   Text,
@@ -32,6 +32,8 @@ import axios from "lib/axios";
 
 type FlavoursConfigProps = {
   currentFlavours: string[];
+  /** Called when the flavour list changes on disk (save); updates the Display tab dropdown without a full page reload. */
+  onFlavoursListChange?: (flavours: string[]) => void;
 };
 
 type SaveFlavourResponse = {
@@ -39,17 +41,19 @@ type SaveFlavourResponse = {
   flavours: string[];
 };
 
-export function FlavoursConfig({ currentFlavours }: FlavoursConfigProps) {
+export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: FlavoursConfigProps) {
   const toast = useToast();
-  const { saveConfigOption, isSaving, wasSuccess, wasError, response } = useSaveConfigOption<SaveFlavourResponse>(
-    "flavour",
-    ""
-  );
+  const { saveConfigOption, isSaving } = useSaveConfigOption<SaveFlavourResponse>("flavour", "");
 
   const [flavourNameUsed, setFlavourNameUsed] = useState(false);
   const [selectableFlavours, setSelectableFlavours] = useState(currentFlavours);
   const [mutableFlavour, setMutableFlavour] = useState<Flavour>();
   const [selectedFlavour, setSelectedFlavour] = useState<string>("");
+
+  const flavoursListKey = currentFlavours.join("\u0001");
+  useEffect(() => {
+    setSelectableFlavours(currentFlavours);
+  }, [flavoursListKey]);
 
   const isFlavourSaveable = !!mutableFlavour?.name?.length && !!mutableFlavour?.screens?.length && !flavourNameUsed;
 
@@ -75,25 +79,28 @@ export function FlavoursConfig({ currentFlavours }: FlavoursConfigProps) {
     toast.closeAll();
 
     mutableFlavour.modified = new Date();
-    await saveConfigOption({ flavour: mutableFlavour }, !!!mutableFlavour.uuid);
+    const data = await saveConfigOption({ flavour: mutableFlavour }, !!!mutableFlavour.uuid);
 
-    if (wasError)
+    if (data === undefined)
       return toast({
         title: "Unable to save",
         description: "An error occured saving your flavour",
         status: "error",
       });
 
-    if (wasSuccess) {
-      if (response.flavours) setSelectableFlavours(response.flavours);
-      if (!mutableFlavour.uuid) mutableFlavour.uuid = response.flavour.uuid;
-
-      return toast({
-        title: "Save successful",
-        description: "Your flavour was saved",
-        status: "success",
-      });
+    if (data.flavours) {
+      setSelectableFlavours(data.flavours);
+      onFlavoursListChange?.(data.flavours);
     }
+    if (!mutableFlavour.uuid && data.flavour?.uuid) {
+      setMutableFlavour({ ...mutableFlavour, uuid: data.flavour.uuid });
+    }
+
+    return toast({
+      title: "Save successful",
+      description: "Your flavour was saved",
+      status: "success",
+    });
   };
 
   const discardChanges = () => {

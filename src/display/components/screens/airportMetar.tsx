@@ -1,6 +1,7 @@
 import {
-  MAX_CONDITION_LENGTH,
-  MAX_NATIONAL_STATION_NAME_LENGTH,
+  AIRPORT_METAR_FLT_CAT_FIELD_WIDTH,
+  AIRPORT_METAR_NAME_FIELD_WIDTH,
+  AIRPORT_METAR_REST_CONDITION_MAX,
   MIN_AIRPORT_METAR_STATIONS_TO_DISPLAY,
 } from "consts";
 import { formatObservedLong } from "lib/date";
@@ -54,19 +55,27 @@ export function AirportMetarScreen(props: AirportMetarScreenProps) {
       <ol>
         {observationsOnMount.map((row, ix) => {
           const name = (row.name ?? "")
-            .slice(0, MAX_NATIONAL_STATION_NAME_LENGTH)
-            .padEnd(MAX_NATIONAL_STATION_NAME_LENGTH);
+            .slice(0, AIRPORT_METAR_NAME_FIELD_WIDTH)
+            .padEnd(AIRPORT_METAR_NAME_FIELD_WIDTH);
           const t = row.temperature;
           const temp =
             t !== null && t !== undefined && Number.isFinite(Number(t))
               ? Math.round(Number(t)).toString().padStart(4)
               : "  --".padStart(4);
+          const flt = (row.metarFltCatPadded ?? "")
+            .slice(0, AIRPORT_METAR_FLT_CAT_FIELD_WIDTH)
+            .padEnd(AIRPORT_METAR_FLT_CAT_FIELD_WIDTH, " ");
           const cond = (row.abbreviatedCondition ?? "")
-            .slice(0, MAX_CONDITION_LENGTH)
-            .padEnd(MAX_CONDITION_LENGTH);
+            .slice(0, AIRPORT_METAR_REST_CONDITION_MAX)
+            .padEnd(AIRPORT_METAR_REST_CONDITION_MAX);
           return (
             <li key={row.code != null && String(row.code).length ? String(row.code) : `metar-${ix}`}>
-              <span>{`${name}${temp} ${cond}`}</span>
+              <span>{name}</span>
+              <span>{temp}</span>
+              <span> </span>
+              <span>{flt}</span>
+              <span> · </span>
+              <span>{cond}</span>
             </li>
           );
         })}

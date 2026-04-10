@@ -13,6 +13,8 @@
     "test:watch": "env NODE_ENV=test jest --watch",
     "build:display": "yarn parcel build src/display/dist/index.html --dist-dir dist/ --no-optimize && yarn parcel build src/display/dist/config.html --dist-dir dist/ --no-optimize && yarn parcel build src/display/dist/status.html --dist-dir dist/ --no-optimize",
     "smoke": "node scripts/post-deploy-smoke.mjs",
+    "gate:rc": "yarn typecheck && yarn test",
+    "gate:rc:e2e": "yarn gate:rc && yarn test:e2e",
     "test:e2e": "playwright test",
     "test:e2e:update": "playwright test --update-snapshots",
     "release": "release-it --ci"

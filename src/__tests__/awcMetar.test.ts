@@ -1,6 +1,8 @@
 import { AxiosError } from "axios";
 import {
   formatAwcMetarConditionLine,
+  formatAwcMetarRestLine,
+  padAwcMetarFltCatDisplay,
   parseAwcMetarRow,
   shouldTryAwcAfterNwsFailure,
 } from "lib/usaweather/awcMetar";
@@ -50,5 +52,23 @@ describe("awcMetar", () => {
         wspd: 12,
       })
     ).toMatch(/MVFR/);
+  });
+
+  it("padAwcMetarFltCatDisplay pads 3-letter categories to 4 chars", () => {
+    expect(padAwcMetarFltCatDisplay("VFR")).toBe("vfr ");
+    expect(padAwcMetarFltCatDisplay("IFR")).toBe("ifr ");
+    expect(padAwcMetarFltCatDisplay("MVFR")).toBe("mvfr");
+    expect(padAwcMetarFltCatDisplay("LIFR")).toBe("lifr");
+  });
+
+  it("formatAwcMetarRestLine is cover and speed only", () => {
+    expect(
+      formatAwcMetarRestLine({
+        icaoId: "KXXX",
+        fltCat: "VFR",
+        cover: "BKN",
+        wspd: 2,
+      })
+    ).toBe("bkn · 2");
   });
 });

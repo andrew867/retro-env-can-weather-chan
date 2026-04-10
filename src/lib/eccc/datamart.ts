@@ -1,6 +1,11 @@
 import { subHours } from "date-fns";
+import { isAxiosError } from "axios";
 import axios from "lib/backendAxios";
 import Logger from "lib/logger";
+import {
+  rwcDatamartHourlyDirExtraRetries,
+  rwcDatamartHourlyDirRetryDelayMs,
+} from "consts/reliability.consts";
 import {
   axiosGetWithMscMirrorResolved,
   axiosHeadWithMscMirror,
@@ -14,6 +19,24 @@ const logger = new Logger("Datamart");
  * (Datamart mirror: https://dd.weather.gc.ca/… — listing + file must use the same host that served the index.)
  */
 const CITYPAGE_UTC_HOUR_FALLBACKS = 8;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+/**
+ * True when the hourly directory request might succeed after a short wait (new hour not published yet, transient upstream).
+ */
+function isMscHourlyDirectoryMaybeNotPublished(err: unknown): boolean {
+  if (!isAxiosError(err)) return true;
+  if (err.code === "ERR_CANCELED") return false;
+  const s = err.response?.status;
+  if (s == null) return true;
+  if (s === 404 || s === 403) return true;
+  if (s >= 500) return true;
+  if (s === 408 || s === 429) return true;
+  return false;
+}
 
 function englishCitypageHrefPattern(stationID: string): RegExp {
   const escaped = stationID.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -30,38 +53,77 @@ async function GetWeatherFileFromECCC(province: string, stationID: string): Prom
   );
 
   const regex = englishCitypageHrefPattern(stationID);
+  const extraDirRetries = rwcDatamartHourlyDirExtraRetries();
+  const dirRetryDelayMs = rwcDatamartHourlyDirRetryDelayMs();
 
-  for (const utcHour of utcHoursToTry) {
+  hourLoop: for (let hourIx = 0; hourIx < utcHoursToTry.length; hourIx++) {
+    const utcHour = utcHoursToTry[hourIx]!;
     const paddedUTCHour = `${utcHour}`.padStart(2, "0");
     const baseURL = `${MSC_HPFX_ORIGIN}/today/citypage_weather/${encodeURIComponent(province)}/${paddedUTCHour}/`;
 
-    let html: string;
-    let directoryResolvedUrl: string;
-    try {
-      const { response, resolvedUrl } = await axiosGetWithMscMirrorResolved(axios, baseURL);
-      directoryResolvedUrl = resolvedUrl;
-      html = response.data as string;
-      if (!html) continue;
-    } catch {
-      logger.error(province, paddedUTCHour, "failed to fetch data");
-      continue;
-    }
+    const maxDirAttempts = hourIx === 0 ? 1 + extraDirRetries : 1;
 
-    const hrefs = [...html.matchAll(regex)].map((m) => m[1]);
-    const unique = [...new Set(hrefs)];
-    if (!unique.length) continue;
-
-    const newestFirst = unique.sort().reverse();
-    const dirBase = directoryResolvedUrl.endsWith("/") ? directoryResolvedUrl : `${directoryResolvedUrl}/`;
-
-    for (const file of newestFirst) {
-      const fileUrl = `${dirBase}${file}`;
-      try {
-        await axiosHeadWithMscMirror(axios, fileUrl);
-        return fileUrl;
-      } catch {
-        /* older or phantom listing row; try next timestamp */
+    for (let attempt = 0; attempt < maxDirAttempts; attempt++) {
+      if (attempt > 0) {
+        const jitter = Math.floor(Math.random() * 2000);
+        await sleep(dirRetryDelayMs + jitter);
       }
+
+      let html: string | undefined;
+      let directoryResolvedUrl: string | undefined;
+      let lastDirErr: unknown;
+
+      try {
+        const { response, resolvedUrl } = await axiosGetWithMscMirrorResolved(axios, baseURL);
+        directoryResolvedUrl = resolvedUrl;
+        html = response.data as string;
+        lastDirErr = undefined;
+      } catch (err) {
+        lastDirErr = err;
+        if (attempt < maxDirAttempts - 1 && isMscHourlyDirectoryMaybeNotPublished(err)) {
+          continue;
+        }
+        logger.error(province, paddedUTCHour, "failed to fetch data", lastDirErr);
+        continue hourLoop;
+      }
+
+      if (!html) {
+        if (hourIx === 0 && attempt < maxDirAttempts - 1) {
+          continue;
+        }
+        if (lastDirErr != null) {
+          logger.error(province, paddedUTCHour, "failed to fetch data", lastDirErr);
+        }
+        continue hourLoop;
+      }
+      if (!directoryResolvedUrl) {
+        continue hourLoop;
+      }
+
+      const hrefs = [...html.matchAll(regex)].map((m) => m[1]);
+      const unique = [...new Set(hrefs)];
+
+      if (!unique.length) {
+        if (hourIx === 0 && attempt < maxDirAttempts - 1) {
+          continue;
+        }
+        continue hourLoop;
+      }
+
+      const newestFirst = unique.sort().reverse();
+      const dirBase = directoryResolvedUrl.endsWith("/") ? directoryResolvedUrl : `${directoryResolvedUrl}/`;
+
+      for (const file of newestFirst) {
+        const fileUrl = `${dirBase}${file}`;
+        try {
+          await axiosHeadWithMscMirror(axios, fileUrl);
+          return fileUrl;
+        } catch {
+          /* older or phantom listing row; try next timestamp */
+        }
+      }
+
+      continue hourLoop;
     }
   }
 

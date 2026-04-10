@@ -1,5 +1,5 @@
 import { useChannelCurrentConfig } from "hooks";
-import React from "react";
+import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { ChakraProvider, Heading, Tabs, TabList, TabPanels, Tab, TabPanel, Text } from "@chakra-ui/react";
 import {
@@ -16,6 +16,13 @@ import {
 
 const ConfigScreen = () => {
   const { config, fetched } = useChannelCurrentConfig();
+  /** Keeps Display tab flavour dropdown in sync when Flavours tab adds/renames lists (server returns `flavours` on save). */
+  const [flavoursList, setFlavoursList] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!config) return;
+    setFlavoursList(config.flavours ?? []);
+  }, [config]);
 
   return (
     <>
@@ -49,7 +56,7 @@ const ConfigScreen = () => {
                   flavour={config.lookAndFeel?.flavour ?? ""}
                   showFooterFreshnessHint={config.lookAndFeel?.showFooterFreshnessHint ?? true}
                   useOfficialFonts={config.lookAndFeel?.useOfficialFonts ?? true}
-                  flavours={config.flavours}
+                  flavours={flavoursList}
                   playlist={config.music ?? []}
                 />
               </TabPanel>
@@ -82,7 +89,7 @@ const ConfigScreen = () => {
               </TabPanel>
 
               <TabPanel>
-                <FlavoursConfig currentFlavours={config.flavours} />
+                <FlavoursConfig currentFlavours={flavoursList} onFlavoursListChange={setFlavoursList} />
               </TabPanel>
 
               <TabPanel>

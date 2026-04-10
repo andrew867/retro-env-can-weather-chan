@@ -227,6 +227,23 @@ ol {
       width: min(100%, 34ch);
     }
 
+    #airport_metar ol li {
+      display: flex;
+      flex-wrap: nowrap;
+      min-width: 0;
+      white-space: nowrap;
+
+      > span:not(:last-child) {
+        flex-shrink: 0;
+      }
+
+      > span:last-child {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;
+      }
+    }
+
     .centre-align {
       text-align: center;
     }

@@ -46,6 +46,24 @@ export function formatAwcMetarConditionLine(row: AwcMetarRow): string {
   return "METAR";
 }
 
+const METAR_FLT_CAT_DISPLAY_CHARS = 4;
+
+/** Lowercase flight category padded to 4 chars (e.g. `vfr `, `mvfr`) for a fixed-width METAR column. */
+export function padAwcMetarFltCatDisplay(raw: string | undefined | null): string {
+  const s = (raw ?? "").trim().toLowerCase();
+  return s.slice(0, METAR_FLT_CAT_DISPLAY_CHARS).padEnd(METAR_FLT_CAT_DISPLAY_CHARS, " ");
+}
+
+/** Cover and wind speed only (no flt cat), for a separate on-screen column. */
+export function formatAwcMetarRestLine(row: AwcMetarRow): string {
+  const cover = row.cover?.trim().toLowerCase() ?? "";
+  const wspd = row.wspd != null ? String(row.wspd) : "";
+  const parts: string[] = [];
+  if (cover) parts.push(cover);
+  if (wspd) parts.push(wspd);
+  return parts.length ? parts.join(" · ") : "";
+}
+
 function awcReportTimeToUuidKey(reportTime: string): string {
   const digits = reportTime.replace(/[-T:.Z]/g, "");
   return generateConditionsUUID(digits.length >= 12 ? digits : digits.padEnd(12, "0"));

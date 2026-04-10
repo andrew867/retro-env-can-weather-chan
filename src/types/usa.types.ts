@@ -11,6 +11,8 @@ export type USAStationObservation = {
   condition: string | null;
   abbreviatedCondition?: string;
   conditionUUID?: string;
+  /** Airport METAR screen: padded flight category from AWC `fltCat`. */
+  metarFltCatPadded?: string;
 };
 
 export type USAStationObservations = USAStationObservation[];

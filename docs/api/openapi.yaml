@@ -1,0 +1,440 @@
+openapi: 3.0.3
+info:
+  title: Retro ECCC Weather Channel API
+  description: |
+    JSON API for broadcast automation, RDS-style crawlers, and headless operation.
+    **SSE** endpoints (`/weather/live`, `/weather/alerts/stream`, `/init/stream`) return `text/event-stream`; they are not fully described as event schemas here.
+
+    **Security:** Config and weather routes are unauthenticated unless you add a reverse proxy.
+    Optional bearer tokens apply to `/metrics` and `/status` when env vars are set (see OPERATORS.md).
+  version: "2.6.7"
+
+servers:
+  - url: http://127.0.0.1:8600/api/v1
+    description: Default local API
+
+tags:
+  - name: health
+  - name: init
+  - name: weather
+  - name: config
+  - name: flavour
+  - name: season
+  - name: airquality
+  - name: metrics
+  - name: status
+
+components:
+  securitySchemes:
+    bearerMetrics:
+      type: http
+      scheme: bearer
+      description: Required when RWC_METRICS_TOKEN is set (same token for GET/POST metrics).
+    bearerStatus:
+      type: http
+      scheme: bearer
+      description: RWC_STATUS_TOKEN, or RWC_METRICS_TOKEN if status token unset.
+
+paths:
+  /health:
+    get:
+      tags: [health]
+      summary: Liveness
+      operationId: getHealth
+      responses:
+        "200":
+          description: Process up; includes MSC AMQP snapshot and degraded hints
+
+  /healthz:
+    get:
+      tags: [health]
+      summary: Alias of /health
+      operationId: getHealthz
+      responses:
+        "200":
+          description: Same as /health
+
+  /ready:
+    get:
+      tags: [health]
+      summary: Readiness (503 if citypage data stale)
+      operationId: getReady
+      responses:
+        "200":
+          description: Ready
+        "503":
+          description: citypage_data_stale
+
+  /init:
+    get:
+      tags: [init]
+      summary: Display bootstrap (gfx, flavour, crawler, authentic refresh, music, info lines)
+      operationId: getInit
+      responses:
+        "200":
+          description: Init payload
+
+  /init/stream:
+    get:
+      tags: [init]
+      summary: SSE stream for crawler/init refresh
+      operationId: getInitStream
+      responses:
+        "200":
+          description: text/event-stream
+
+  /config:
+    get:
+      tags: [config]
+      summary: Full config + crawler + music playlist
+      operationId: getConfig
+      responses:
+        "200":
+          description: Config snapshot
+
+  /config/stations:
+    post:
+      tags: [config]
+      summary: Search ECCC stations
+      operationId: postConfigStations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                search: { type: string }
+      responses:
+        "200":
+          description: Search results
+
+  /config/primaryLocation:
+    post:
+      tags: [config]
+      summary: Set primary citypage station
+      operationId: postPrimaryLocation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                station: { type: object }
+      responses:
+        "200": { description: OK }
+
+  /config/provinceTracking:
+    post:
+      tags: [config]
+      operationId: postProvinceTracking
+      responses:
+        "200": { description: OK }
+
+  /config/historicalDataStationID:
+    post:
+      tags: [config]
+      operationId: postHistoricalDataStationID
+      responses:
+        "200": { description: OK }
+
+  /config/climateNormals:
+    post:
+      tags: [config]
+      operationId: postClimateNormals
+      responses:
+        "200": { description: OK }
+
+  /config/misc:
+    post:
+      tags: [config]
+      operationId: postMisc
+      responses:
+        "200": { description: OK }
+
+  /config/lookAndFeel:
+    post:
+      tags: [config]
+      operationId: postLookAndFeel
+      responses:
+        "200": { description: OK }
+
+  /config/airQuality:
+    post:
+      tags: [config]
+      operationId: postAirQuality
+      responses:
+        "200": { description: OK }
+
+  /config/crawler:
+    post:
+      tags: [config]
+      summary: Replace crawler ticker lines
+      operationId: postCrawler
+      responses:
+        "200": { description: OK }
+
+  /config/playlist:
+    post:
+      tags: [config]
+      operationId: postPlaylist
+      responses:
+        "200": { description: OK }
+
+  /config/gfx:
+    post:
+      tags: [config]
+      summary: Persist graphics / retro GFX settings
+      operationId: postGfx
+      responses:
+        "200": { description: OK }
+
+  /flavour:
+    put:
+      tags: [flavour]
+      summary: Create flavour (new UUID)
+      operationId: putFlavour
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [flavour]
+              properties:
+                flavour: { type: object }
+      responses:
+        "200":
+          description: Returns flavour and flavours list (see server implementation)
+
+    post:
+      tags: [flavour]
+      summary: Update existing flavour
+      operationId: postFlavour
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [flavour]
+              properties:
+                flavour: { type: object }
+      responses:
+        "200":
+          description: OK
+
+  /flavour/{name}:
+    get:
+      tags: [flavour]
+      summary: Load one flavour by file-safe name
+      operationId: getFlavourByName
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: `{ flavour }`
+
+  /weather/observed:
+    get:
+      tags: [weather]
+      summary: Current conditions snapshot
+      operationId: getObserved
+      responses:
+        "200":
+          description: Observed conditions (header X-RWC-Data-Fetched-At when present)
+
+  /weather/forecast:
+    get:
+      tags: [weather]
+      operationId: getForecast
+      responses:
+        "200": { description: Forecast }
+
+  /weather/almanac:
+    get:
+      tags: [weather]
+      operationId: getAlmanac
+      responses:
+        "200": { description: Almanac }
+
+  /weather/seasons:
+    get:
+      tags: [weather]
+      operationId: getSeasons
+      responses:
+        "200": { description: Seasons }
+
+  /weather/alerts:
+    get:
+      tags: [weather]
+      operationId: getAlerts
+      responses:
+        "200": { description: Alerts }
+
+  /weather/alerts/stream:
+    get:
+      tags: [weather]
+      summary: SSE alerts
+      operationId: getAlertsStream
+      responses:
+        "200":
+          description: text/event-stream
+
+  /weather/live:
+    get:
+      tags: [weather]
+      summary: SSE primary conditions
+      operationId: getLive
+      responses:
+        "200":
+          description: text/event-stream
+
+  /weather/national:
+    get:
+      tags: [weather]
+      operationId: getNational
+      responses:
+        "200": { description: National regional lists }
+
+  /weather/usa:
+    get:
+      tags: [weather]
+      operationId: getUSA
+      responses:
+        "200": { description: USA regional }
+
+  /weather/airport-metar:
+    get:
+      tags: [weather]
+      operationId: getAirportMetar
+      responses:
+        "200": { description: METAR station rows }
+
+  /weather/sunspots:
+    get:
+      tags: [weather]
+      operationId: getSunspots
+      responses:
+        "200": { description: Sunspots }
+
+  /weather/province:
+    get:
+      tags: [weather]
+      operationId: getProvince
+      responses:
+        "200": { description: Province grid }
+
+  /weather/hotColdSpots:
+    get:
+      tags: [weather]
+      operationId: getHotColdSpots
+      responses:
+        "200": { description: Hot/cold spots }
+
+  /season:
+    get:
+      tags: [season]
+      operationId: getSeason
+      responses:
+        "200": { description: Season stats }
+
+  /season/lastMonth:
+    get:
+      tags: [season]
+      operationId: getLastMonth
+      responses:
+        "200": { description: Last month summary }
+
+  /airquality:
+    get:
+      tags: [airquality]
+      operationId: getAirQuality
+      responses:
+        "200": { description: AQHI snapshot }
+
+  /airquality/stations:
+    post:
+      tags: [airquality]
+      operationId: postAirQualityStations
+      responses:
+        "200": { description: Station search }
+
+  /metrics:
+    get:
+      tags: [metrics]
+      summary: Server outbound HTTP metrics, circuits, MSC AMQP stats
+      description: When RWC_METRICS_TOKEN is set, send Authorization Bearer; otherwise open on the same rules as config routes.
+      operationId: getMetrics
+      responses:
+        "200":
+          description: Metrics snapshot
+        "401":
+          description: Missing or invalid bearer when token configured
+        "404":
+          description: metrics_disabled
+
+  /metrics/client:
+    post:
+      tags: [metrics]
+      summary: Display bundle axios counters (merged into GET /metrics)
+      description: Same optional bearer as GET /metrics when RWC_METRICS_TOKEN is set.
+      operationId: postMetricsClient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayAxios]
+              properties:
+                displayAxios:
+                  type: object
+      responses:
+        "204":
+          description: Accepted
+        "400":
+          description: Invalid body
+
+  /status:
+    get:
+      tags: [status]
+      summary: Operator feed snapshot (disabled in production unless RWC_STATUS_ENABLED=1)
+      description: Optional bearer when RWC_STATUS_TOKEN or RWC_METRICS_TOKEN is set (see OPERATORS.md).
+      operationId: getStatus
+      responses:
+        "200":
+          description: Snapshot including statusSchemaVersion
+        "401":
+          description: Unauthorized
+        "404":
+          description: status_disabled
+
+  /status/refresh:
+    post:
+      tags: [status]
+      summary: Trigger async poll/refresh for feeds
+      description: Same optional bearer and production enable rules as GET /status.
+      operationId: postStatusRefresh
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [scope]
+                  properties:
+                    scope: { type: string, enum: [all] }
+                - type: object
+                  required: [scope, target]
+                  properties:
+                    scope: { type: string, enum: [single] }
+                    target: { type: string }
+      responses:
+        "202":
+          description: Refresh accepted
+        "400":
+          description: unknown_target

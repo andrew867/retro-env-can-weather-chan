@@ -4,6 +4,8 @@ This project is a simulator of the Environment Canada Weather Channel that Winni
 
 **Release notes:** see [CHANGELOG.md](./CHANGELOG.md) for reliability work, GFX controls, API endpoints, and broadcast-oriented rationale.
 
+**HTTP API (automation, OpenAPI, curl):** [docs/api/README.md](./docs/api/README.md) — import [docs/api/openapi.yaml](./docs/api/openapi.yaml) into Postman or your own tooling; no need to use the bundled config UI.
+
 ## Features
 
 This project includes all of the features from the original weather channel such as:
@@ -41,7 +43,9 @@ The **display** combines **SSE** (`GET /api/v1/weather/live`) for primary condit
 | `GET /api/v1/metrics` | Server outbound HTTP (`backendAxios`) plus last **display** axios snapshot (`displayAxiosFromClient`) if a browser session has posted to `POST /api/v1/metrics/client`. If **`RWC_METRICS_TOKEN`** is set, use `Authorization: Bearer <token>` on both GET and POST. |
 | `POST /api/v1/metrics/client` | Display bundle posts in-browser API client counters (same schema as server bucket); merged into `GET /metrics`. |
 
-**Operator / deploy notes** (git on servers, env vars, metrics auth): see [OPERATORS.md](./OPERATORS.md).
+**Operator / deploy notes** (git on servers, env vars, metrics auth, **RC checklist**, network exposure): see [OPERATORS.md](./OPERATORS.md).
+
+**Release candidate gate (quick):** `yarn gate:rc` (typecheck + unit tests). With the API running: `BASE_URL=http://127.0.0.1:8600 yarn smoke`. Full UI regression: `yarn gate:rc:e2e` (includes Playwright). Details in OPERATORS.md.
 
 **GFX** (scanlines, vignette, colour presets such as NES/C64-style or CRT mono, safe area) is editable under the config UI **Graphics** tab and stored via `POST /api/v1/config/gfx`; the display reads **`gfx`** from `GET /api/v1/init` every few seconds.
 

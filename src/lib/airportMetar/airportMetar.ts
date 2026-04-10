@@ -1,6 +1,7 @@
 import {
   AIRPORT_METAR_FETCH_INTERVAL_MS,
   AIRPORT_METAR_HTTP_TIMEOUT_MS,
+  AIRPORT_METAR_REST_CONDITION_MAX,
   DEFAULT_AIRPORT_METAR_STATIONS,
   MAX_AIRPORT_METAR_STATIONS,
 } from "consts";
@@ -11,7 +12,12 @@ import Logger from "lib/logger";
 import axios from "lib/backendAxios";
 import { harshTruncateConditions } from "lib/conditions";
 import { initializeConfig } from "lib/config";
-import { fetchAwcMetarRows, parseAwcMetarRow } from "lib/usaweather/awcMetar";
+import {
+  fetchAwcMetarRows,
+  formatAwcMetarRestLine,
+  padAwcMetarFltCatDisplay,
+  parseAwcMetarRow,
+} from "lib/usaweather/awcMetar";
 
 const logger = new Logger("AirportMetar");
 
@@ -59,23 +65,29 @@ class AirportMetarWeather {
         const parsed = row ? parseAwcMetarRow(row) : null;
         if (!parsed) {
           logger.warn(`${st.name} (${st.code}): no METAR from AWC`);
-          next.push({
-            name: st.name,
-            code: st.code,
-            condition: null,
-            abbreviatedCondition: undefined,
-            temperature: null,
-            conditionUUID: undefined,
-          });
+        next.push({
+          name: st.name,
+          code: st.code,
+          condition: null,
+          abbreviatedCondition: undefined,
+          temperature: null,
+          conditionUUID: undefined,
+          metarFltCatPadded: undefined,
+        });
           continue;
         }
+        const restRaw = formatAwcMetarRestLine(row);
         next.push({
           name: st.name,
           code: st.code,
           condition: parsed.condition,
-          abbreviatedCondition: harshTruncateConditions(parsed.condition),
+          abbreviatedCondition: harshTruncateConditions(
+            restRaw || "—",
+            AIRPORT_METAR_REST_CONDITION_MAX
+          ),
           temperature: parsed.temperatureC,
           conditionUUID: parsed.conditionUUID,
+          metarFltCatPadded: padAwcMetarFltCatDisplay(row.fltCat),
         });
       }
       this._observations = next;

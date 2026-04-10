@@ -40,5 +40,8 @@ alerts.txt
 
 # Local-only engineering / ops notes (not published to GitHub)
 /docs/**
+!/docs/README.md
+!/docs/api/
+!/docs/api/**
 !/docs/specs/
 !/docs/specs/**

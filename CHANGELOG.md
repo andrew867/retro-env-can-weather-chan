@@ -4,6 +4,23 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ## [2.6.7] - 2026-04-10
 
+### Documentation & API
+
+- **`docs/api/`** — API index ([README.md](./docs/api/README.md)), **[OpenAPI 3.0](./docs/api/openapi.yaml)** for Postman/codegen, and **[REST-COOKBOOK.md](./docs/api/REST-COOKBOOK.md)** with curl examples for automation (crawler, GFX, flavours, status refresh).
+- **`docs/README.md`** — Documentation table of contents.
+- **[OPERATORS.md](./OPERATORS.md)** — Datamart publication-lag env vars (`RWC_DATAMART_HOURLY_DIR_*`), **deployment / network exposure** (unauthenticated config writes, bind address), **release candidate checklist**, expanded HTTP endpoint table (`/config`, `/flavour`, `/season`, `/airquality`).
+- **[docs/specs/PLAN-release-hardening.md](./docs/specs/PLAN-release-hardening.md)** — Phase 2.4 smoke scope + new **2.5 API docs** row; Phase 1.3 notes Datamart hourly retries.
+
+### Tooling
+
+- **`yarn gate:rc`** — `yarn typecheck && yarn test`.
+- **`yarn gate:rc:e2e`** — `yarn gate:rc && yarn test:e2e`.
+- **`yarn smoke`** — Extended `scripts/post-deploy-smoke.mjs`: **`GET /init`**, **`GET /metrics`** (accepts 200 / 401 / 404), **`GET /status`** (200 / 401 / 404). Optional **`METRICS_TOKEN`** env when the server uses **`RWC_METRICS_TOKEN`**.
+
+### Reliability
+
+- **Datamart hourly directory:** For the **current UTC hour** only, retry when the HTML listing contains **no matching citypage files** yet (same delayed retry pattern as failed GETs), controlled by **`RWC_DATAMART_HOURLY_DIR_*`**.
+
 ### Config
 
 - **Airport METAR:** `MAX_AIRPORT_METAR_STATIONS` is **7** (fits the plate without clipping the last row); **`DEFAULT_AIRPORT_METAR_STATIONS`** is Winnipeg, St. John's (**CYYT**), Vancouver, Toronto, Montreal, Calgary, New York (**KJFK**) — Chicago (**KORD**) dropped from defaults. Omit **`airportMetarStations`**, set it to **`[]`**, or supply only invalid rows, and the channel **falls back to that default list** so the METAR screen and poller never sit on an empty station list. The display client and **`GET /weather/airport-metar`** coerce non-array payloads; METAR rows tolerate missing temperature in the UI.

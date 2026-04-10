@@ -11,6 +11,9 @@ on:
       - "**.test.ts"
       - "**.json"
       - "**.yml"
+      - "**.md"
+      - "docs/**"
+      - "scripts/**"
       - "yarn.lock"
   push:
     branches:
@@ -22,6 +25,9 @@ on:
       - "**.test.ts"
       - "**.json"
       - "**.yml"
+      - "**.md"
+      - "docs/**"
+      - "scripts/**"
       - "yarn.lock"
 
 concurrency:

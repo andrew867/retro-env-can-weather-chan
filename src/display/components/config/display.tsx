@@ -104,6 +104,10 @@ export function DisplayConfig({
   }, [showFooterFreshnessHint, useOfficialFonts]);
 
   useEffect(() => {
+    setMutableFlavour(flavour ?? "");
+  }, [flavour]);
+
+  useEffect(() => {
     if (regeneratePlaylist.wasError)
       toast({
         title: "Unable to regenerate playlist",
