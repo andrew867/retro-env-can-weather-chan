@@ -1,0 +1,57 @@
+# Tag-driven GitHub Releases (public mirror).
+# Push a semver-style tag: git tag v2.7.0-rc2 && git push github v2.7.0-rc2
+# See OPERATORS.md — "Publishing to the public GitHub mirror".
+
+name: Release (version tag)
+
+on:
+  push:
+    tags:
+      - "v[0-9]*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  github-release:
+    name: Publish GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout tag
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify package version matches tag
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          VER=$(node -p "require('./package.json').version")
+          if [[ "$VER" != "$TAG" ]]; then
+            echo "::error::package.json version ($VER) does not match tag (v$TAG / $GITHUB_REF_NAME)"
+            exit 1
+          fi
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Compose release notes
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
+        run: node scripts/github-release-notes.mjs "$TAG_NAME" > "$RUNNER_TEMP/RELEASE_BODY.md"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Retro ECCC Weather Channel ${{ github.ref_name }}
+          body_path: ${{ runner.temp }}/RELEASE_BODY.md
+          draft: false
+          prerelease: ${{ contains(github.ref_name, 'rc') || contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

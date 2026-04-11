@@ -159,3 +159,24 @@ git branch -D rwc-github-publish
 Use a different remote branch name only if your GitHub default branch is not **`main`** (e.g. legacy **`master`**).
 
 **`origin`** remains your source remote; **`github`** is only for this subtree push. Do not run `git push github` from the full repository without the split step above.
+
+### Version tags → GitHub Releases (CD)
+
+After **`main`** on GitHub contains the workflow, publish a release by pushing a **semver-style tag** whose **`v…` form matches `package.json`** (e.g. **`2.7.0-rc2`** in `package.json` ↔ tag **`v2.7.0-rc2`**):
+
+```bash
+# From a clone of THIS app root (or after subtree push), on the commit you want to ship:
+git tag -a v2.7.0-rc2 -m "Release v2.7.0-rc2"
+git push github v2.7.0-rc2
+```
+
+**What runs:** [`.github/workflows/release-on-tag.yml`](./.github/workflows/release-on-tag.yml) — verifies **`package.json` `version`**, composes release notes from **[`CHANGELOG.md`](./CHANGELOG.md)** via **`scripts/github-release-notes.mjs`**, and creates a **GitHub Release** (marked **prerelease** when the tag contains `rc`, `beta`, or `alpha`).
+
+**From a monorepo** (subtree parent): create the tag on the **split** tip that matches GitHub `main`, then `git push github vX.Y.Z`. Example:
+
+```bash
+git subtree split --prefix=code/weather-gfx/retro-env-can-weather-chan -b rwc-tag-tip
+git tag -a v2.7.0-rc2 rwc-tag-tip -m "v2.7.0-rc2"
+git push github v2.7.0-rc2
+git branch -D rwc-tag-tip
+```

@@ -17,6 +17,10 @@ All notable changes to this project are documented here. The format follows [Kee
 - **LTCE virtual station search** on the Display tab (`POST /config/ltce-stations`) to fill `misc.ltceVirtualClimateId` (MSC LTCE almanac backfill).
 - **Weather station statistics (`#stats_screen`):** Title is **`{city} statistics - {date}`** on **one** line (was two), so typical plates like **Winnipeg** lose a row and the last block is less likely to clip on fixed-height rotations.
 
+### CI / GitHub
+
+- **Tag → Release:** Pushing a tag matching **`v*`** (e.g. **`v2.7.0-rc2`**) runs **`.github/workflows/release-on-tag.yml`**, which checks **`package.json`** matches the tag, builds rich release notes from **`CHANGELOG.md`** via **`scripts/github-release-notes.mjs`**, and publishes a **GitHub Release** (prerelease when the tag contains **`rc`**, **`beta`**, or **`alpha`**).
+
 ## [2.7.0-rc1] - unreleased
 
 ### Enterprise hardening (pre-rc1 tranche)
