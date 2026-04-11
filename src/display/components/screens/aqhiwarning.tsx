@@ -5,17 +5,19 @@ import { useEffect, useMemo } from "react";
 import { AQHIObservationResponse, AutomaticScreenProps } from "types";
 
 type AQHIWarningScreenProps = {
-  city: string;
-  airQuality: AQHIObservationResponse;
+  city?: string | null;
+  airQuality: AQHIObservationResponse | null;
 } & AutomaticScreenProps;
 
 export function AQHIWarningScreen({ city, airQuality, onComplete }: AQHIWarningScreenProps) {
   const onCompleteRef = useStableOnCompleteRef(onComplete);
+  const cityLabel = (city ?? "").trim() || "Local";
   const observedDateTime = useMemo(() => {
     if (!airQuality || airQuality.month == null || airQuality.day == null || airQuality.hour == null) return;
 
     const y = new Date().getFullYear();
-    const hour24 = airQuality.hour + (airQuality.isPM ? 12 : 0);
+    const h = airQuality.hour;
+    const hour24 = airQuality.isPM ? (h === 12 ? 12 : h + 12) : h === 12 ? 0 : h;
     let dt = new Date(y, airQuality.month - 1, airQuality.day, hour24);
     if (dt.getTime() > Date.now()) dt = new Date(y - 1, airQuality.month - 1, airQuality.day, hour24);
 
@@ -23,18 +25,20 @@ export function AQHIWarningScreen({ city, airQuality, onComplete }: AQHIWarningS
   }, [airQuality, airQuality?.day, airQuality?.month, airQuality?.hour, airQuality?.isPM]);
 
   useEffect(() => {
-    if (!airQuality || !airQuality.value || !airQuality.showWarning) onCompleteRef.current();
+    const v = airQuality?.value != null ? Number(airQuality.value) : NaN;
+    if (!airQuality || !Number.isFinite(v) || !airQuality.showWarning) onCompleteRef.current();
   }, [airQuality, airQuality?.value, airQuality?.showWarning]);
 
-  if (!airQuality?.value || !airQuality?.showWarning) return <></>;
+  const aqhiNum = airQuality?.value != null ? Number(airQuality.value) : NaN;
+  if (!airQuality?.showWarning || !Number.isFinite(aqhiNum)) return <></>;
 
   return (
     <div id="aqhi_warning_screen" style={{ textAlign: "left", overflowWrap: "anywhere", whiteSpace: "normal" }}>
-      <div>{city.trim()} air quality health index at</div>
+      <div>{cityLabel} air quality health index at</div>
       <div>
-        {observedDateTime} is {Math.round(airQuality.value).toString().padStart(2)}-{getAQHIRisk(airQuality.value)} risk
+        {observedDateTime ?? "last report"} is {Math.round(aqhiNum).toString().padStart(2)}-{getAQHIRisk(aqhiNum)} risk
       </div>
-      <div>{getAQHIWarningMessage(airQuality.value)}</div>
+      <div>{getAQHIWarningMessage(aqhiNum)}</div>
     </div>
   );
 }

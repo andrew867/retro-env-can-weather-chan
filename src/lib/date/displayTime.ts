@@ -15,7 +15,9 @@ export function adjustObservedDateTimeToStationTime(date: WeatherStationTimeData
   if (!date?.observedDateTime) return new Date();
   const parsed = parseISO(date.observedDateTime);
   if (!isValid(parsed)) return new Date();
-  return addMinutes(parsed, date.stationOffsetMinutesFromLocal ?? 0);
+  const off = date.stationOffsetMinutesFromLocal;
+  const minutes = typeof off === "number" && Number.isFinite(off) ? off : 0;
+  return addMinutes(parsed, minutes);
 }
 
 export function formatObservedLong(

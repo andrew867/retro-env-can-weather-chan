@@ -11,7 +11,7 @@ import {
   LastMonthDayValue,
   LastMonthSummary,
 } from "types";
-import { isSameMonth, isValid, isYesterday, parseISO, subMonths } from "date-fns";
+import { addDays, isSameMonth, isValid, isYesterday, parseISO, subDays, subMonths, subYears } from "date-fns";
 import { isDateInCurrentWinterSeason, getIsWinterSeason, isDateInCurrentSummerSeason } from "lib/date";
 import eventbus from "lib/eventbus";
 import { EVENT_BUS_AUXILIARY_WEATHER_DATA_READY, EVENT_BUS_CONFIG_CHANGE_HISTORICAL_TEMP_PRECIP } from "consts";
@@ -157,22 +157,34 @@ class HistoricalTempPrecip {
 
   private parseLastYearTemperatures(currentDate: Date) {
     if (!this._historicalData?.length) return;
-
-    // today is what current conditions observed date says
     if (!isValid(currentDate)) return;
 
-    // get the data from today a year ago
-    const todayLastYear = this._historicalData.find(
-      (stationData) =>
-        Number(stationData._attributes.day) === currentDate.getDate() &&
-        Number(stationData._attributes.month) === currentDate.getMonth() + 1 &&
-        Number(stationData._attributes.year) === currentDate.getFullYear() - 1
-    );
-    if (!todayLastYear) return;
+    /** Clear before each parse so a miss does not leave a previous station/day’s values on screen. */
+    this._lastYearTemperatures = { min: null, max: null };
 
-    // and store the highest temp and lowest temp
-    const maxV = Number(xmlText(todayLastYear.maxtemp) ?? NaN);
-    const minV = Number(xmlText(todayLastYear.mintemp) ?? NaN);
+    /** Same calendar anchor as `observedDateTimeAtStation()` (already offset); try ±1 day for DST / midnight edge cases. */
+    const base = subYears(currentDate, 1);
+    if (!isValid(base)) return;
+
+    const candidates = [base, subDays(base, 1), addDays(base, 1)];
+    let row: (typeof this._historicalData)[0] | undefined;
+    for (const cand of candidates) {
+      if (!isValid(cand)) continue;
+      const hit = this._historicalData.find(
+        (stationData) =>
+          Number(stationData._attributes.day) === cand.getDate() &&
+          Number(stationData._attributes.month) === cand.getMonth() + 1 &&
+          Number(stationData._attributes.year) === cand.getFullYear()
+      );
+      if (hit) {
+        row = hit;
+        break;
+      }
+    }
+    if (!row) return;
+
+    const maxV = Number(xmlText(row.maxtemp) ?? NaN);
+    const minV = Number(xmlText(row.mintemp) ?? NaN);
     this._lastYearTemperatures.max = Number.isFinite(maxV) ? { value: maxV, unit: "C" } : null;
     this._lastYearTemperatures.min = Number.isFinite(minV) ? { value: minV, unit: "C" } : null;
   }

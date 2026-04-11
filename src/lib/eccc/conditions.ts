@@ -334,21 +334,27 @@ class CurrentConditions {
   }
 
   private generateWeatherStationTimeData(date: any) {
-    if (!date) return;
+    if (!date?.textSummary) return;
 
     // convert the date string into the users local time to begin with
     const localDate = ecccDateStringToTSDate(date.textSummary);
+    if (!isValid(localDate)) return;
 
     // get the number of minutes behind that the local time is from UTC
     const offsetFromUTC = -localDate.getTimezoneOffset();
+    if (!Number.isFinite(offsetFromUTC)) return;
 
-    // get the number of minutes behind taht the station time is from utc
-    const stationOffsetFromUTC = parseFloat(date.UTCOffset) * 60;
+    // get the number of minutes behind that the station time is from utc
+    const utcOffHours = parseFloat(String(date.UTCOffset ?? ""));
+    const stationOffsetFromUTC = Number.isFinite(utcOffHours) ? utcOffHours * 60 : 0;
 
     // now we can figure out the difference between these and use it on the ui
     // timezones dont really exist in js so it'll really just end up being the local time
     // with some minutes added onto it
-    const stationOffsetMinutesFromLocal = stationOffsetFromUTC - offsetFromUTC;
+    let stationOffsetMinutesFromLocal = stationOffsetFromUTC - offsetFromUTC;
+    if (!Number.isFinite(stationOffsetMinutesFromLocal)) {
+      stationOffsetMinutesFromLocal = 0;
+    }
 
     // also store the actual timezone string for use on the ui
     this._weatherStationTimeData = {
@@ -552,25 +558,41 @@ class CurrentConditions {
     await this.getTempRecordsForDay();
   }
 
+  private recordYearMissing(year: unknown): boolean {
+    if (year == null || year === "") return true;
+    const n = typeof year === "number" ? year : parseInt(String(year), 10);
+    return !Number.isFinite(n);
+  }
+
   private async applyLtceDailyRecordExtremesIfNeeded() {
     const vid = config.misc.ltceVirtualClimateId?.trim();
     if (!vid) return;
 
-    const needMax = this._almanac.temperatures.extremeMax == null;
-    const needMin = this._almanac.temperatures.extremeMin == null;
-    if (!needMax && !needMin) return;
+    const max = this._almanac.temperatures.extremeMax;
+    const min = this._almanac.temperatures.extremeMin;
+    const needFullMax = max == null;
+    const needFullMin = min == null;
+    const needMaxYear = max != null && this.recordYearMissing(max.year);
+    const needMinYear = min != null && this.recordYearMissing(min.year);
+    if (!needFullMax && !needFullMin && !needMaxYear && !needMinYear) return;
 
     const d = this.observedDateTimeAtStation();
     const row = await fetchLtceDailyTemperatureExtremes(vid, d.getMonth() + 1, d.getDate());
     if (!row) return;
 
     let updated = false;
-    if (needMax) {
+    if (needFullMax) {
       this._almanac.temperatures.extremeMax = row.extremeMax;
       updated = true;
+    } else if (needMaxYear && max != null && Number.isFinite(row.extremeMax.year)) {
+      this._almanac.temperatures.extremeMax = { ...max, year: row.extremeMax.year };
+      updated = true;
     }
-    if (needMin) {
+    if (needFullMin) {
       this._almanac.temperatures.extremeMin = row.extremeMin;
+      updated = true;
+    } else if (needMinYear && min != null && Number.isFinite(row.extremeMin.year)) {
+      this._almanac.temperatures.extremeMin = { ...min, year: row.extremeMin.year };
       updated = true;
     }
     if (updated) eventbus.emit(EVENT_BUS_AUXILIARY_WEATHER_DATA_READY);
@@ -643,9 +665,10 @@ class CurrentConditions {
   public observedDateTimeAtStation() {
     if (!this._weatherStationTimeData?.observedDateTime) return new Date();
     const stationTime = parseISO(this._weatherStationTimeData.observedDateTime);
-    return isValid(stationTime)
-      ? addMinutes(stationTime, this._weatherStationTimeData.stationOffsetMinutesFromLocal)
-      : new Date();
+    if (!isValid(stationTime)) return new Date();
+    const off = this._weatherStationTimeData.stationOffsetMinutesFromLocal;
+    const minutes = typeof off === "number" && Number.isFinite(off) ? off : 0;
+    return addMinutes(stationTime, minutes);
   }
 }
 

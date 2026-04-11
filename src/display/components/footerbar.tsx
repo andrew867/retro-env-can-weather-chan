@@ -3,6 +3,10 @@ import { formatDisplayDate } from "lib/date";
 import { isSnapshotStale } from "lib/display/dataFreshness";
 import { useEffect, useRef, useState } from "react";
 
+function finiteFooterOffsetMinutes(m: number | undefined): number {
+  return typeof m === "number" && Number.isFinite(m) ? m : 0;
+}
+
 type FooterBarProps = {
   timeOffset: number;
   /** ISO timestamps for ECCC-aligned feeds; stale if any is past `STALE_SNAPSHOT_THRESHOLD_MINUTES` (~hourly obs + jitter). */
@@ -13,18 +17,19 @@ type FooterBarProps = {
 
 export function FooterBar(props: FooterBarProps) {
   const { timeOffset, snapshotFreshnessIsos = [], showFooterFreshnessHint = true } = props ?? {};
+  const safeOffset = finiteFooterOffsetMinutes(timeOffset);
   const [time, setTime] = useState<Date>(new Date());
   const timerInterval = useRef<NodeJS.Timeout>(null);
 
   useEffect(() => {
     timerInterval.current = setInterval(() => {
-      setTime(addMinutes(new Date(), timeOffset));
+      setTime(addMinutes(new Date(), safeOffset));
     }, 1000);
 
     return () => {
       timerInterval.current && clearInterval(timerInterval.current);
     };
-  }, [timeOffset]);
+  }, [safeOffset]);
 
   const formattedTime = format(time, "HH:mm:ss");
   const formattedDate = formatDisplayDate(time.getTime());

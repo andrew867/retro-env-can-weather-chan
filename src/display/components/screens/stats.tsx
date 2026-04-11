@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { HotColdSpots, Season, SunRiseSet, WeatherStationTimeData } from "types";
 
 type StatsScreenProps = {
-  city: string;
+  city?: string | null;
   weatherStationTime: WeatherStationTimeData;
   season: Season;
   sunRiseSet: SunRiseSet;
@@ -16,38 +16,46 @@ const PRECIP_CHARS_USED_OUTSIDE_OF_DOTS = 16;
 const NORMAL_PRECIP_CHARS_USED_OUTSIDE_OF_DOTS = 12;
 const HOT_COLD_SPOT_CHARS_USED_OUTSIDE_OF_DOTS = 9;
 
+function finiteStationOffsetMinutes(stationTime: WeatherStationTimeData | null | undefined): number {
+  const m = stationTime?.stationOffsetMinutesFromLocal;
+  return typeof m === "number" && Number.isFinite(m) ? m : 0;
+}
+
 export function StatsScreen(props: StatsScreenProps) {
   const { city, weatherStationTime, season: seasonStats, sunRiseSet, hotColdSpots } = props ?? {};
 
   const { season, seasonPrecip } = seasonStats ?? {};
 
-  const parseDate = (isoDate: string) => parseISO(isoDate);
+  const parseDate = (isoDate: string | null | undefined) =>
+    isoDate == null || typeof isoDate !== "string" ? new Date(NaN) : parseISO(isoDate);
 
   const formattedDate = useMemo(
     () => weatherStationTime?.observedDateTime && formatObservedMonthDate(weatherStationTime, true),
     [weatherStationTime?.observedDateTime]
   );
 
+  const stationOffsetMin = finiteStationOffsetMinutes(weatherStationTime);
+
   const formattedHotColdSpotDate = useMemo(() => {
     const date = parseDate(hotColdSpots?.lastUpdated);
     if (!isValid(date)) return "";
 
-    return format(addMinutes(date, weatherStationTime?.stationOffsetMinutesFromLocal ?? 0), "MMM d");
-  }, [hotColdSpots?.lastUpdated, weatherStationTime?.stationOffsetMinutesFromLocal]);
+    return format(addMinutes(date, stationOffsetMin), "MMM d");
+  }, [hotColdSpots?.lastUpdated, stationOffsetMin]);
 
   const formattedSunrise = useMemo(() => {
     const date = parseDate(sunRiseSet?.rise);
     if (!isValid(date)) return "";
 
-    return format(addMinutes(date, weatherStationTime?.stationOffsetMinutesFromLocal ?? 0), "h:mm");
-  }, [sunRiseSet?.rise, weatherStationTime?.stationOffsetMinutesFromLocal]);
+    return format(addMinutes(date, stationOffsetMin), "h:mm");
+  }, [sunRiseSet?.rise, stationOffsetMin]);
 
   const formattedSunset = useMemo(() => {
     const date = parseDate(sunRiseSet?.set);
     if (!isValid(date)) return "";
 
-    return format(addMinutes(date, weatherStationTime?.stationOffsetMinutesFromLocal ?? 0), "h:mm");
-  }, [sunRiseSet?.set, weatherStationTime?.stationOffsetMinutesFromLocal]);
+    return format(addMinutes(date, stationOffsetMin), "h:mm");
+  }, [sunRiseSet?.set, stationOffsetMin]);
 
   /** Single line (≤ STATS_SCREEN_MAX_CHARACTERS_PER_LINE) so the plate does not clip the row below. */
   const sunriseSunsetLine = useMemo(() => {
@@ -61,7 +69,10 @@ export function StatsScreen(props: StatsScreenProps) {
   const generatePrecip = (amount: number) => amount.toFixed(1).padStart(5);
 
   const generateDotsForPrecipLine = (dataName: string, usedChars = PRECIP_CHARS_USED_OUTSIDE_OF_DOTS) =>
-    "".padEnd(STATS_SCREEN_MAX_CHARACTERS_PER_LINE - (dataName.length + usedChars), ".");
+    "".padEnd(
+      Math.max(0, STATS_SCREEN_MAX_CHARACTERS_PER_LINE - (dataName.length + usedChars)),
+      "."
+    );
 
   /** Match server-side seasonal precip window to the station’s observed calendar month (not only the browser clock). */
   const seasonStartMonth = useMemo(() => {
@@ -90,9 +101,9 @@ export function StatsScreen(props: StatsScreenProps) {
   const formatTempForHotColdSpotLine = (temperature?: number | null) =>
     (!isNaN(temperature) && temperature != null ? Math.round(temperature) : "N/A").toString().padStart(3);
 
-  if (!city || !weatherStationTime?.observedDateTime || !season) return <></>;
+  if (!(city ?? "").trim() || !weatherStationTime?.observedDateTime || !season) return <></>;
 
-  const cityTrim = city.trim();
+  const cityTrim = (city ?? "").trim();
 
   return (
     <div id="stats_screen">

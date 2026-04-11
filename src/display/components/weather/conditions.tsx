@@ -20,7 +20,7 @@ type ConditionsProp = {
   /** May be missing briefly while observed payload is merged (avoid crashing on destructure). */
   stationTime?: WeatherStationTimeData;
   showPressure?: boolean;
-  airQuality: AQHIObservationResponse;
+  airQuality: AQHIObservationResponse | null;
   /** Forecast reload: show line `n` when `revealStep >= n` (see ForecastScreen). Omit to show all lines. */
   revealStep?: number;
 };

@@ -5,7 +5,7 @@ import { LastMonth } from "types";
 import { AutomaticScreenProps } from "types/screen.types";
 
 type LastMonthScreenProps = {
-  city: string;
+  city?: string | null;
   lastMonth: LastMonth | undefined;
   lastMonthFetchAttempted: boolean;
 } & AutomaticScreenProps;
@@ -26,13 +26,19 @@ export function LastMonthScreen(props: LastMonthScreenProps) {
   if (!city?.length || !lastMonth?.actual || !lastMonth?.normal) return <></>;
 
   const month = format(subMonths(new Date(), 1), "MMMM");
-  const formatNumber = (value: number) => (value !== undefined ? value.toFixed(1).padStart(5) : "N/A");
-  const formatTemp = (value: number) =>
-    value !== undefined ? ((value > 0 ? "+" : "") + value.toFixed(1)).padStart(5) : "N/A";
-  const formatDayWithSuffix = (value: number) => {
+  const formatNumber = (value: number | null | undefined) =>
+    value != null && Number.isFinite(Number(value)) ? Number(value).toFixed(1).padStart(5) : "N/A";
+  const formatTemp = (value: number | null | undefined) => {
+    if (value == null || !Number.isFinite(Number(value))) return "N/A";
+    const n = Number(value);
+    return `${(n > 0 ? "+" : "") + n.toFixed(1)}`.padStart(5);
+  };
+  const formatDayWithSuffix = (value: number | null | undefined) => {
+    if (value == null || !Number.isFinite(Number(value))) return "N/A";
+    const dayNum = Math.trunc(Number(value));
     const date = subMonths(new Date(), 1);
-    date.setDate(value);
-    if (!isValid(date)) return value ?? "N/A";
+    date.setDate(dayNum);
+    if (!isValid(date)) return "N/A";
 
     return format(date, "do").padStart(4);
   };
@@ -41,7 +47,7 @@ export function LastMonthScreen(props: LastMonthScreenProps) {
     <div id="lastmonth_screen" style={{ overflowWrap: "anywhere", whiteSpace: "normal" }}>
       <div>Weather Statistics for {month}</div>
       <div>
-        &nbsp;{city.trim()}&nbsp;This Year{"".padStart(2)}Normal
+        &nbsp;{(city ?? "").trim()}&nbsp;This Year{"".padStart(2)}Normal
       </div>
       <div>
         {"Average High".padEnd(15)}

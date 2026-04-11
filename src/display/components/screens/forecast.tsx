@@ -17,7 +17,7 @@ type ForecastScreenProps = {
   forecastPageIndex: number;
   alert?: CAPObject;
   isReload?: boolean;
-  airQuality: AQHIObservationResponse;
+  airQuality: AQHIObservationResponse | null;
   reloadLineMs?: number;
   authenticRefresh?: AuthenticRefreshConfig;
   /** Master switch from `gfx.features.authenticRefreshEnabled` (init); tuning lives in `authenticRefresh`. */

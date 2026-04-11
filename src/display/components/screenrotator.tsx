@@ -57,7 +57,8 @@ type ScreenRotatorProps = {
   sunspotsPayload: SunspotsWeatherPayload | undefined;
   /** After first sunspots poll; avoids skipping before the list loads in sunspot season. */
   sunspotsFetchAttempted: boolean;
-  airQuality: AQHIObservationResponse;
+  /** Null while polling or when observation has no usable index value. */
+  airQuality: AQHIObservationResponse | null;
   configVersion: string;
   /** Matches `gfx.retro.reloadLineMs` / `--gfx-reload-line-ms` for forecast reload line timing. */
   reloadLineMs?: number;

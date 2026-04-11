@@ -8,7 +8,9 @@ export function stationWallClockFromStationTime(st: WeatherStationTimeData | und
   if (!st?.observedDateTime) return null;
   const utc = parseISO(st.observedDateTime);
   if (Number.isNaN(utc.getTime())) return null;
-  return addMinutes(utc, st.stationOffsetMinutesFromLocal ?? 0);
+  const off = st.stationOffsetMinutesFromLocal;
+  const minutes = typeof off === "number" && Number.isFinite(off) ? off : 0;
+  return addMinutes(utc, minutes);
 }
 
 export function shouldIncludeLastMonthStatsInPlayout(screen: FlavourScreen, stationLocalNow: Date | null): boolean {

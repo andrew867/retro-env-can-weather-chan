@@ -54,6 +54,7 @@ export function ProvinceTrackingScreen(props: ProvinceTrackingProps) {
     if (typeof temp === "string") return temp;
 
     const tempNumber = Number(temp);
+    if (!Number.isFinite(tempNumber)) return "N/A";
     return `${Math.round(tempNumber)}`;
   };
 

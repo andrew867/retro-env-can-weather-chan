@@ -2,6 +2,27 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.7.0-rc3] - 2026-04-14
+
+**2.7.0** release candidate **rc3** — display and parsing hardening so malformed MSC payloads, missing strings, or non-finite clock offsets cannot take down the rotator (Hamilton-style prod incidents).
+
+### Display / copy
+
+- **Sunspot plate (`#sunspots_screen`):** Sub-plate titles name the data: **MSC/DRAO** block uses **`F10.7 CM FLUX (SFU)`** (international **F10.7** index and **SFU** unit); **NOAA SWPC** block uses **`NOAA SWPC CYCLE (ISN + F10.7)`** (international sunspot context plus the **F10.7** cycle index); the warm-city outlook adds **`NWS TROPICAL SUNSPOT WX`** above the station table. **`SunspotScreen`** hook order fixed so **`sunspotDate`** is not computed after conditional returns.
+
+### Reliability / display
+
+- **AQHI warning (`Screens.AQHI_WARNING`):** Safe headline when **`city`** is missing; **`airQuality`** may be **`null`** from the poller; require a **finite** index value for dwell/render; correct **12-hour → 24-hour** mapping for **12 AM / 12 PM**; fallback label when the MSC observation stamp is incomplete.
+- **Weather station stats (`#stats_screen`):** **`addMinutes`** no longer receives **`NaN`** (guards **`stationOffsetMinutesFromLocal`**, safe **`parseISO`** inputs, **`Math.max(0, …)`** for precip dot padding). **`city`** may be null/blank without **`trim`** crashes; whitespace-only city skips the plate.
+- **Footer bar clock:** **`timeOffset`** from **`stationOffsetMinutesFromLocal ?? 0`** still passes **`NaN`** through ( **`??`** only replaces **`null` / `undefined`** ); the ticker now clamps to a **finite** minute offset so **`date-fns` `addMinutes`** cannot throw.
+- **Last month stats:** Formatters treat **`null` / non-finite** numbers as **“N/A”** instead of calling **`.toFixed`** on **`null`**; optional **`city`** with safe trim.
+- **Province tracking grid:** Non-finite **`displayTemp`** shows **“N/A”** instead of **`NaN`** in the temperature column.
+- **Citypage → station time (`conditions.generateWeatherStationTimeData`):** Requires **`textSummary`**, validates the parsed observation instant, parses **`UTCOffset`** defensively, and stores **`stationOffsetMinutesFromLocal === 0`** when the offset is not finite (avoids **`addMinutes`** throws across **`adjustObservedDateTimeToStationTime`**, **`observedDateTimeAtStation`**, **`stationWallClockFromStationTime`**, and stats/sun lines).
+
+### Tests
+
+- **`footerBar.test.tsx`**, **`lastMonthScreen.test.tsx`**, **`aqhiWarningScreen.test.tsx`**, stats NaN-offset case, **`displayTime`** NaN-offset case.
+
 ## [2.7.0-rc2] - 2026-04-12
 
 **2.7.0** release candidate **rc2**; **package version renumbered from 2.6.8** so npm, OpenAPI, and the public mirror follow the **2.7.0** RC line (entries below are the same scope as the former **2.6.8** patch).

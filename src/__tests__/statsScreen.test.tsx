@@ -63,4 +63,21 @@ describe("StatsScreen", () => {
     const first = container.querySelector("#stats_screen > div");
     expect(first?.textContent).toMatch(/^St\. John's statistics - /);
   });
+
+  it("does not throw when station offset is NaN (invalid upstream time fields)", () => {
+    const badOffsetTime = { ...time, stationOffsetMinutesFromLocal: Number.NaN };
+    expect(() =>
+      render(
+        <div id="weather_channel">
+          <StatsScreen
+            city="HAMILTON"
+            weatherStationTime={badOffsetTime}
+            season={season}
+            sunRiseSet={sun}
+            hotColdSpots={hotCold}
+          />
+        </div>
+      )
+    ).not.toThrow();
+  });
 });

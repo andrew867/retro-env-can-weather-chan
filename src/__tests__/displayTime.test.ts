@@ -32,6 +32,12 @@ describe("Formatted display time", () => {
     expect(
       adjustObservedDateTimeToStationTime({ ...dateTimeAtStation, stationOffsetMinutesFromLocal: -60 })
     ).toStrictEqual(addMinutes(date, -60));
+    expect(
+      adjustObservedDateTimeToStationTime({
+        ...dateTimeAtStation,
+        stationOffsetMinutesFromLocal: Number.NaN,
+      })
+    ).toStrictEqual(date);
   });
 
   it("formats the date in the bottom bar correctly", () => {

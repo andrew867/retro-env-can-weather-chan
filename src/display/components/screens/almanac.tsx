@@ -3,7 +3,7 @@ import { Conditions } from "../weather";
 
 type AlmanacScreenProps = {
   weatherStationResponse: WeatherStation;
-  airQuality: AQHIObservationResponse;
+  airQuality: AQHIObservationResponse | null;
 };
 
 const TEMPERATURE_STRING_LENGTH = 5;
