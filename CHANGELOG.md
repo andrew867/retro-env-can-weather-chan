@@ -2,7 +2,7 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [2.7.0-rc3] - 2026-04-14
+## [2.7.0-rc3] - 2026-04-11
 
 **2.7.0** release candidate **rc3** — display and parsing hardening so malformed MSC payloads, missing strings, or non-finite clock offsets cannot take down the rotator (Hamilton-style prod incidents).
 
