@@ -312,7 +312,10 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
                     mutableFlavour.screens.map((screen, ix) => (
                       <Tr key={`screen.${ix}`}>
                         <Td>
-                          <Select value={screen.id} onChange={(e) => updateScreenID(e, screen, ix)}>
+                          <Select
+                            value={String(screen.id)}
+                            onChange={(e) => updateScreenID(e, screen, ix)}
+                          >
                             {Object.keys(Screens)
                               .filter((screenID) => !isNaN(Number(screenID)))
                               .map((screenID) => (

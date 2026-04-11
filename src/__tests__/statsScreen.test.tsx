@@ -44,11 +44,11 @@ describe("StatsScreen", () => {
     );
     const rows = container.querySelectorAll("#stats_screen > div");
     const lengths = [...rows].map((el) => el.textContent?.length ?? 0);
-    // Row 0: full city; row 1: " statistics - …"; from row 2 onward use the legacy raster width budget.
-    expect(Math.max(...lengths.slice(2))).toBeLessThanOrEqual(STATS_SCREEN_MAX_CHARACTERS_PER_LINE);
+    // Row 0: "{city} statistics - …" (one plate line); from row 1 onward use the legacy raster width budget.
+    expect(Math.max(...lengths.slice(1))).toBeLessThanOrEqual(STATS_SCREEN_MAX_CHARACTERS_PER_LINE);
   });
 
-  it("shows the full city string on its own title row", () => {
+  it("shows city plus statistics date on a single title line", () => {
     const { container } = render(
       <div id="weather_channel">
         <StatsScreen
@@ -61,6 +61,6 @@ describe("StatsScreen", () => {
       </div>
     );
     const first = container.querySelector("#stats_screen > div");
-    expect(first?.textContent).toBe("St. John's");
+    expect(first?.textContent).toMatch(/^St\. John's statistics - /);
   });
 });

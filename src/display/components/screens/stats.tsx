@@ -96,10 +96,8 @@ export function StatsScreen(props: StatsScreenProps) {
 
   return (
     <div id="stats_screen">
-      <div>{cityTrim}</div>
       <div>
-        {"".padStart(1)}
-        statistics - {formattedDate}
+        {cityTrim} statistics - {formattedDate}
       </div>
       {sunriseSunsetLine ? <div>{sunriseSunsetLine}</div> : null}
       <div>{"".padStart(4)}Total precipitation since</div>

@@ -8,10 +8,12 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - **New flavour templates:** **On-air cable (14s)** — same playlist as the original shipped default (`FLAVOUR_DEFAULT`); **All screens (2s)** — every `Screens` id once at minimum dwell for fast previews. **Delete** — `DELETE /api/v1/flavour/{name}` removes `cfg/flavours/{name}.json`, refreshes the flavours list, and if that flavour was active, persists look-and-feel **`default`** in `rwc-config.json`. Config UI: two green template buttons, **Delete this flavour** with confirm.
 - **Minimum dwell:** flavour timing floor remains **2s** per step (`SCREEN_MIN_DISPLAY_LENGTH`).
+- **Flavours tab:** Screen type `<Select>` uses **string** `value`s so Chakra shows the chosen row when a template pre-fills numeric `screen.id`s (same pattern as native `<select>` / React controlled components).
 
 ### Display / ops
 
 - **LTCE virtual station search** on the Display tab (`POST /config/ltce-stations`) to fill `misc.ltceVirtualClimateId` (MSC LTCE almanac backfill).
+- **Weather station statistics (`#stats_screen`):** Title is **`{city} statistics - {date}`** on **one** line (was two), so typical plates like **Winnipeg** lose a row and the last block is less likely to clip on fixed-height rotations.
 
 ## [2.7.0-rc1] - unreleased
 
