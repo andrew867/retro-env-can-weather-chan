@@ -38,12 +38,13 @@ function formatSwpcDailyDate(iso: string): string {
 /** NOAA SWPC plate lines; `null` if no slice loaded yet. */
 function formatSwpcLines(swpc: SolarCycleSwpcData): string[] | null {
   /** ISN = international sunspot context; F10.7 = 10.7 cm radio flux index (same family as MSC flux plate). */
-  const lines: string[] = ["NOAA SWPC CYCLE (ISN + F10.7)"];
+  /** Two-line title so half-width plate columns do not clip the header. */
+  const lines: string[] = ["NOAA SWPC\nISN + F10.7 CYCLE"];
   if (swpc.daily) {
     const ssn = Math.round(Number(swpc.daily.swpcSsn));
     if (Number.isFinite(ssn)) {
       const ds = formatSwpcDailyDate(swpc.daily.obsDateIso);
-      const prefix = ds ? `${ds}  ` : "";
+      const prefix = ds ? `${ds} ` : "";
       lines.push(`${prefix}EST SSN ${String(ssn).padStart(3)}`);
     }
   }
@@ -51,10 +52,9 @@ function formatSwpcLines(swpc: SolarCycleSwpcData): string[] | null {
     const { ssn, observedSwpcSsn, f107, timeTag } = swpc.monthlyObserved;
     if ([ssn, observedSwpcSsn, f107].every((n) => Number.isFinite(Number(n)))) {
       const ym = formatSwpcYmShort(timeTag);
-      lines.push(
-        `${ym}  MO SSN ${String(Math.round(Number(ssn))).padStart(3)}  SWPC ${String(Math.round(Number(observedSwpcSsn))).padStart(3)}`
-      );
-      lines.push(`       F10.7 ${String(Math.round(Number(f107))).padStart(3)} SFU`);
+      lines.push(`${ym}  MO SSN ${String(Math.round(Number(ssn))).padStart(3)}`);
+      lines.push(`SWPC ${String(Math.round(Number(observedSwpcSsn))).padStart(3)}`);
+      lines.push(`F10.7 ${String(Math.round(Number(f107))).padStart(3)} SFU`);
     }
   }
   if (swpc.monthlyPredicted) {
@@ -62,7 +62,7 @@ function formatSwpcLines(swpc: SolarCycleSwpcData): string[] | null {
     if ([ps, pf].every((n) => Number.isFinite(Number(n)))) {
       const ym = formatSwpcYmShort(timeTag);
       lines.push(`${ym}  PRED SSN ${String(Math.round(Number(ps))).padStart(3)}`);
-      lines.push(`       F10.7 ${String(Math.round(Number(pf))).padStart(3)} SFU`);
+      lines.push(`F10.7 ${String(Math.round(Number(pf))).padStart(3)} SFU`);
     }
   }
   if (lines.length === 1) return null;
@@ -87,10 +87,12 @@ function formatFluxLines(flux: SolarFluxLatest | null | undefined): string[] | n
     const obs = Math.round(Number(flux.observedSfU));
     const ursi = Math.round(Number(flux.ursiSfU));
     if (![adj, obs, ursi].every((n) => Number.isFinite(n))) return null;
-    /** F10.7 = international index name for 2800 MHz flux; SFU = solar flux unit. */
+    /** F10.7 = international index name for 2800 MHz flux; SFU = solar flux unit. Narrow rows for half-width plate. */
     return [
-      "F10.7 CM FLUX (SFU)  MSC/DRAO",
-      `${dateStr} ${hourZ}Z  ADJ ${String(adj).padStart(3)}  OBS ${String(obs).padStart(3)}  URSI ${String(ursi).padStart(3)}`,
+      "F10.7 CM FLUX (SFU)\nMSC/DRAO",
+      `${dateStr}  ${hourZ}Z`,
+      `ADJ ${String(adj).padStart(3)}  OBS ${String(obs).padStart(3)}`,
+      `URSI ${String(ursi).padStart(3)}`,
     ];
   } catch {
     return null;

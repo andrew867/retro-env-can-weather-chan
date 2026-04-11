@@ -49,7 +49,8 @@ describe("SunspotScreen", () => {
     const { container } = render(
       <SunspotScreen sunspotsPayload={payload} sunspotsFetchAttempted weatherStationTime={stationTime} onComplete={() => {}} />
     );
-    expect(container.textContent).toContain("NOAA SWPC CYCLE (ISN + F10.7)");
+    expect(container.textContent).toContain("NOAA SWPC");
+    expect(container.textContent).toContain("ISN + F10.7 CYCLE");
   });
 
   it("shows MSC flux plate when not in tropical season (Apr–Jan) if flux data exists", () => {

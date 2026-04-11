@@ -8,7 +8,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 ### Display
 
-- **Sunspot screen:** Two framed **plates** (MSC **F10.7** flux + NOAA **SWPC** cycle) side‑by‑side when both are present; **SWPC** monthly lines split across two rows so copy fits without horizontal clipping. **NWS tropical** block uses a **CSS grid** table (city / conditions / hi‑lo) instead of padded monospace columns, with `white-space: normal` / `pre-wrap` so glyphs are not clipped under channel `overflow`.
+- **Sunspot screen:** Two framed **plates** (MSC **F10.7** flux + NOAA **SWPC** cycle) side‑by‑side when both are present; **SWPC** monthly lines split across shorter rows and the **NOAA** title wraps on two lines so half-width columns stay readable. **`#sunspots_screen`** uses **`min-height: 0`**, **`max-height: 100%`**, slightly tighter vertical rhythm, and a hidden scrollbar **`overflow-y: auto`** fallback so the tropical outlook table is not clipped at the bottom. **NWS tropical** block uses a **CSS grid** table (city / conditions / hi‑lo) instead of padded monospace columns, with `white-space: normal` / `pre-wrap` so glyphs are not clipped under channel `overflow`.
 
 ## [2.7.0-rc4] - 2026-04-09
 

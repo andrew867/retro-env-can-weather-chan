@@ -234,23 +234,33 @@ ol {
       -webkit-font-smoothing: subpixel-antialiased;
       backface-visibility: hidden;
       display: flex;
+      flex: 1 1 auto;
       flex-direction: column;
-      gap: 0.55em;
+      gap: 0.38em;
       margin-inline: auto;
+      max-height: 100%;
       max-width: min(100%, 38rem);
+      min-height: 0;
       min-width: 0;
+      overflow-x: hidden;
+      overflow-y: auto;
+      scrollbar-width: none;
       text-rendering: geometricPrecision;
       transform: translateZ(0);
       white-space: normal;
       width: 100%;
     }
 
+    #sunspots_screen.sunspots-screen::-webkit-scrollbar {
+      display: none;
+    }
+
     #sunspots_screen .sunspots-plates-row {
-      align-items: stretch;
+      align-items: flex-start;
       display: flex;
       flex-direction: row;
       flex-wrap: wrap;
-      gap: 0.5em 0.65em;
+      gap: 0.42em 0.55em;
       justify-content: center;
       min-width: 0;
       width: 100%;
@@ -272,7 +282,7 @@ ol {
       max-width: 100%;
       min-height: 0;
       min-width: min(100%, 14.75rem);
-      padding: 0.32em 0.42em 0.4em;
+      padding: 0.26em 0.34em 0.32em;
     }
 
     #sunspots_screen .sunspots-plate--outlook {
@@ -282,24 +292,26 @@ ol {
 
     #sunspots_screen .sunspots-plate-title {
       border-bottom: 1px solid rgba(255, 255, 255, 0.24);
-      font-size: 0.88em;
+      font-size: 0.82em;
       font-weight: 600;
-      letter-spacing: 0.045em;
-      line-height: 1.15;
-      margin-bottom: 0.22em;
-      padding-bottom: 0.18em;
+      letter-spacing: 0.035em;
+      line-height: 1.12;
+      margin-bottom: 0.16em;
+      padding-bottom: 0.14em;
       text-align: center;
+      white-space: pre-line;
     }
 
     #sunspots_screen .sunspots-plate-title--outlook {
-      font-size: 0.9em;
+      font-size: 0.84em;
+      white-space: normal;
     }
 
     #sunspots_screen .sunspots-plate-line {
-      font-size: 0.82em;
-      line-height: 1.24;
+      font-size: 0.76em;
+      line-height: 1.2;
       overflow-wrap: anywhere;
-      padding-top: 0.06em;
+      padding-top: 0.04em;
       white-space: pre-wrap;
     }
 
@@ -307,13 +319,13 @@ ol {
       align-items: baseline;
       display: flex;
       flex-wrap: wrap;
-      font-size: 0.78em;
-      gap: 0.35em 0.65em;
+      font-size: 0.72em;
+      gap: 0.28em 0.5em;
       justify-content: space-between;
-      line-height: 1.2;
-      margin-bottom: 0.28em;
+      line-height: 1.15;
+      margin-bottom: 0.2em;
       opacity: 0.92;
-      padding: 0 0.06em;
+      padding: 0 0.04em;
     }
 
     #sunspots_screen .sunspots-outlook-date {
@@ -327,30 +339,30 @@ ol {
     #sunspots_screen .sunspots-outlook-grid {
       display: flex;
       flex-direction: column;
-      font-size: 0.8em;
-      gap: 0.06em;
-      line-height: 1.18;
+      font-size: 0.74em;
+      gap: 0.04em;
+      line-height: 1.12;
       min-width: 0;
       width: 100%;
     }
 
     #sunspots_screen .sunspots-outlook-row {
       align-items: start;
-      column-gap: 0.5em;
+      column-gap: 0.42em;
       display: grid;
-      grid-template-columns: minmax(5.5rem, 0.95fr) minmax(0, 1.65fr) auto;
+      grid-template-columns: minmax(4.8rem, 0.9fr) minmax(0, 1.7fr) auto;
       min-width: 0;
-      padding: 0.1em 0.04em;
+      padding: 0.06em 0.02em;
     }
 
     #sunspots_screen .sunspots-outlook-row--head {
       border-bottom: 1px solid rgba(255, 255, 255, 0.22);
-      font-size: 0.78em;
+      font-size: 0.72em;
       font-weight: 700;
-      letter-spacing: 0.06em;
-      margin-bottom: 0.04em;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.02em;
       opacity: 0.95;
-      padding-bottom: 0.12em;
+      padding-bottom: 0.08em;
     }
 
     #sunspots_screen .sunspots-outlook-row:not(.sunspots-outlook-row--head) {
