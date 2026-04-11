@@ -52,15 +52,17 @@ function formatSwpcLines(swpc: SolarCycleSwpcData): string[] | null {
     if ([ssn, observedSwpcSsn, f107].every((n) => Number.isFinite(Number(n)))) {
       const ym = formatSwpcYmShort(timeTag);
       lines.push(
-        `${ym}  MO MEAN SSN ${String(Math.round(Number(ssn))).padStart(3)}  SWPC ${String(Math.round(Number(observedSwpcSsn))).padStart(3)}  F10 ${String(Math.round(Number(f107))).padStart(3)}`
+        `${ym}  MO SSN ${String(Math.round(Number(ssn))).padStart(3)}  SWPC ${String(Math.round(Number(observedSwpcSsn))).padStart(3)}`
       );
+      lines.push(`       F10.7 ${String(Math.round(Number(f107))).padStart(3)} SFU`);
     }
   }
   if (swpc.monthlyPredicted) {
     const { predictedSsn: ps, predictedF107: pf, timeTag } = swpc.monthlyPredicted;
     if ([ps, pf].every((n) => Number.isFinite(Number(n)))) {
       const ym = formatSwpcYmShort(timeTag);
-      lines.push(`${ym}  PRED SSN ${String(Math.round(Number(ps))).padStart(3)}  F10 ${String(Math.round(Number(pf))).padStart(3)}`);
+      lines.push(`${ym}  PRED SSN ${String(Math.round(Number(ps))).padStart(3)}`);
+      lines.push(`       F10.7 ${String(Math.round(Number(pf))).padStart(3)} SFU`);
     }
   }
   if (lines.length === 1) return null;
@@ -121,7 +123,7 @@ export function SunspotScreen(props: SunspotScreenProps) {
   const hasAnyPlate = !!(fluxLines || hasSwpcPlate || hasTropicalOutlook);
 
   const sunspotDate = useMemo(
-    () => weatherStationTime?.observedDateTime && formatSunspotDate(weatherStationTime).padEnd(9),
+    () => (weatherStationTime?.observedDateTime ? formatSunspotDate(weatherStationTime) : ""),
     [weatherStationTime?.observedDateTime]
   );
 
@@ -138,44 +140,61 @@ export function SunspotScreen(props: SunspotScreenProps) {
       .toString()
       .padStart(2, "0");
 
+  const renderPlateLines = (lines: string[], keyPrefix: string) =>
+    lines.map((line, i) => (
+      <div key={`${keyPrefix}-${i}`} className={i === 0 ? "sunspots-plate-title" : "sunspots-plate-line"}>
+        {line}
+      </div>
+    ));
+
   return (
-    <div id="sunspots_screen">
-      {fluxLines ? (
-        <div className="sunspots-flux-plate">
-          {fluxLines.map((line) => (
-            <div key={line}>{line}</div>
-          ))}
-        </div>
-      ) : null}
-      {swpcLines ? (
-        <div className="sunspots-flux-plate">
-          {swpcLines.map((line) => (
-            <div key={line}>{line}</div>
-          ))}
+    <div id="sunspots_screen" className="sunspots-screen">
+      {fluxLines || swpcLines ? (
+        <div className="sunspots-plates-row">
+          {fluxLines ? (
+            <section className="sunspots-plate sunspots-plate--flux" aria-label="MSC solar flux">
+              {renderPlateLines(fluxLines, "flux")}
+            </section>
+          ) : null}
+          {swpcLines ? (
+            <section className="sunspots-plate sunspots-plate--swpc" aria-label="NOAA SWPC solar cycle">
+              {renderPlateLines(swpcLines, "swpc")}
+            </section>
+          ) : null}
         </div>
       ) : null}
       {hasTropicalOutlook ? (
-        <>
-          <div className="sunspots-outlook-header">NWS TROPICAL SUNSPOT WX</div>
-          <div>
-            {sunspotDate}
-            {"Sunspot Weather".padEnd(17)}
-            Hi/Lo
+        <section className="sunspots-plate sunspots-plate--outlook" aria-label="NWS tropical sunspot outlook">
+          <div className="sunspots-plate-title sunspots-plate-title--outlook">NWS TROPICAL SUNSPOT WX</div>
+          <div className="sunspots-outlook-meta">
+            <span className="sunspots-outlook-date">{sunspotDate}</span>
+            <span className="sunspots-outlook-sub">Warm-city outlook</span>
           </div>
-          <ol>
+          <div className="sunspots-outlook-grid" role="table" aria-label="City sunspot outlook">
+            <div className="sunspots-outlook-row sunspots-outlook-row--head" role="row">
+              <span role="columnheader">City</span>
+              <span role="columnheader">Conditions</span>
+              <span role="columnheader">Hi/Lo</span>
+            </div>
             {observations.map((sunspot, ix) => (
-              <li key={sunspot.code ? String(sunspot.code) : `sunspot-${ix}`}>
-                <span>
-                  {(sunspot.name ?? "").slice(0, MAX_SUNSPOT_CITY_NAME_LENGTH).padEnd(MAX_SUNSPOT_CITY_NAME_LENGTH)}
+              <div
+                className="sunspots-outlook-row"
+                role="row"
+                key={sunspot.code ? String(sunspot.code) : `sunspot-${ix}`}
+              >
+                <span className="sunspots-outlook-city" role="cell" title={sunspot.name ?? ""}>
+                  {(sunspot.name ?? "").slice(0, MAX_SUNSPOT_CITY_NAME_LENGTH)}
                 </span>
-                <span>{(sunspot.abbreviatedForecast ?? sunspot.forecast ?? "").padEnd(13)}</span>
-                <span>
+                <span className="sunspots-outlook-forecast" role="cell" title={sunspot.forecast ?? ""}>
+                  {sunspot.abbreviatedForecast ?? sunspot.forecast ?? ""}
+                </span>
+                <span className="sunspots-outlook-hilo" role="cell">
                   {formatTemp(sunspot.highTemp)}/{formatTemp(sunspot.lowTemp)}
                 </span>
-              </li>
+              </div>
             ))}
-          </ol>
-        </>
+          </div>
+        </section>
       ) : null}
     </div>
   );
