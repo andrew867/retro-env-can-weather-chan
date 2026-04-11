@@ -50,6 +50,15 @@ export function StatsScreen(props: StatsScreenProps) {
     return format(addMinutes(date, weatherStationTime?.stationOffsetMinutesFromLocal ?? 0), "h:mm");
   }, [sunRiseSet?.set, weatherStationTime?.stationOffsetMinutesFromLocal]);
 
+  /** Single line (≤ STATS_SCREEN_MAX_CHARACTERS_PER_LINE) so the plate does not clip the row below. */
+  const sunriseSunsetLine = useMemo(() => {
+    if (!formattedSunrise && !formattedSunset) return "";
+    const a = formattedSunrise ? `Sunrise..${formattedSunrise}a` : "";
+    const b = formattedSunset ? `Sunset..${formattedSunset}p` : "";
+    if (a && b) return `${a} ${b}`;
+    return a || b;
+  }, [formattedSunrise, formattedSunset]);
+
   const generatePrecip = (amount: number) => amount.toFixed(1).padStart(5);
 
   const generateDotsForPrecipLine = (dataName: string, usedChars = PRECIP_CHARS_USED_OUTSIDE_OF_DOTS) =>
@@ -84,10 +93,7 @@ export function StatsScreen(props: StatsScreenProps) {
         {"".padStart(1)}
         {city.slice(0, 10)} statistics - {formattedDate}
       </div>
-      <div>
-        Sunrise..{formattedSunrise} am
-      </div>
-      <div>Sunset..{formattedSunset} pm</div>
+      {sunriseSunsetLine ? <div>{sunriseSunsetLine}</div> : null}
       <div>{"".padStart(4)}Total precipitation since</div>
       <div>
         {"".padStart(2)}
