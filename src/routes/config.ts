@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import {
   getConfigHandler,
   postPrimaryLocation,
+  postLocationQuickSetup,
   postStationsHandler,
   postLtceStationsHandler,
   postProvinceTracking,
@@ -24,6 +25,7 @@ router.get("/", getConfigHandler);
 router.post("/stations", async (req: Request, res: Response) => await postStationsHandler(req, res));
 router.post("/ltce-stations", async (req: Request, res: Response) => await postLtceStationsHandler(req, res));
 router.post("/primaryLocation", postPrimaryLocation);
+router.post("/locationQuickSetup", postLocationQuickSetup);
 router.post("/provinceTracking", postProvinceTracking);
 router.post("/historicalDataStationID", postHistoricalDataStationID);
 router.post("/climateNormals", postClimateNormals);

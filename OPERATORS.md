@@ -75,7 +75,7 @@ Machine-readable API description: [docs/api/openapi.yaml](./docs/api/openapi.yam
 | `POST` | `/metrics/client` | Body: `{ "displayAxios": { "requestCount", "successCount", "errorCount", "timeoutCount", "status4xx", "status5xx", "networkError" } }`. The display posts about every 30 seconds while `/` is open. Same auth as `GET /metrics` when `RWC_METRICS_TOKEN` is set. |
 | `GET` | `/init` | Display bootstrap: flavour, crawler, `gfx`, and look-and-feel flags (including footer freshness and font mode). |
 | `GET` | `/config` | Full **`rwc-config`** snapshot plus crawler lines and music playlist (same persistence as the config UI). |
-| `POST` | `/config/*` | Station search, primary location, province grid, historical/climate IDs, misc, look-and-feel, AQHI station, **crawler**, playlist, **gfx** — see [docs/api/openapi.yaml](./docs/api/openapi.yaml) and [docs/api/REST-COOKBOOK.md](./docs/api/REST-COOKBOOK.md). **Unauthenticated** unless you front the API with your own auth. |
+| `POST` | `/config/*` | Station search, primary location, **`/config/locationQuickSetup`** (quick setup), province grid, historical/climate IDs, misc, look-and-feel, AQHI station, **crawler**, playlist, **gfx** — see [docs/api/openapi.yaml](./docs/api/openapi.yaml) and [docs/api/REST-COOKBOOK.md](./docs/api/REST-COOKBOOK.md). **Unauthenticated** unless you front the API with your own auth. |
 | `PUT` / `POST` | `/flavour` | Create (**PUT**) or update (**POST**) a flavour JSON file under `cfg/flavours/`. |
 | `GET` | `/flavour/:name` | Load one flavour by file-safe name. |
 | `DELETE` | `/flavour/:name` | Remove that flavour file; if it was the active rotation, **`rwc-config.json`** switches to **`default`**. |
@@ -85,6 +85,8 @@ Machine-readable API description: [docs/api/openapi.yaml](./docs/api/openapi.yam
 | `POST` | `/status/refresh` | Body **`{ "scope": "all" }`** or **`{ "scope": "single", "target": "<feed>" }`** (`observed`, `national`, `usa`, `airport_metar`, `province`, `sunspots`, `hot_cold`, `alerts`, `historical`, `climate_normals`, `aqhi`). **202**; work is async. Same enable/auth as **`GET /api/v1/status`**. |
 
 ## Look and feel (config UI)
+
+Under **Locations & feeds** (first tab on `/config`): primary citypage search, **Quick setup** (one POST for primary + curated MSC bundle + optional ON/MB province grid preset), province temp/precip, historical bulk id, climate normals, AQHI, and **LTCE** almanac backfill search.
 
 Under **Display → Look and Feel**:
 

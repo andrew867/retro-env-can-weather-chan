@@ -3,7 +3,7 @@ import { initializeConfig } from "./config";
 import { broadcastCrawlerUpdate, broadcastInitRefresh, registerInitSseClient } from "./initSseHub";
 import { getECCCWeatherStations } from "lib/eccc/weatherStations";
 import { searchLtceVirtualStations } from "lib/eccc/ltceStationSearch";
-import { AuthenticRefreshConfig, GfxRuntimeConfig } from "types";
+import { AuthenticRefreshConfig, ECCCWeatherStation, GfxRuntimeConfig } from "types";
 
 const config = initializeConfig();
 
@@ -76,6 +76,29 @@ export function postPrimaryLocation(req: Request, res: Response) {
     if (!station) throw "Missing `station` parameter";
 
     config.updateAndSaveConfigOption(() => config.setPrimaryLocation(station));
+    res.sendStatus(200);
+  } catch (e) {
+    res.status(500).json({ error: e });
+  }
+}
+
+/** Primary + MSC anchor bundle; optional ON/MB province tracking preset. */
+export function postLocationQuickSetup(req: Request, res: Response) {
+  try {
+    const station = req.body?.station as ECCCWeatherStation | undefined;
+    const applyProvincePreset = !!req.body?.applyProvincePreset;
+    if (!station || typeof station !== "object") {
+      res.status(400).json({ error: "Missing station object" });
+      return;
+    }
+    if (typeof station.name !== "string" || typeof station.province !== "string" || typeof station.location !== "string") {
+      res.status(400).json({ error: "station must include name, province, and location strings" });
+      return;
+    }
+
+    config.updateAndSaveConfigOption(() =>
+      config.applyLocationQuickSetup(station, { applyProvincePreset })
+    );
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: e });

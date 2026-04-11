@@ -40,6 +40,7 @@ import eventbus from "lib/eventbus";
 import { LTCE_WINNIPEG_AREA_VIRTUAL_CLIMATE_ID } from "lib/eccc/ltceDailyTemperatureRecords";
 import type { CitypageClimateAnchor } from "lib/config/citypageClimateAnchors";
 import { getCitypageClimateAnchor } from "lib/config/citypageClimateAnchors";
+import { getProvinceTrackingPresetForProvince } from "lib/config/locationQuickSetupPresets";
 import { logConfigValidationIssues, validateLoadedConfigJson } from "lib/config/configValidation";
 
 const logger = new Logger("config");
@@ -438,6 +439,21 @@ class Config {
     eventbus.emit(EVENT_BUS_CONFIG_CHANGE_PRIMARY_LOCATION, true);
     if (deltas.historical) eventbus.emit(EVENT_BUS_CONFIG_CHANGE_HISTORICAL_TEMP_PRECIP, true);
     if (deltas.climate) eventbus.emit(EVENT_BUS_CONFIG_CHANGE_CLIMATE_NORMALS, true);
+  }
+
+  /**
+   * One-shot operator setup: primary (with curated MSC bundle when available) plus optional province grid preset
+   * for provinces we ship verified lists for (see `locationQuickSetupPresets.ts`).
+   */
+  public applyLocationQuickSetup(station: ECCCWeatherStation, options?: { applyProvincePreset?: boolean }) {
+    if (!station) return;
+    this.setPrimaryLocation(station);
+    if (options?.applyProvincePreset) {
+      const preset = getProvinceTrackingPresetForProvince(station.province ?? "");
+      if (preset?.length) {
+        this.setProvinceStations(true, preset);
+      }
+    }
   }
 
   /**

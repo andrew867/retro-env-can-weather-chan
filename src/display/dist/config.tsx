@@ -2,20 +2,10 @@ import { useChannelCurrentConfig } from "hooks";
 import React, { useEffect, useState } from "react";
 import ReactDOM from "react-dom/client";
 import { ChakraProvider, Heading, Tabs, TabList, TabPanels, Tab, TabPanel, Text } from "@chakra-ui/react";
-import {
-  AirQualityConfig,
-  ClimateNormalsConfig,
-  CrawlerConfig,
-  DisplayConfig,
-  FlavoursConfig,
-  GfxConfig,
-  HistoricalDataStationIDConfig,
-  ProvinceTempPrecipConfig,
-  WeatherStationConfig,
-} from "display/components/config";
+import { CrawlerConfig, DisplayConfig, FlavoursConfig, GfxConfig, LocationsHubConfig } from "display/components/config";
 
 const ConfigScreen = () => {
-  const { config, fetched } = useChannelCurrentConfig();
+  const { config, fetched, refetch } = useChannelCurrentConfig();
   /** Keeps Display tab flavour dropdown in sync when Flavours tab adds/renames lists (server returns `flavours` on save). */
   const [flavoursList, setFlavoursList] = useState<string[]>([]);
 
@@ -37,22 +27,38 @@ const ConfigScreen = () => {
         <>
           <Tabs>
             <TabList>
+              <Tab>Locations &amp; feeds</Tab>
               <Tab>Display</Tab>
               <Tab>Graphics</Tab>
-              <Tab>Weather Station</Tab>
-              <Tab>Province Temp/Precip</Tab>
-              <Tab>Historical Data</Tab>
-              <Tab>Climate Normals</Tab>
-              <Tab>Air Quality</Tab>
               <Tab>Flavours</Tab>
               <Tab>Crawler</Tab>
             </TabList>
 
             <TabPanels>
               <TabPanel>
+                <LocationsHubConfig
+                  primaryLocation={config.primaryLocation}
+                  provinceHighLowEnabled={config.provinceHighLowEnabled ?? true}
+                  provinceStations={config.provinceStations ?? []}
+                  historicalDataStationID={config.historicalDataStationID ?? 27174}
+                  climateNormals={
+                    config.climateNormals ?? {
+                      stationID: 3698,
+                      climateID: 5023222,
+                      province: config.primaryLocation?.province ?? "MB",
+                    }
+                  }
+                  airQualityStation={config.airQualityStation ?? ""}
+                  rejectInHourConditionUpdates={config.misc?.rejectInHourConditionUpdates ?? false}
+                  alternateRecordsSource={config.misc?.alternateRecordsSource ?? ""}
+                  logLevel={config.misc?.logLevel ?? "warn"}
+                  ltceVirtualClimateId={config.misc?.ltceVirtualClimateId ?? ""}
+                  onQuickSetupDone={() => refetch()}
+                />
+              </TabPanel>
+              <TabPanel>
                 <DisplayConfig
                   alternateRecordsSource={config.misc?.alternateRecordsSource ?? ""}
-                  ltceVirtualClimateId={config.misc?.ltceVirtualClimateId ?? ""}
                   rejectInHourConditionUpdates={config.misc?.rejectInHourConditionUpdates ?? false}
                   flavour={config.lookAndFeel?.flavour ?? ""}
                   showFooterFreshnessHint={config.lookAndFeel?.showFooterFreshnessHint ?? true}
@@ -67,26 +73,6 @@ const ConfigScreen = () => {
                   authenticRefresh={config.authenticRefresh}
                   useOfficialFonts={config.lookAndFeel?.useOfficialFonts ?? true}
                 />
-              </TabPanel>
-              <TabPanel>
-                <WeatherStationConfig weatherStation={config.primaryLocation} />
-              </TabPanel>
-              <TabPanel>
-                <ProvinceTempPrecipConfig
-                  isEnabled={config.provinceHighLowEnabled ?? true}
-                  stations={config.provinceStations ?? []}
-                />
-              </TabPanel>
-              <TabPanel>
-                <HistoricalDataStationIDConfig historicalDataStationID={config.historicalDataStationID} />
-              </TabPanel>
-
-              <TabPanel>
-                <ClimateNormalsConfig climateNormals={config.climateNormals} />
-              </TabPanel>
-
-              <TabPanel>
-                <AirQualityConfig station={config.airQualityStation} />
               </TabPanel>
 
               <TabPanel>

@@ -8,20 +8,12 @@ import {
   Select,
   Stack,
   Switch,
-  Table,
-  TableContainer,
-  Tbody,
-  Td,
   Text,
-  Th,
-  Thead,
-  Tr,
   useToast,
 } from "@chakra-ui/react";
-import axios from "lib/axios";
 import { useSaveConfigOption } from "hooks";
 import { FormEvent, useEffect, useState } from "react";
-import type { FlavourNames, LtceVirtualStationSearchHit, LookAndFeel, MiscConfig } from "types";
+import type { FlavourNames, LookAndFeel, MiscConfig } from "types";
 
 type DisplayConfigProps = {
   flavour: string;
@@ -30,8 +22,6 @@ type DisplayConfigProps = {
   useOfficialFonts: boolean;
   rejectInHourConditionUpdates: boolean;
   alternateRecordsSource: string;
-  /** MSC LTCE virtual climate id (e.g. VSMB38V for Winnipeg Area); empty disables LTCE backfill. */
-  ltceVirtualClimateId: string;
   playlist: string[];
 };
 
@@ -46,17 +36,12 @@ export function DisplayConfig({
   useOfficialFonts,
   rejectInHourConditionUpdates,
   alternateRecordsSource,
-  ltceVirtualClimateId,
   playlist,
 }: DisplayConfigProps) {
   const toast = useToast();
   const [mutableRejectInHourConditionUpdates, setMutableRejectInHourConditionUpdates] =
     useState(rejectInHourConditionUpdates);
   const [mutableAlternateRecordsSource, setMutableAlternateRecordsSource] = useState(alternateRecordsSource ?? "");
-  const [mutableLtceVirtualClimateId, setMutableLtceVirtualClimateId] = useState(ltceVirtualClimateId ?? "");
-  const [ltceNameSearch, setLtceNameSearch] = useState("");
-  const [isLtceSearching, setIsLtceSearching] = useState(false);
-  const [ltceSearchResults, setLtceSearchResults] = useState<LtceVirtualStationSearchHit[] | undefined>(undefined);
   const [mutableFlavour, setMutableFlavour] = useState(flavour ?? "");
   const [mutableShowFooterFreshnessHint, setMutableShowFooterFreshnessHint] = useState(showFooterFreshnessHint);
   const [mutableUseOfficialFonts, setMutableUseOfficialFonts] = useState(useOfficialFonts);
@@ -66,27 +51,12 @@ export function DisplayConfig({
   const lookAndFeelSaveConfigOption = useSaveConfigOption<LookAndFeel>("lookAndFeel");
   const regeneratePlaylist = useSaveConfigOption<string[]>("playlist");
 
-  const runLtceStationSearch = () => {
-    const q = ltceNameSearch.trim();
-    if (isLtceSearching || q.length < 2) return;
-    setIsLtceSearching(true);
-    axios
-      .post<{ results: LtceVirtualStationSearchHit[] }>("config/ltce-stations", { search: q })
-      .then((resp) => setLtceSearchResults(resp.data?.results ?? []))
-      .catch(() => {
-        setLtceSearchResults(undefined);
-        toast({ title: "LTCE search failed", status: "error", description: "Try again or enter a virtual id manually." });
-      })
-      .finally(() => setIsLtceSearching(false));
-  };
-
   const onSubmitMiscSettings = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     await miscSaveConfigOption.saveConfigOption({
       rejectInHourConditionUpdates: mutableRejectInHourConditionUpdates,
       alternateRecordsSource: mutableAlternateRecordsSource,
-      ltceVirtualClimateId: mutableLtceVirtualClimateId,
     });
 
     if (miscSaveConfigOption.wasError)
@@ -132,10 +102,6 @@ export function DisplayConfig({
     setMutableShowFooterFreshnessHint(showFooterFreshnessHint);
     setMutableUseOfficialFonts(useOfficialFonts);
   }, [showFooterFreshnessHint, useOfficialFonts]);
-
-  useEffect(() => {
-    setMutableLtceVirtualClimateId(ltceVirtualClimateId ?? "");
-  }, [ltceVirtualClimateId]);
 
   useEffect(() => {
     setMutableFlavour(flavour ?? "");
@@ -206,105 +172,9 @@ export function DisplayConfig({
               </FormHelperText>
             </FormControl>
 
-            <Stack id="ltce_virtual_station_search" spacing={3} mt={4}>
-              <Heading as="h3" size="sm">
-                Search LTCE virtual stations
-              </Heading>
-              <Text fontSize="sm" color="gray.600">
-                Same pattern as <b>Weather Station</b>: type part of the English area name (e.g. <code>Winnipeg</code>),
-                then pick a row to fill the virtual climate id below.
-              </Text>
-              <FormControl>
-                <FormLabel htmlFor="ltceStationNameSearch">Area name</FormLabel>
-                <Input
-                  id="ltceStationNameSearch"
-                  value={ltceNameSearch}
-                  onChange={(e) => setLtceNameSearch(e.target.value)}
-                  placeholder="e.g. Winnipeg, Toronto"
-                />
-              </FormControl>
-              <Button
-                type="button"
-                colorScheme="teal"
-                variant="outline"
-                isLoading={isLtceSearching}
-                isDisabled={ltceNameSearch.trim().length < 2}
-                onClick={runLtceStationSearch}
-              >
-                Search LTCE
-              </Button>
-
-              {ltceSearchResults !== undefined && (
-                <TableContainer>
-                  <Table variant="striped" size="sm" aria-label="LTCE virtual station search results">
-                    <Thead>
-                      <Tr>
-                        <Th>Virtual ID</Th>
-                        <Th>Area (EN)</Th>
-                        <Th>WXO</Th>
-                        <Th>Prov</Th>
-                        <Th />
-                      </Tr>
-                    </Thead>
-                    <Tbody>
-                      {ltceSearchResults.length ? (
-                        ltceSearchResults.map((row) => (
-                          <Tr key={row.virtualClimateId}>
-                            <Td>{row.virtualClimateId}</Td>
-                            <Td>{row.virtualStationNameEn}</Td>
-                            <Td>{row.wxoCityCode}</Td>
-                            <Td>{row.provinceCode}</Td>
-                            <Td>
-                              <Button
-                                type="button"
-                                size="sm"
-                                onClick={() => {
-                                  setMutableLtceVirtualClimateId(row.virtualClimateId);
-                                  toast({
-                                    title: "LTCE id applied",
-                                    description: `${row.virtualClimateId} — ${row.virtualStationNameEn}`,
-                                    status: "success",
-                                    duration: 2500,
-                                  });
-                                }}
-                              >
-                                Use
-                              </Button>
-                            </Td>
-                          </Tr>
-                        ))
-                      ) : (
-                        <Tr>
-                          <Td colSpan={5}>No LTCE virtual stations matched</Td>
-                        </Tr>
-                      )}
-                    </Tbody>
-                  </Table>
-                </TableContainer>
-              )}
-            </Stack>
-
-            <FormControl mt={4}>
-              <FormLabel htmlFor="ltceVirtualClimateId">LTCE virtual climate ID (almanac record high/low)</FormLabel>
-              <Input
-                id="ltceVirtualClimateId"
-                value={mutableLtceVirtualClimateId}
-                onChange={(e) => setMutableLtceVirtualClimateId(e.target.value)}
-                placeholder="e.g. VSMB38V for Winnipeg Area"
-              />
-              <FormHelperText>
-                MSC removed the citypage <code>&lt;almanac&gt;</code> block in 2024. When set, the server loads daily
-                record temperatures from{" "}
-                <a href="https://api.weather.gc.ca/collections/ltce-temperature" target="_blank" rel="noreferrer">
-                  LTCE — Temperature
-                </a>{" "}
-                (virtual station list:{" "}
-                <a href="https://api.weather.gc.ca/collections/ltce-stations/items?f=csv" target="_blank" rel="noreferrer">
-                  ltce-stations CSV
-                </a>
-                ). Leave empty to disable. Operator doc: <code>docs/specs/SPEC-ltce-almanac-records.md</code>.
-              </FormHelperText>
-            </FormControl>
+            <Text fontSize="sm" color="gray.600" mt={4}>
+              LTCE almanac record backfill is configured under the <b>Locations &amp; feeds</b> tab.
+            </Text>
           </Stack>
 
           <Button type="submit" mt={4} colorScheme="teal" isLoading={miscSaveConfigOption.isSaving}>

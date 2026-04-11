@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.7.0-rc4] - 2026-04-09
+
+**2.7.0** release candidate **rc4** — single **Locations & feeds** config tab with **quick setup** (primary station search → `POST /api/v1/config/locationQuickSetup`) plus existing per-feed editors; optional **ON / MB** province-tracking presets. LTCE virtual station search and **Save LTCE** moved here from Display. Docs: [SPEC](./docs/specs/SPEC-config-location-hub-rc4.md), [PLAN](./docs/specs/PLAN-config-location-hub-rc4.md), [TEST-PLAN](./docs/specs/TEST-PLAN-config-location-hub-rc4.md). Playwright baselines refreshed for config and canonical/forecast visuals.
+
 ## [2.7.0-rc3] - 2026-04-11
 
 **2.7.0** release candidate **rc3** — display and parsing hardening so malformed MSC payloads, missing strings, or non-finite clock offsets cannot take down the rotator (Hamilton-style prod incidents).

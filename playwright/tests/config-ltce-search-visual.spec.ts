@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Display tab — LTCE virtual station search table (mocked API so CI stays deterministic).
+ * Locations & feeds tab — LTCE virtual station search table (mocked API so CI stays deterministic).
  */
-test.describe("config LTCE station search (Display tab)", () => {
+test.describe("config LTCE station search (Locations tab)", () => {
   test("search shows table and applies virtual id", async ({ page }) => {
     await page.route("**/api/v1/config/ltce-stations", async (route) => {
       if (route.request().method() !== "POST") return route.continue();
@@ -31,6 +31,8 @@ test.describe("config LTCE station search (Display tab)", () => {
 
     await page.goto("/config");
     await expect(page.getByRole("heading", { name: /weather simulator config/i })).toBeVisible({ timeout: 30_000 });
+
+    await page.getByRole("tab", { name: /locations/i }).click();
 
     await page.getByLabel(/area name/i).fill("Winnipeg");
     await page.getByRole("button", { name: /search ltce/i }).click();

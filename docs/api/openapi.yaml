@@ -144,6 +144,31 @@ paths:
       responses:
         "200": { description: OK }
 
+  /config/locationQuickSetup:
+    post:
+      tags: [config]
+      summary: Quick setup — primary + MSC anchor bundle; optional ON/MB province preset
+      operationId: postLocationQuickSetup
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [station]
+              properties:
+                station:
+                  type: object
+                  required: [name, province, location]
+                  properties:
+                    name: { type: string }
+                    province: { type: string }
+                    location: { type: string }
+                applyProvincePreset: { type: boolean, default: false }
+      responses:
+        "200": { description: OK }
+        "400": { description: Invalid body }
+
   /config/provinceTracking:
     post:
       tags: [config]
