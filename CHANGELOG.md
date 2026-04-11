@@ -23,7 +23,7 @@ All notable changes to this project are documented here. The format follows [Kee
 
 - **`footerBar.test.tsx`**, **`lastMonthScreen.test.tsx`**, **`aqhiWarningScreen.test.tsx`**, stats NaN-offset case, **`displayTime`** NaN-offset case.
 
-## [2.7.0-rc2] - 2026-04-12
+## [2.7.0-rc2] - 2026-04-11
 
 **2.7.0** release candidate **rc2**; **package version renumbered from 2.6.8** so npm, OpenAPI, and the public mirror follow the **2.7.0** RC line (entries below are the same scope as the former **2.6.8** patch).
 
