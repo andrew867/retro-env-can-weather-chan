@@ -1,5 +1,7 @@
 import { EVENT_BUS_CONFIG_CHANGE_AIR_QUALITY_STATION } from "consts";
 import axios from "lib/backendAxios";
+import { isAxiosError } from "axios";
+import { formatFetchError } from "lib/eccc/fetchErrors";
 import { axiosGetWithMscMirror, MSC_HPFX_ORIGIN } from "lib/eccc/mscHttpMirror";
 import { initializeConfig } from "lib/config";
 import eventbus from "lib/eventbus";
@@ -93,8 +95,15 @@ class AirQuality {
         logger.log("AQHI observation updated");
         this._fetchedAt = new Date().toISOString();
       })
-      .catch((e) => {
-        logger.error("Failed to fetch AQHI observation", e);
+      .catch((e: unknown) => {
+        if (isAxiosError(e)) {
+          const st = e.response?.status;
+          if (st === 404 || st === 403) {
+            logger.warn(`AQHI observation unavailable (${st}): ${url}`);
+            return;
+          }
+        }
+        logger.warn(`Failed to fetch AQHI observation: ${formatFetchError(e)}`);
       });
   }
 

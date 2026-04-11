@@ -50,6 +50,18 @@ function parseCsvLine(line: string): string[] {
   return result;
 }
 
+/**
+ * ECCC NORMAL_CODE: data-quality tier for 1981–2010 normals (A = strictest … D = ≥15 years).
+ * Composite stations often publish C/D for temperature while precip remains A — accept all four.
+ */
+const NORMAL_CODE_RANK: Record<string, number> = { A: 0, B: 1, C: 2, D: 3 };
+
+function normalCodeRank(code: string | undefined): number | null {
+  const u = code?.trim().toUpperCase();
+  if (u == null || u === "") return null;
+  return u in NORMAL_CODE_RANK ? NORMAL_CODE_RANK[u]! : null;
+}
+
 /** Parse api.weather.gc.ca climate-normals CSV; keys are `${NORMAL_ID}-${MONTH}` (1–12). */
 export function parseClimateNormalsCsv(body: string): Map<string, number> {
   const lines = body.split(/\r?\n/).filter((l) => l.length > 0);
@@ -77,18 +89,32 @@ export function parseClimateNormalsCsv(body: string): Map<string, number> {
     return new Map();
   }
 
-  const map = new Map<string, number>();
+  /** Prefer best NORMAL_CODE when multiple rows share the same NORMAL_ID+MONTH (e.g. A over C). */
+  const best = new Map<string, { value: number; rank: number }>();
+
   for (let li = 1; li < lines.length; li++) {
     const row = parseCsvLine(lines[li]);
     if (row.length < header.length) continue;
-    if (row[iCurrent] !== "Y" || row[iNormCode] !== "A") continue;
+    if (row[iCurrent] !== "Y") continue;
+
+    const rank = normalCodeRank(row[iNormCode]);
+    if (rank == null) continue;
 
     const month = parseInt(row[iMonth], 10);
     const normalId = parseInt(row[iNormalId], 10);
     const value = parseFloat(row[iValue]);
     if (!Number.isFinite(month) || !Number.isFinite(normalId) || !Number.isFinite(value)) continue;
 
-    map.set(`${normalId}-${month}`, value);
+    const key = `${normalId}-${month}`;
+    const prev = best.get(key);
+    if (prev == null || rank < prev.rank) {
+      best.set(key, { value, rank });
+    }
+  }
+
+  const map = new Map<string, number>();
+  for (const [key, { value }] of best) {
+    map.set(key, value);
   }
   return map;
 }

@@ -59,7 +59,7 @@ describe("parseClimateNormalsCsv", () => {
     expect(map.get("5-3")).toBe(12.3);
   });
 
-  it("skips rows that are not current or not NORMAL_CODE A", () => {
+  it("skips non-current rows; prefers NORMAL_CODE A over B/C for the same NORMAL_ID+MONTH", () => {
     const header = CSV_COLUMNS.join(",");
     const skip1 = makeCsvRow({
       CURRENT_FLAG: "N",
@@ -68,22 +68,48 @@ describe("parseClimateNormalsCsv", () => {
       MONTH: "1",
       VALUE: "9",
     });
-    const skip2 = makeCsvRow({
+    const tierB = makeCsvRow({
       CURRENT_FLAG: "Y",
       NORMAL_CODE: "B",
       NORMAL_ID: "1",
       MONTH: "1",
       VALUE: "9",
     });
-    const keep = makeCsvRow({
+    const tierA = makeCsvRow({
       CURRENT_FLAG: "Y",
       NORMAL_CODE: "A",
       NORMAL_ID: "1",
       MONTH: "1",
       VALUE: "-4",
     });
-    const map = parseClimateNormalsCsv(`${header}\n${skip1}\n${skip2}\n${keep}\n`);
+    const map = parseClimateNormalsCsv(`${header}\n${skip1}\n${tierB}\n${tierA}\n`);
     expect(map.get("1-1")).toBe(-4);
+  });
+
+  it("accepts NORMAL_CODE B–D when no A row exists (ECCC composite stations often use C for temps)", () => {
+    const header = CSV_COLUMNS.join(",");
+    const row = makeCsvRow({
+      CURRENT_FLAG: "Y",
+      NORMAL_CODE: "C",
+      NORMAL_ID: "1",
+      MONTH: "3",
+      VALUE: "2.5",
+    });
+    const map = parseClimateNormalsCsv(`${header}\n${row}\n`);
+    expect(map.get("1-3")).toBe(2.5);
+  });
+
+  it("skips unknown NORMAL_CODE letters", () => {
+    const header = CSV_COLUMNS.join(",");
+    const row = makeCsvRow({
+      CURRENT_FLAG: "Y",
+      NORMAL_CODE: "E",
+      NORMAL_ID: "1",
+      MONTH: "1",
+      VALUE: "1",
+    });
+    const map = parseClimateNormalsCsv(`${header}\n${row}\n`);
+    expect(map.get("1-1")).toBeUndefined();
   });
 
   it("parses quoted fields containing commas", () => {

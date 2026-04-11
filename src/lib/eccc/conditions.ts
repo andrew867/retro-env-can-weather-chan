@@ -46,6 +46,7 @@ import { generateConditionsUUID } from "./utils";
 import eventbus from "lib/eventbus";
 import { getTempRecordForDate } from "lib/temprecords";
 import { GetWeatherFileFromECCC, legacyHpfxCitypageEnglishXmlUrl } from "./datamart";
+import { parseAlmanacExtremesFromCitypageXml } from "./almanacExtremesFromCitypageXml";
 import { isLooseNull } from "lib/isnull";
 import { axiosGetWithMscMirror, normalizeMscHttpUrl } from "lib/eccc/mscHttpMirror";
 import {
@@ -205,7 +206,8 @@ class CurrentConditions {
   private applyCitypageHttpResponse(resp: AxiosResponse, applyGen: number): "applied" | "stale" | "unparsed" {
     if (applyGen !== this._conditionsApplyGen) return "stale";
 
-    const weather = new Weather(resp.data);
+    const rawXml = typeof resp.data === "string" ? resp.data : String(resp.data ?? "");
+    const weather = new Weather(rawXml);
     if (!weather) return "unparsed";
 
     const { all: allWeather } = weather;
@@ -233,6 +235,7 @@ class CurrentConditions {
     this.fillAlmanacNormalsFromRegional(
       (allWeather as { regionalNormals?: RegionalNormalsFromFeed }).regionalNormals
     );
+    this.fillAlmanacExtremesFromRawCitypageXml(rawXml);
     this.generateWindchill(weather.current);
     this.generateForecast(weather.weekly);
     void this.getTempRecordsForDay();
@@ -441,7 +444,10 @@ class CurrentConditions {
     const retrieveAlmanacTemp = (tempClass: string, parseYear: boolean = true) => {
       if (!temps.length || !tempClass) return null;
 
-      const entry = temps.find((temp: ECCCAlmanacTemp) => temp.class === tempClass);
+      const needle = tempClass.toLowerCase();
+      const entry = temps.find(
+        (temp: ECCCAlmanacTemp) => temp.class != null && temp.class.toLowerCase() === needle
+      );
       if (!entry) return null;
 
       const num = Number(entry.value);
@@ -464,6 +470,17 @@ class CurrentConditions {
     this._almanac.temperatures.normalMax = retrieveAlmanacTemp("normalMax", false);
 
     // last year min/max is done at request time for observed to make sure we have that data
+  }
+
+  /** When structured parse drops record highs/lows, recover from `<almanac>` in the raw citypage XML. */
+  private fillAlmanacExtremesFromRawCitypageXml(xml: string) {
+    const { extremeMax, extremeMin } = parseAlmanacExtremesFromCitypageXml(xml);
+    if (this._almanac.temperatures.extremeMax == null && extremeMax != null) {
+      this._almanac.temperatures.extremeMax = extremeMax;
+    }
+    if (this._almanac.temperatures.extremeMin == null && extremeMin != null) {
+      this._almanac.temperatures.extremeMin = extremeMin;
+    }
   }
 
   /**
