@@ -43,7 +43,7 @@ See [docs/specs/ADR-002-sarracenia-amqp-and-phase0.md](./docs/specs/ADR-002-sarr
 ### Deployment & network exposure
 
 - **Bind address:** The API listens on **all interfaces** on **`API_PORT`** (default **8600**) unless you change `src/api/main.ts` / process manager config. For headless display hosts, prefer **localhost-only** or a **firewall** that allows only your studio subnet.
-- **Unauthenticated writes:** **`POST /api/v1/config/*`**, **`POST`/`PUT /api/v1/flavour`**, and similar routes accept changes **without** a bearer token. Anyone who can reach the port can change on-air configuration. Use **network segmentation**, **reverse proxy + auth**, or **VPN** for remote access.
+- **Unauthenticated writes:** **`POST /api/v1/config/*`**, **`POST`/`PUT`/`DELETE /api/v1/flavour`**, and similar routes accept changes **without** a bearer token. Anyone who can reach the port can change on-air configuration. Use **network segmentation**, **reverse proxy + auth**, or **VPN** for remote access.
 - **Optional bearer protection:** **`RWC_METRICS_TOKEN`** gates **`/api/v1/metrics`**; **`RWC_STATUS_TOKEN`** (or the metrics token) gates **`/api/v1/status`** when set. This does **not** protect config or weather JSON.
 
 ### Reliability runbook (short)
@@ -78,6 +78,7 @@ Machine-readable API description: [docs/api/openapi.yaml](./docs/api/openapi.yam
 | `POST` | `/config/*` | Station search, primary location, province grid, historical/climate IDs, misc, look-and-feel, AQHI station, **crawler**, playlist, **gfx** — see [docs/api/openapi.yaml](./docs/api/openapi.yaml) and [docs/api/REST-COOKBOOK.md](./docs/api/REST-COOKBOOK.md). **Unauthenticated** unless you front the API with your own auth. |
 | `PUT` / `POST` | `/flavour` | Create (**PUT**) or update (**POST**) a flavour JSON file under `cfg/flavours/`. |
 | `GET` | `/flavour/:name` | Load one flavour by file-safe name. |
+| `DELETE` | `/flavour/:name` | Remove that flavour file; if it was the active rotation, **`rwc-config.json`** switches to **`default`**. |
 | `GET` | `/season`, `/season/lastMonth` | Seasonal / last-month stats screens. |
 | `GET` / `POST` | `/airquality`, `/airquality/stations` | AQHI snapshot and station search. |
 | `GET` | `/status` | JSON feed snapshot: last fetch times, citypage observation id, LKG hints, **`statusSchemaVersion`** (alerts block includes AMQP **received** count and **last Rx** for CAP notifications). Disabled in production without **`RWC_STATUS_ENABLED=1`** (404). Optional bearer: **`RWC_STATUS_TOKEN`** or **`RWC_METRICS_TOKEN`**. |

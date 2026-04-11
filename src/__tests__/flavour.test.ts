@@ -2,11 +2,13 @@ import { FlavourLoader } from "lib/flavour/flavour";
 import testFlavour from "./testdata/flavours/test_flavour.json";
 import fs from "fs";
 import { parseISO } from "date-fns";
-import { FLAVOUR_DEFAULT } from "consts/flavour.consts";
+import { FLAVOUR_DEFAULT, buildFlavourScreensAllScreenTypes } from "consts/flavour.consts";
 import { SCREEN_DEFAULT_DISPLAY_LENGTH, SCREEN_MIN_DISPLAY_LENGTH } from "consts/screens.consts";
 import { Screens } from "consts/screens.consts";
 import { FS_NO_FILE_FOUND } from "consts/storage.consts";
 import {
+  deleteFlavourJsonFile,
+  generateNewFlavour,
   isAutomaticScreen,
   resolveScreenDwellSeconds,
   usesPerPageDwellInFlavourConfig,
@@ -50,7 +52,7 @@ describe("Flavour loading", () => {
   });
 
   it("makes sure the duration of a screen is the min value", () => {
-    const screens = [...testFlavour.screens, { id: 5, duration: 4 }];
+    const screens = [...testFlavour.screens, { id: 5, duration: 1 }];
     const spy = jest.spyOn(fs, "readFileSync");
     spy.mockReturnValueOnce(
       JSON.stringify({
@@ -103,16 +105,38 @@ describe("Flavour utils", () => {
     manualDurationScreens.forEach((manualScreen) => expect(isAutomaticScreen(manualScreen)).toBeFalsy());
   });
 
-  it("marks forecast, outlook, and alerts as per-page dwell in flavour config", () => {
+  it("marks forecast and alerts as per-page dwell in flavour config (outlook is one step)", () => {
     expect(usesPerPageDwellInFlavourConfig(Screens.FORECAST)).toBe(true);
-    expect(usesPerPageDwellInFlavourConfig(Screens.OUTLOOK)).toBe(true);
+    expect(usesPerPageDwellInFlavourConfig(Screens.OUTLOOK)).toBe(false);
     expect(usesPerPageDwellInFlavourConfig(Screens.ALERTS)).toBe(true);
     expect(usesPerPageDwellInFlavourConfig(Screens.ALMANAC)).toBe(false);
   });
 
   it("resolveScreenDwellSeconds coerces flavour JSON", () => {
     expect(resolveScreenDwellSeconds({ duration: 0 })).toBe(SCREEN_DEFAULT_DISPLAY_LENGTH);
-    expect(resolveScreenDwellSeconds({ duration: 4 })).toBe(SCREEN_MIN_DISPLAY_LENGTH);
+    expect(resolveScreenDwellSeconds({ duration: 1 })).toBe(SCREEN_MIN_DISPLAY_LENGTH);
+    expect(resolveScreenDwellSeconds({ duration: 4 })).toBe(4);
     expect(resolveScreenDwellSeconds({ duration: 20 })).toBe(20);
+  });
+
+  it("generateNewFlavour on-air-cable copies default playlist length", () => {
+    expect(generateNewFlavour("on-air-cable").screens).toHaveLength(FLAVOUR_DEFAULT.screens.length);
+  });
+
+  it("generateNewFlavour all-screens-fast lists every screen once at min dwell", () => {
+    const f = generateNewFlavour("all-screens-fast");
+    expect(f.screens).toEqual(buildFlavourScreensAllScreenTypes(SCREEN_MIN_DISPLAY_LENGTH));
+  });
+
+  it("deleteFlavourJsonFile returns false when file missing", () => {
+    jest.spyOn(fs, "existsSync").mockReturnValue(false);
+    expect(deleteFlavourJsonFile("nope")).toBe(false);
+  });
+
+  it("deleteFlavourJsonFile unlinks when file exists", () => {
+    jest.spyOn(fs, "existsSync").mockReturnValue(true);
+    const unlink = jest.spyOn(fs, "unlinkSync").mockImplementation(() => undefined);
+    expect(deleteFlavourJsonFile("Test_Name")).toBe(true);
+    expect(String(unlink.mock.calls[0]?.[0])).toMatch(/test_name\.json$/);
   });
 });

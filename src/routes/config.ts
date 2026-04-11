@@ -3,6 +3,7 @@ import {
   getConfigHandler,
   postPrimaryLocation,
   postStationsHandler,
+  postLtceStationsHandler,
   postProvinceTracking,
   postHistoricalDataStationID,
   postClimateNormals,
@@ -21,6 +22,7 @@ import {
 const router = express.Router();
 router.get("/", getConfigHandler);
 router.post("/stations", async (req: Request, res: Response) => await postStationsHandler(req, res));
+router.post("/ltce-stations", async (req: Request, res: Response) => await postLtceStationsHandler(req, res));
 router.post("/primaryLocation", postPrimaryLocation);
 router.post("/provinceTracking", postProvinceTracking);
 router.post("/historicalDataStationID", postHistoricalDataStationID);

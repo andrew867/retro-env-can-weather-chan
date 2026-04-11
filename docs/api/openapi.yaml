@@ -7,7 +7,7 @@ info:
 
     **Security:** Config and weather routes are unauthenticated unless you add a reverse proxy.
     Optional bearer tokens apply to `/metrics` and `/status` when env vars are set (see OPERATORS.md).
-  version: "2.6.7"
+  version: "2.6.8"
 
 servers:
   - url: http://127.0.0.1:8600/api/v1
@@ -108,6 +108,26 @@ paths:
       responses:
         "200":
           description: Search results
+
+  /config/ltce-stations:
+    post:
+      tags: [config]
+      summary: Search MSC LTCE virtual climate stations (almanac record backfill)
+      operationId: postConfigLtceStations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [search]
+              properties:
+                search: { type: string, minLength: 2 }
+      responses:
+        "200":
+          description: Deduped virtual stations (max 40)
+        "400":
+          description: search too short
 
   /config/primaryLocation:
     post:
@@ -237,6 +257,23 @@ paths:
       responses:
         "200":
           description: `{ flavour }`
+
+    delete:
+      tags: [flavour]
+      summary: Delete a flavour JSON file by file-safe basename (without .json)
+      operationId: deleteFlavourByName
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Returns updated `flavours` list; if the deleted file was the active display flavour, look-and-feel switches to `default` and rwc-config is saved.
+        "400":
+          description: Missing name
+        "404":
+          description: No matching flavour file
 
   /weather/observed:
     get:

@@ -30,7 +30,12 @@ describe("Config file loading", () => {
       showFooterFreshnessHint: true,
       useOfficialFonts: true,
     });
-    expect(config.misc).toStrictEqual({ ...exampleConfig.misc, alternateRecordsSource: undefined, logLevel: "warn" });
+    expect(config.misc).toStrictEqual({
+      ...exampleConfig.misc,
+      alternateRecordsSource: undefined,
+      logLevel: "warn",
+      ltceVirtualClimateId: "VSMB38V",
+    });
     expect(config.flavour.name).toStrictEqual(FLAVOUR_DEFAULT.name);
     expect(config.flavour.screens).toStrictEqual(FLAVOUR_DEFAULT.screens);
     expect(config.musicPlaylist).toHaveLength(0);
@@ -149,10 +154,16 @@ describe("Config file loading", () => {
   });
 
   it("loads from file correctly when misc is missing", () => {
-    const defaultMisc: { rejectInHourConditionUpdates: boolean; alternateRecordsSource?: string; logLevel: string } = {
+    const defaultMisc: {
+      rejectInHourConditionUpdates: boolean;
+      alternateRecordsSource?: string;
+      logLevel: string;
+      ltceVirtualClimateId: string;
+    } = {
       rejectInHourConditionUpdates: false,
       alternateRecordsSource: undefined,
       logLevel: "warn",
+      ltceVirtualClimateId: "VSMB38V",
     };
     jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => JSON.stringify({ ...exampleConfig, misc: undefined }));
 
@@ -297,11 +308,15 @@ describe("Config updating", () => {
         rejectInHourConditionUpdates: update.reject,
         alternateRecordsSource: update.url,
         logLevel: "warn",
+        ltceVirtualClimateId: "VSMB38V",
       });
     });
 
     config.setMiscSettings(true, "", "error");
     expect(config.misc.logLevel).toBe("error");
+
+    config.setMiscSettings(false, "", undefined, "");
+    expect(config.misc.ltceVirtualClimateId).toBeUndefined();
   });
 
   it("updates the look and feel settings correctly", () => {

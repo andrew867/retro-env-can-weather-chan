@@ -2,7 +2,7 @@ import { buildForecastScreenBodies } from "lib/display/forecastScreenBodies";
 import { buildOutlookPlaylistPages } from "lib/display/outlookScreenBodies";
 
 describe("buildOutlookPlaylistPages", () => {
-  it("keeps each day’s condition line with its period line (no orphan SUNNY page)", () => {
+  it("returns one page with the full body so the outlook is a single rotator plate", () => {
     const lines = [
       "THURSDAY....Low -6.  High 3.",
       "     A MIX OF SUN AND CLOUD.",
@@ -13,11 +13,10 @@ describe("buildOutlookPlaylistPages", () => {
       "Normal Low -4. High 8.",
     ];
     const pages = buildOutlookPlaylistPages("Outlook for Southern Manitoba", lines);
-    expect(pages.length).toBe(2);
-    expect(pages[0].bodyLines).toHaveLength(4);
-    expect(pages[1].bodyLines).toHaveLength(3);
-    expect(pages[1].bodyLines[2]).toMatch(/Normal Low -4\. High 8\./);
-    expect(pages[1].bodyLines.some((l) => l.includes("SUNNY"))).toBe(true);
+    expect(pages).toHaveLength(1);
+    expect(pages[0].title).toBe("Outlook for Southern Manitoba");
+    expect(pages[0].bodyLines).toEqual(lines);
+    expect(pages[0].bodyLines[6]).toMatch(/Normal Low -4\. High 8\./);
   });
 });
 

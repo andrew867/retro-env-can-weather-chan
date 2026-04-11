@@ -21,4 +21,12 @@ describe("configValidation", () => {
     });
     expect(issues.some((i) => i.message.includes("misc.logLevel"))).toBe(true);
   });
+
+  it("validateLoadedConfigJson warns on misc.ltceVirtualClimateId with odd characters", () => {
+    const issues = validateLoadedConfigJson({
+      primaryLocation: { province: "MB", location: "s0000193" },
+      misc: { ltceVirtualClimateId: "bad id!" },
+    });
+    expect(issues.some((i) => i.message.includes("ltceVirtualClimateId"))).toBe(true);
+  });
 });

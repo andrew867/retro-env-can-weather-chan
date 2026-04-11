@@ -2,6 +2,30 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.6.8] - 2026-04-11
+
+### Config / flavours
+
+- **New flavour templates:** **On-air cable (14s)** — same playlist as the original shipped default (`FLAVOUR_DEFAULT`); **All screens (2s)** — every `Screens` id once at minimum dwell for fast previews. **Delete** — `DELETE /api/v1/flavour/{name}` removes `cfg/flavours/{name}.json`, refreshes the flavours list, and if that flavour was active, persists look-and-feel **`default`** in `rwc-config.json`. Config UI: two green template buttons, **Delete this flavour** with confirm.
+- **Minimum dwell:** flavour timing floor remains **2s** per step (`SCREEN_MIN_DISPLAY_LENGTH`).
+
+### Display / ops
+
+- **LTCE virtual station search** on the Display tab (`POST /config/ltce-stations`) to fill `misc.ltceVirtualClimateId` (MSC LTCE almanac backfill).
+
+## [2.7.0-rc1] - unreleased
+
+### Enterprise hardening (pre-rc1 tranche)
+
+- **Specs:** [SPEC-enterprise-hardening-pre-2.7-rc1.md](./docs/specs/SPEC-enterprise-hardening-pre-2.7-rc1.md), [TEST-PLAN](./docs/specs/TEST-PLAN-enterprise-hardening-pre-2.7-rc1.md), [PLAN](./docs/specs/PLAN-enterprise-hardening-pre-2.7-rc1.md), [coverage map](./docs/specs/COVERAGE-enterprise-hardening-pre-2.7-rc1.md), [quad-city climate appendix](./docs/specs/APPENDIX-quad-city-climate-ids.md).
+- **Display — place names:** Conditions / last month / stats use the **full** MSC `city` string (no truncation). Regional **on-air** strings (“southern manitoba”, “southern ontario”, AQHI **WPG/YHM/YYT**) live in **`lib/display/plugins/bundles/ecccRetroBroadcast.bundle.ts`** (configurable ID arrays + rules) and resolve through **`lib/display/plugins/displayLabelRegistry.ts`** — core screens import **`outlookRegionalLabel`** only. `#conditions` sets **`data-rwc-label-template`** for bundle-specific SCSS without core `if` chains.
+- **Outlook:** Single rotator plate (no pagination split); flavour helper text updated.
+- **Last month stats:** Flavour option to show **all month** vs **days 1–5** only (ECCC-style default); `filterFlavourScreensForPlayout` in `ScreenRotator`.
+- **Status snapshot:** `historical` and `climate_normals` blocks may include a **`note`** when bulk data is empty or CSV parse yields no rows (operator steer to appendix).
+- **Logging:** `warnThrottled` reduces duplicate climate / historical operator warns during fetch storms.
+- **CI fixtures:** Quad-city observed JSON under `src/__tests__/testdata/ecccData/conditions/` + `channelQuadCitySmoke.test.ts`.
+- **Almanac record high/low (LTCE):** MSC removed citypage `<almanac>` in 2024; the server now backfills **calendar-day record max/min** from **`api.weather.gc.ca/collections/ltce-temperature`** when **`misc.ltceVirtualClimateId`** is set (default **`VSMB38V`** for Winnipeg Area). **`misc.alternateRecordsSource`** JSON still overrides after LTCE. Docs: [SPEC](./docs/specs/SPEC-ltce-almanac-records.md), [PLAN](./docs/specs/PLAN-ltce-almanac-records.md), [TEST-PLAN](./docs/specs/TEST-PLAN-ltce-almanac-records.md). Implementation: `lib/eccc/ltceDailyTemperatureRecords.ts`, `conditions.mergeExternalAlmanacRecordSources`, Display config field.
+
 ## [2.6.7] - 2026-04-10
 
 ### Documentation & API

@@ -48,6 +48,8 @@
             observationID: station.observationID,
             stationTime: station.stationTime,
           });
+        } else if (this.url.includes("init/stream")) {
+          /* no synthetic crawler/init_refresh — avoids refetch churn during screenshot stability checks */
         } else if (this.url.includes("alerts/stream")) {
           emit("alerts_update", { alerts: [] });
         }

@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SCREEN_BACKGROUND_BLUE, SCREEN_BACKGROUND_RED, Screens } from "consts";
-import { getAqhiCityAbbreviation } from "lib/display/outlookRegionalLabel";
 import { buildChannelPlaylist, getChannelPlaylistStructureKey } from "lib/display/channelPlaylist";
+import { getAqhiCityAbbreviation } from "lib/display/outlookRegionalLabel";
+import { filterFlavourScreensForPlayout } from "lib/flavour/lastMonthStatsSchedule";
 import { isAutomaticScreen, resolveScreenDwellSeconds } from "lib/flavour/utils";
 import {
   AQHIObservationResponse,
@@ -143,7 +144,8 @@ export function ScreenRotator(props: ScreenRotatorProps) {
     screenRotatorTimeout.current && clearTimeout(screenRotatorTimeout.current);
 
     const { screens: s, weatherStationResponse: w, alerts: a } = playlistInputRef.current;
-    const playlist = buildChannelPlaylist(s ?? [], {
+    const effectiveScreens = filterFlavourScreensForPlayout(s, w?.stationTime);
+    const playlist = buildChannelPlaylist(effectiveScreens, {
       weatherStationResponse: w,
       alert: a?.mostImportantAlert,
     });
@@ -271,10 +273,7 @@ export function ScreenRotator(props: ScreenRotatorProps) {
       case Screens.AQHI_WARNING:
         return (
           <AQHIWarningScreen
-            city={getAqhiCityAbbreviation(
-              weatherStationResponse?.stationID ?? "",
-              weatherStationResponse?.city
-            )}
+            city={getAqhiCityAbbreviation(weatherStationResponse?.stationID ?? "", weatherStationResponse?.city)}
             airQuality={airQuality}
             onComplete={switchToNextScreen}
           />

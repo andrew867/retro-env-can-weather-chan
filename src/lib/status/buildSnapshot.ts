@@ -179,11 +179,21 @@ export function buildStatusSnapshot(): StatusSnapshot {
         dataFetchedAt: historical.getLastBulkFetchCompletedIso(),
         servedDataAsOf: historical.getLastBulkFetchCompletedIso(),
         source: historical.getLastBulkFetchCompletedIso() ? "live" : "none",
+        ...(historical.getLastBulkFetchCompletedIso() && !historical.hasAnyBulkRows()
+          ? {
+              note: "Bulk fetch finished but no stationdata rows were stored (HTML error page, invalid station ID, or upstream empty).",
+            }
+          : {}),
       },
       climate_normals: {
         dataFetchedAt: climate.getLastFetchIso(),
         servedDataAsOf: climate.getLastFetchIso(),
         source: climate.getLastFetchIso() ? "live" : "none",
+        ...(climate.getLastFetchIso() && climate.csvHadNoUsableRows()
+          ? {
+              note: "Last CSV parse had no usable rows — verify CLIMATE_IDENTIFIER on api.weather.gc.ca (see docs/specs/APPENDIX-quad-city-climate-ids.md).",
+            }
+          : {}),
       },
       aqhi: {
         dataFetchedAt: aqhi.getLastFetchIso(),

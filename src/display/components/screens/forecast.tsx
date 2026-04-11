@@ -382,6 +382,7 @@ export function ForecastScreen(props: ForecastScreenProps) {
         <>
           <Conditions
             city={weatherStationResponse.city ?? ""}
+            stationID={weatherStationResponse.stationID}
             conditions={weatherStationResponse.observed ?? undefined}
             stationTime={weatherStationResponse.stationTime}
             airQuality={airQuality}

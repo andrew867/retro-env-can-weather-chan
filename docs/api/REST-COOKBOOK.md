@@ -89,6 +89,12 @@ curl -sS -X POST "$BASE/flavour/" \
 curl -sS "$BASE/flavour/Stats" | jq .
 ```
 
+**Delete** a flavour file (basename without `.json`). If it was the active display flavour, `rwc-config.json` switches to **`default`**:
+
+```bash
+curl -sS -X DELETE "$BASE/flavour/my_test_rotation"
+```
+
 ## Operator status snapshot & refresh
 
 ```bash

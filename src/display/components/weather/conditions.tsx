@@ -1,4 +1,5 @@
 import { CONDITIONS_WIND_SPEED_CALM } from "consts";
+import { resolveConditionsLabelTemplateId } from "lib/display/outlookRegionalLabel";
 import { formatObservedLong } from "lib/date";
 import { isLooseNull } from "lib/isnull";
 import { useMemo } from "react";
@@ -12,6 +13,8 @@ function unitValue(container: unknown): unknown {
 
 type ConditionsProp = {
   city?: string | null;
+  /** MSC `stationID` — used only for optional `data-rwc-label-template` (plugin bundles / SCSS). */
+  stationID?: string;
   /** May be absent for a render while hooks merge SSE + polled payloads. */
   conditions?: ObservedConditions | null;
   /** May be missing briefly while observed payload is merged (avoid crashing on destructure). */
@@ -25,6 +28,7 @@ type ConditionsProp = {
 export function Conditions(props: ConditionsProp) {
   const {
     city,
+    stationID = "",
     conditions,
     stationTime,
     showPressure = false,
@@ -33,8 +37,13 @@ export function Conditions(props: ConditionsProp) {
   } = props ?? {};
   const observedDateTime = stationTime?.observedDateTime;
 
+  const labelTemplateId = useMemo(
+    () => resolveConditionsLabelTemplateId({ stationID, city: city ?? undefined }),
+    [stationID, city]
+  );
+
   if (conditions == null) {
-    return <div id="conditions" />;
+    return <div id="conditions" data-rwc-label-template={labelTemplateId} />;
   }
 
   // Avoid `a.b.value` when `b` may be undefined (merge / partial XML) — use unitValue + explicit wind branches.
@@ -74,7 +83,7 @@ export function Conditions(props: ConditionsProp) {
   const abbreviatedCondition = conditions.abbreviatedCondition;
 
   const title = useMemo(
-    () => stationTime && ` ${(city ?? "").slice(0, 8).padEnd(11)}${formatObservedLong(stationTime, true)}`,
+    () => stationTime && ` ${(city ?? "").trim()} ${formatObservedLong(stationTime, true)}`,
     [city, observedDateTime, stationTime]
   );
 
@@ -132,7 +141,7 @@ export function Conditions(props: ConditionsProp) {
   });
 
   return (
-    <div id="conditions">
+    <div id="conditions" data-rwc-label-template={labelTemplateId}>
       <div className="reload-animation" style={rv(1)}>
         {title}
       </div>

@@ -1,8 +1,12 @@
-import { SCREEN_DEFAULT_DISPLAY_LENGTH, Screens } from "./screens.consts";
+import { SCREEN_DEFAULT_DISPLAY_LENGTH, SCREEN_MIN_DISPLAY_LENGTH, Screens } from "./screens.consts";
 
 export const FLAVOUR_DIRECTORY = "cfg/flavours";
 export const FLAVOUR_NAME_MAX_LENGTH = 32;
 
+/**
+ * On-air cable-style default playlist (~14s steps, duplicate alerts at the end).
+ * Matches the shipped `default` flavour intent; used as the **on-air cable** new-flavour template.
+ */
 export const FLAVOUR_DEFAULT = {
   name: "default",
   created: "2023-07-23T15:39:40",
@@ -82,3 +86,13 @@ export const FLAVOUR_DEFAULT = {
     },
   ],
 };
+
+/** One playlist row per {@link Screens} id, ascending by id — for quick previews / lab runs. */
+export function buildFlavourScreensAllScreenTypes(
+  duration: number = SCREEN_MIN_DISPLAY_LENGTH
+): { id: Screens; duration: number }[] {
+  const ids = (Object.values(Screens) as (keyof typeof Screens | Screens)[])
+    .filter((v): v is Screens => typeof v === "number")
+    .sort((a, b) => a - b);
+  return ids.map((id) => ({ id, duration }));
+}

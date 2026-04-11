@@ -53,13 +53,24 @@ export function validateLoadedConfigJson(parsed: Record<string, unknown>): Confi
   }
 
   const misc = parsed.misc as Record<string, unknown> | undefined;
-  if (misc && typeof misc === "object" && misc.logLevel !== undefined) {
-    const level = String(misc.logLevel).trim().toLowerCase();
-    if (!["debug", "notice", "warn", "warning", "error", "critical"].includes(level)) {
-      issues.push({
-        level: "warn",
-        message: `misc.logLevel must be one of debug|notice|warn|error|critical (got ${String(misc.logLevel)})`,
-      });
+  if (misc && typeof misc === "object") {
+    if (misc.logLevel !== undefined) {
+      const level = String(misc.logLevel).trim().toLowerCase();
+      if (!["debug", "notice", "warn", "warning", "error", "critical"].includes(level)) {
+        issues.push({
+          level: "warn",
+          message: `misc.logLevel must be one of debug|notice|warn|error|critical (got ${String(misc.logLevel)})`,
+        });
+      }
+    }
+    if (misc.ltceVirtualClimateId !== undefined && misc.ltceVirtualClimateId !== null) {
+      const ltce = String(misc.ltceVirtualClimateId).trim();
+      if (ltce.length && !/^[A-Za-z0-9]{4,16}$/.test(ltce)) {
+        issues.push({
+          level: "warn",
+          message: `misc.ltceVirtualClimateId should look like an MSC virtual id (e.g. VSMB38V); got "${ltce}"`,
+        });
+      }
     }
   }
 

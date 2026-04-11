@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import { initializeConfig } from "./config";
 import { broadcastCrawlerUpdate, broadcastInitRefresh, registerInitSseClient } from "./initSseHub";
 import { getECCCWeatherStations } from "lib/eccc/weatherStations";
+import { searchLtceVirtualStations } from "lib/eccc/ltceStationSearch";
 import { AuthenticRefreshConfig, GfxRuntimeConfig } from "types";
 
 const config = initializeConfig();
@@ -46,6 +47,23 @@ export async function postStationsHandler(req: Request, res: Response) {
     res.json({ results: await getECCCWeatherStations(search) });
   } catch (e) {
     res.status(500).json({ error: "Unable to search weather stations" });
+  }
+}
+
+export async function postLtceStationsHandler(req: Request, res: Response) {
+  const {
+    body: { search = "" },
+  } = req ?? {};
+
+  try {
+    const q = String(search ?? "").trim();
+    if (q.length < 2) {
+      res.status(400).json({ error: "search must be at least 2 characters" });
+      return;
+    }
+    res.json({ results: await searchLtceVirtualStations(q) });
+  } catch (e) {
+    res.status(500).json({ error: "Unable to search LTCE virtual stations" });
   }
 }
 
@@ -113,16 +131,19 @@ export function postClimateNormals(req: Request, res: Response) {
 
 export function postMisc(req: Request, res: Response) {
   const {
-    body: { rejectInHourConditionUpdates, alternateRecordsSource, logLevel },
+    body: { rejectInHourConditionUpdates, alternateRecordsSource, logLevel, ltceVirtualClimateId },
   } = req ?? {};
 
   try {
     if (typeof rejectInHourConditionUpdates !== "boolean") throw "`rejectInHourConditionUpdates` must be true/false";
     if (typeof alternateRecordsSource !== "string") throw "`alternateRecordsSource` must be a string";
     if (logLevel !== undefined && typeof logLevel !== "string") throw "`logLevel` must be a string";
+    if (ltceVirtualClimateId !== undefined && typeof ltceVirtualClimateId !== "string") {
+      throw "`ltceVirtualClimateId` must be a string when provided";
+    }
 
     config.updateAndSaveConfigOption(() =>
-      config.setMiscSettings(rejectInHourConditionUpdates, alternateRecordsSource, logLevel)
+      config.setMiscSettings(rejectInHourConditionUpdates, alternateRecordsSource, logLevel, ltceVirtualClimateId)
     );
     res.sendStatus(200);
   } catch (e) {

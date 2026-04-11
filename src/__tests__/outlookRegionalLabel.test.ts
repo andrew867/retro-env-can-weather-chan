@@ -5,7 +5,7 @@ import {
   isSouthernOntarioOutlookArea,
 } from "lib/display/outlookRegionalLabel";
 
-describe("outlookRegionalLabel", () => {
+describe("outlookRegionalLabel (plugin registry + eccc-retro bundle)", () => {
   it("uses southern manitoba / WPG for default Winnipeg site", () => {
     expect(getOutlookForAreaLabel(DEFAULT_WEATHER_STATION_ID, "Winnipeg")).toBe("southern manitoba");
     expect(getAqhiCityAbbreviation(DEFAULT_WEATHER_STATION_ID, "Winnipeg")).toBe("WPG");
@@ -27,5 +27,10 @@ describe("outlookRegionalLabel", () => {
   it("falls back to city for other locations", () => {
     expect(getOutlookForAreaLabel("s0000458", "Toronto")).toBe("Toronto");
     expect(getAqhiCityAbbreviation("s0000458", "Toronto")).toBe("Toronto");
+  });
+
+  it("uses YYT for St. John’s NL citypage codes", () => {
+    expect(getAqhiCityAbbreviation("NL/s0000280", "St. John's")).toBe("YYT");
+    expect(getAqhiCityAbbreviation("s0000280", "St. John's")).toBe("YYT");
   });
 });

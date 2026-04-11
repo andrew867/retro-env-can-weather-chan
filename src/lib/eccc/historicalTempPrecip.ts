@@ -1,5 +1,6 @@
 import { initializeConfig } from "lib/config";
 import Logger from "lib/logger";
+import { warnThrottled } from "lib/logger/warnThrottled";
 import axios from "lib/backendAxios";
 import { formatFetchError, looksLikeClimatedataXml } from "lib/eccc/fetchErrors";
 import { ElementCompact, xml2js } from "xml-js";
@@ -121,7 +122,9 @@ class HistoricalTempPrecip {
             logger.log("Fetched historical data for", year);
           })
           .catch((err) =>
-            logger.warn(`Historical bulk data for ${year} skipped: ${formatFetchError(err)}`)
+            warnThrottled(`historical_bulk_${year}_${formatFetchError(err)}`, 90_000, () =>
+              logger.warn(`Historical bulk data for ${year} skipped: ${formatFetchError(err)}`)
+            )
           )
       );
     });
@@ -141,6 +144,10 @@ class HistoricalTempPrecip {
 
   public getLastBulkFetchCompletedIso(): string | null {
     return this._lastBulkFetchCompletedAt;
+  }
+
+  public hasAnyBulkRows(): boolean {
+    return this._historicalData.length > 0;
   }
 
   private parseHistoricalStationData(currentDate: Date) {

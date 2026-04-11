@@ -14,28 +14,6 @@ export type OutlookPlaylistPage = {
   bodyLines: readonly string[];
 };
 
-/** First page: title + this many body rows (footer-safe). Continuation pages omit the title. */
-const OUTLOOK_FIRST_PAGE_BODY_LINES = 6;
-const OUTLOOK_CONTINUATION_BODY_LINES = 7;
-
-/** One day = high/low line + condition line; normals = final line. Never split a day across pages. */
-function outlookBodySegments(bodyLines: string[]): string[][] {
-  if (bodyLines.length === 0) return [];
-  if (bodyLines.length <= 2) return [bodyLines];
-  const normalLine = bodyLines[bodyLines.length - 1];
-  const dayLines = bodyLines.slice(0, -1);
-  if (dayLines.length % 2 !== 0) return [bodyLines];
-  const segments: string[][] = [];
-  for (let i = 0; i < dayLines.length; i += 2) {
-    segments.push([dayLines[i], dayLines[i + 1]]);
-  }
-  /** Keep climate-normal line with the last day block so it is not stranded alone on a sparse page. */
-  if (segments.length > 0 && normalLine?.trim()) {
-    segments[segments.length - 1].push(normalLine);
-  }
-  return segments;
-}
-
 function computeOutlookBodyLines(ws: WeatherStation): { title: string; lines: string[] } | null {
   const { stationID, city, forecast, stationTime, almanac } = ws;
   const title = `Outlook for ${getOutlookForAreaLabel(stationID, city)}`;
@@ -82,52 +60,15 @@ function computeOutlookBodyLines(ws: WeatherStation): { title: string; lines: st
   return { title, lines };
 }
 
-/** Segment-aware pagination (exported for tests). */
+/**
+ * Single playout page: full outlook (title + all body lines) in one rotator dwell.
+ * (Previously paginated into continuation pages; product wants one plate.)
+ */
 export function buildOutlookPlaylistPages(title: string, bodyLines: string[]): OutlookPlaylistPage[] {
-  const segments = outlookBodySegments(bodyLines);
-  if (segments.length === 0) {
-    return [{ title, bodyLines: [] }];
-  }
-
-  const pages: OutlookPlaylistPage[] = [];
-  let current: string[] = [];
-  let budget = OUTLOOK_FIRST_PAGE_BODY_LINES;
-  let isFirstPage = true;
-
-  const flush = () => {
-    if (current.length === 0) return;
-    pages.push({
-      title: isFirstPage ? title : null,
-      bodyLines: [...current],
-    });
-    current = [];
-    isFirstPage = false;
-    budget = OUTLOOK_CONTINUATION_BODY_LINES;
-  };
-
-  for (const seg of segments) {
-    const need = seg.length;
-    if (need > budget && current.length === 0) {
-      pages.push({
-        title: isFirstPage ? title : null,
-        bodyLines: [...seg],
-      });
-      isFirstPage = false;
-      budget = OUTLOOK_CONTINUATION_BODY_LINES;
-      continue;
-    }
-    if (current.length + need > budget) {
-      flush();
-    }
-    current.push(...seg);
-  }
-  flush();
-  return pages;
+  return [{ title, bodyLines: [...bodyLines] }];
 }
 
-/**
- * One rotator step per page so tall regional outlooks are not clipped by the footer.
- */
+/** One rotator step with the complete regional outlook. */
 export function buildOutlookScreenBodies(weatherStationResponse: WeatherStation | undefined): OutlookPlaylistPage[] {
   if (!weatherStationResponse) {
     return [];

@@ -37,6 +37,7 @@ import {
   ProvinceStations,
 } from "types";
 import eventbus from "lib/eventbus";
+import { LTCE_WINNIPEG_AREA_VIRTUAL_CLIMATE_ID } from "lib/eccc/ltceDailyTemperatureRecords";
 import { logConfigValidationIssues, validateLoadedConfigJson } from "lib/config/configValidation";
 
 const logger = new Logger("config");
@@ -127,6 +128,8 @@ class Config {
   misc: MiscConfig = {
     rejectInHourConditionUpdates: false, // whether we should only update conditions once an hour
     alternateRecordsSource: undefined, // if you want to supply your own record data to override what ECCC has, you can do it here with a JSON file at http(s)://example.com/records.json
+    /** Default Winnipeg Area LTCE id — citypage no longer includes `<almanac>` (MSC 2024-06-25). */
+    ltceVirtualClimateId: LTCE_WINNIPEG_AREA_VIRTUAL_CLIMATE_ID,
     logLevel: "warn", // mute notice/debug by default; emit warn/error/critical
   };
   crawlerMessages: string[] = [];
@@ -452,12 +455,36 @@ class Config {
     this.checkFlavoursDirectory();
   }
 
-  public setMiscSettings(rejectInHourConditionUpdates: boolean, alternateRecordsSource: string, logLevel?: string) {
+  /** Refresh {@link flavours} from `cfg/flavours` synchronously (e.g. after delete). */
+  public syncFlavoursFromDisk() {
+    try {
+      const files = fs
+        .readdirSync(FLAVOUR_DIRECTORY)
+        .filter((f) => f.endsWith(".json"))
+        .map((f) => f.replace(".json", ""));
+      this.flavours.splice(0, this.flavours.length, ...files);
+      logger.log("Synced flavours list from disk:", this.flavours.length);
+    } catch (err) {
+      logger.error("Failed to sync flavours from disk", err);
+      this.flavours.splice(0, this.flavours.length);
+    }
+  }
+
+  public setMiscSettings(
+    rejectInHourConditionUpdates: boolean,
+    alternateRecordsSource: string,
+    logLevel?: string,
+    ltceVirtualClimateId?: string | null
+  ) {
     this.misc.alternateRecordsSource = alternateRecordsSource;
     this.misc.rejectInHourConditionUpdates = rejectInHourConditionUpdates;
     if (typeof logLevel === "string") {
       this.misc.logLevel = normalizeLogLevel(logLevel, this.misc.logLevel ?? "warn");
       setLogLevel(this.misc.logLevel);
+    }
+    if (ltceVirtualClimateId !== undefined) {
+      const raw = ltceVirtualClimateId === null ? "" : String(ltceVirtualClimateId).trim();
+      this.misc.ltceVirtualClimateId = raw.length ? raw : undefined;
     }
   }
 

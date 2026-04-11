@@ -4,6 +4,7 @@ import { format, getDaysInMonth, isValid, subMonths } from "date-fns";
 import { initializeConfig } from "lib/config";
 import { getShorthandMonthNamesForSeason } from "lib/date";
 import Logger from "lib/logger";
+import { warnThrottled } from "lib/logger/warnThrottled";
 import { ClimateNormalSeasonPrecip, ClimateNormalsForMonth } from "types";
 import eventbus from "lib/eventbus";
 import { EVENT_BUS_AUXILIARY_WEATHER_DATA_READY, EVENT_BUS_CONFIG_CHANGE_CLIMATE_NORMALS } from "consts";
@@ -135,6 +136,8 @@ class ClimateNormals {
     precip: { amount: 0 },
   };
   private _fetchedAt: string | null = null;
+  /** Last completed HTTP parse yielded zero usable CSV rows (distinct from “never fetched”). */
+  private _csvHadNoUsableRows = false;
 
   constructor() {
     if (!config) return;
@@ -175,16 +178,24 @@ class ClimateNormals {
           throw new Error(`climate normals CSV parse failed: ${formatFetchError(parseErr)}`);
         }
         if (!values.size) {
-          logger.warn("Climate normals CSV contained no usable rows");
+          this._csvHadNoUsableRows = true;
+          warnThrottled("climate_normals_csv_empty", 120_000, () =>
+            logger.warn("Climate normals CSV contained no usable rows")
+          );
           return;
         }
 
+        this._csvHadNoUsableRows = false;
         this.applyPrecipNormals(currentDate, values);
         this.applyTempNormals(values);
         this._fetchedAt = new Date().toISOString();
         eventbus.emit(EVENT_BUS_AUXILIARY_WEATHER_DATA_READY);
       })
-      .catch((err) => logger.warn(`Climate normals fetch skipped: ${formatFetchError(err)}`))
+      .catch((err) =>
+        warnThrottled(`climate_normals_fetch_${formatFetchError(err)}`, 120_000, () =>
+          logger.warn(`Climate normals fetch skipped: ${formatFetchError(err)}`)
+        )
+      )
       .finally(() => logger.log("Climate normals request finished"));
   }
 
@@ -250,6 +261,10 @@ class ClimateNormals {
 
   public getLastFetchIso(): string | null {
     return this._fetchedAt;
+  }
+
+  public csvHadNoUsableRows(): boolean {
+    return this._csvHadNoUsableRows;
   }
 
   public requestOperatorRefresh(currentDate: Date = new Date()): void {

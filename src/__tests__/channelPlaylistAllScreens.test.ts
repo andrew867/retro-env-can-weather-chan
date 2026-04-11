@@ -10,7 +10,8 @@ function readyStation(): import("types").WeatherStation {
     stationID: "s0000193",
     fetchedAt: "2026-04-08T12:00:00.000Z",
     stationTime: {
-      observedDateTime: "2026-04-08T12:00:00.000Z",
+      /** Station-local day 2 (CDT): keeps Last month stats in authentic days 1–5 window for playlist tests. */
+      observedDateTime: "2026-04-02T17:00:00.000Z",
       stationOffsetMinutesFromLocal: -300,
       timezone: "CDT",
     },

@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useState } from "react";
-import { Stack, Text, FormControl, FormLabel, Input, Button, useToast, Link } from "@chakra-ui/react";
+import { Stack, Text, FormControl, FormLabel, Input, Button, useToast, Link, Code } from "@chakra-ui/react";
 import { useSaveConfigOption } from "hooks";
 
 type HistoricalDataStationIDConfigProps = {
@@ -49,6 +49,11 @@ export function HistoricalDataStationIDConfig({ historicalDataStationID }: Histo
           <i>"Winnipeg Richardson Intl A"</i> doesn't track both last year and precip data so we use a station in a
           different location referred to as
           <i>"Winnipeg A CS"</i>
+        </Text>
+
+        <Text fontSize="sm" color={"gray"}>
+          Example <b>historicalDataStationID</b> pairings for common sites are listed in{" "}
+          <Code>docs/specs/APPENDIX-quad-city-climate-ids.md</Code> in the source tree.
         </Text>
 
         <Text fontSize="sm" color={"gray"}>

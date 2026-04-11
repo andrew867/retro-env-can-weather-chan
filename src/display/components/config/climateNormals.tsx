@@ -1,5 +1,5 @@
 import { ChangeEvent, FormEvent, useState } from "react";
-import { Stack, Text, FormControl, FormLabel, Input, Button, useToast, Link, Select } from "@chakra-ui/react";
+import { Stack, Text, FormControl, FormLabel, Input, Button, useToast, Link, Select, Code } from "@chakra-ui/react";
 import { useSaveConfigOption } from "hooks";
 import { ClimateNormals } from "types";
 import { PROVINCE_LIST } from "consts";
@@ -66,6 +66,12 @@ export function ClimateNormalsConfig({ climateNormals }: ClimateNormalsConfigPro
             this website
           </Link>{" "}
           (1981-2010 tab) to see if climate normals would exist for your station.
+        </Text>
+
+        <Text fontSize="sm" color={"gray"}>
+          Recommended IDs for Winnipeg / Oakville / Hamilton / St. John’s setups are summarized in the repo at{" "}
+          <Code>docs/specs/APPENDIX-quad-city-climate-ids.md</Code> (empty pygeoapi CSV usually means the wrong{" "}
+          <b>Climate ID</b>).
         </Text>
 
         <Text fontSize="sm" color={"gray"}>

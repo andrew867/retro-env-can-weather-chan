@@ -7,7 +7,7 @@ import { buildOutlookScreenBodies, type OutlookPlaylistPage } from "./outlookScr
  * Expand a flavour’s screen list into a flat playout sequence.
  * - Most screens stay one rotator step (`timed`).
  * - `FORECAST` becomes N steps (`forecast_page`), one per precomputed text page.
- * - `OUTLOOK` becomes N steps (`outlook_page`) when the regional outlook exceeds one footer-safe page.
+ * - `OUTLOOK` becomes one step (`outlook_page`) with the full title + body for that dwell.
  *
  * Future screen types (news ticker page, schedule, etc.) can add new `kind` variants here.
  */

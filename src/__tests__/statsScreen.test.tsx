@@ -30,7 +30,7 @@ const hotCold: HotColdSpots = {
 };
 
 describe("StatsScreen", () => {
-  it("keeps each line within STATS_SCREEN_MAX_CHARACTERS_PER_LINE (display plate width)", () => {
+  it("keeps fixed-width data rows within STATS_SCREEN_MAX_CHARACTERS_PER_LINE (title row may be longer for official names)", () => {
     const { container } = render(
       <div id="weather_channel">
         <StatsScreen
@@ -44,6 +44,23 @@ describe("StatsScreen", () => {
     );
     const rows = container.querySelectorAll("#stats_screen > div");
     const lengths = [...rows].map((el) => el.textContent?.length ?? 0);
-    expect(Math.max(...lengths)).toBeLessThanOrEqual(STATS_SCREEN_MAX_CHARACTERS_PER_LINE);
+    // Row 0: full city; row 1: " statistics - …"; from row 2 onward use the legacy raster width budget.
+    expect(Math.max(...lengths.slice(2))).toBeLessThanOrEqual(STATS_SCREEN_MAX_CHARACTERS_PER_LINE);
+  });
+
+  it("shows the full city string on its own title row", () => {
+    const { container } = render(
+      <div id="weather_channel">
+        <StatsScreen
+          city="St. John's"
+          weatherStationTime={time}
+          season={season}
+          sunRiseSet={sun}
+          hotColdSpots={hotCold}
+        />
+      </div>
+    );
+    const first = container.querySelector("#stats_screen > div");
+    expect(first?.textContent).toBe("St. John's");
   });
 });

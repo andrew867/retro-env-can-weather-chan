@@ -24,7 +24,7 @@ export function OutlookScreen(props: OutlookScreenProps) {
   const bodyLines = coerceStringLines(page.bodyLines);
 
   return (
-    <div id="outlook_screen">
+    <div id="outlook_screen" className="outlook-screen-plate">
       {page.title ? <div className="outlook-screen-title">{String(page.title ?? "")}</div> : null}
       <div className="forecast-hardware-text-column outlook-screen-body">
         {bodyLines.map((line, i) => (

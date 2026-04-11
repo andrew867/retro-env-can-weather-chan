@@ -39,7 +39,11 @@
   font-size: 0.97em;
   margin-inline: auto;
   max-width: 35ch;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
+
+/* Plate tuning: target `#conditions[data-rwc-label-template="…"]` when a bundle needs different max-width / font-size without TS branches (see `lib/display/plugins/`). */
 
 #almanac_screen .forecast-hardware-text-column--almanac-records {
   font-size: 0.93em;
@@ -88,9 +92,17 @@
   width: 100%;
 }
 
-/** Regional outlook: centered plate title, body in same hardware column as forecast copy. */
+/** Regional outlook: one visual plate (title + column) in a single rotator step. */
+#outlook_screen.outlook-screen-plate {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 .outlook-screen-title {
-  margin-bottom: 0.22em;
+  flex-shrink: 0;
+  margin-bottom: 0.16em;
   text-align: center;
   width: 100%;
 }

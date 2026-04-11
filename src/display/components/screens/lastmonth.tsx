@@ -38,10 +38,10 @@ export function LastMonthScreen(props: LastMonthScreenProps) {
   };
 
   return (
-    <div id="lastmonth_screen">
+    <div id="lastmonth_screen" style={{ overflowWrap: "anywhere", whiteSpace: "normal" }}>
       <div>Weather Statistics for {month}</div>
       <div>
-        &nbsp;{city.slice(0, 11).padEnd(11)}&nbsp;This Year{"".padStart(2)}Normal
+        &nbsp;{city.trim()}&nbsp;This Year{"".padStart(2)}Normal
       </div>
       <div>
         {"Average High".padEnd(15)}

@@ -13,7 +13,9 @@ const SSE_RECONNECT_MAX_MS = 60000;
 export type WeatherEventStreamOptions = {
   /**
    * Called every time the EventSource opens, including first connect and after reconnect.
-   * Use to refetch polled feeds so footer freshness headers catch up right after the API is back.
+   * The channel wires this to **`refetchAllFeedsForFreshness`** (`channel.tsx`): season, last month,
+   * national, USA, airport METAR, province, hot/cold, sunspots, AQHI, alerts, and init/config refetch
+   * so polled/auxiliary feeds are not left stale across an SSE gap (SPEC R-4.2.2 / TEST-PLAN H1).
    */
   onStreamConnected?: () => void;
 };

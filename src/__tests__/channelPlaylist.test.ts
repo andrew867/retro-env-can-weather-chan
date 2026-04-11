@@ -64,7 +64,7 @@ describe("buildChannelPlaylist", () => {
     expect(playlist.filter((e) => e.kind === "outlook_page")).toHaveLength(0);
   });
 
-  it("expands OUTLOOK into one outlook_page per paginated body when data is ready", () => {
+  it("expands OUTLOOK into a single outlook_page when data is ready", () => {
     const screens: FlavourScreen[] = [timed(Screens.OUTLOOK)];
     const station = {
       stationID: "s0000193",

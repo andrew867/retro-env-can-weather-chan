@@ -8,6 +8,7 @@ import {
   Button,
   useToast,
   Select,
+  Switch,
   Table,
   TableContainer,
   Tbody,
@@ -18,7 +19,7 @@ import {
   Tfoot,
 } from "@chakra-ui/react";
 import { useSaveConfigOption } from "hooks";
-import { Flavour, FlavourScreen } from "types";
+import { Flavour, FlavourCreationTemplateId, FlavourScreen } from "types";
 import { generateNewFlavour, usesPerPageDwellInFlavourConfig } from "lib/flavour/utils";
 import {
   FLAVOUR_NAME_MAX_LENGTH,
@@ -38,6 +39,10 @@ type FlavoursConfigProps = {
 
 type SaveFlavourResponse = {
   flavour: Flavour;
+  flavours: string[];
+};
+
+type DeleteFlavourResponse = {
   flavours: string[];
 };
 
@@ -108,8 +113,37 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
     setSelectedFlavour("");
   };
 
-  const createNewFlavour = () => {
-    setMutableFlavour(generateNewFlavour());
+  const beginNewFlavour = (template: FlavourCreationTemplateId) => {
+    setMutableFlavour(generateNewFlavour(template));
+    setSelectedFlavour("");
+  };
+
+  const deleteFlavourFromServer = async () => {
+    if (!mutableFlavour?.uuid || !selectedFlavour) return;
+    const fileKey = selectedFlavour;
+    const label = mutableFlavour.name || fileKey;
+    if (
+      !window.confirm(
+        `Delete flavour "${label}" (${fileKey}.json)? This cannot be undone. If it is the active display flavour, the channel switches to "default".`
+      )
+    )
+      return;
+
+    toast.closeAll();
+    try {
+      const { data } = await axios.delete<DeleteFlavourResponse>(`flavour/${encodeURIComponent(fileKey)}`);
+      setSelectableFlavours(data.flavours ?? []);
+      onFlavoursListChange?.(data.flavours ?? []);
+      setMutableFlavour(null);
+      setSelectedFlavour("");
+      toast({ title: "Flavour deleted", status: "success" });
+    } catch {
+      toast({
+        title: "Delete failed",
+        description: "Could not remove the flavour file (or the server rejected the request).",
+        status: "error",
+      });
+    }
   };
 
   const editFlavour = (e: ChangeEvent<HTMLSelectElement>) => {
@@ -141,17 +175,38 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
   };
 
   const updateScreenID = (e: ChangeEvent<HTMLSelectElement>, screen: FlavourScreen, ix: number) => {
-    // update screen in temp array
     const newScreens = [...mutableFlavour.screens];
-    newScreens.splice(ix, 1, {
-      id: Number(e.target.value),
-      duration: Math.max(
-        SCREEN_MIN_DISPLAY_LENGTH,
-        screen.duration >= SCREEN_MIN_DISPLAY_LENGTH ? screen.duration : SCREEN_DEFAULT_DISPLAY_LENGTH
-      ),
-    });
+    const newId = Number(e.target.value) as Screens;
+    const baseDuration = Math.max(
+      SCREEN_MIN_DISPLAY_LENGTH,
+      screen.duration >= SCREEN_MIN_DISPLAY_LENGTH ? screen.duration : SCREEN_DEFAULT_DISPLAY_LENGTH
+    );
 
-    // store to state
+    let replacement: FlavourScreen;
+    if (newId === Screens.LAST_MONTH_STATS) {
+      replacement =
+        screen.id === Screens.LAST_MONTH_STATS && screen.lastMonthStatsShowAllMonth === true
+          ? { id: newId, duration: baseDuration, lastMonthStatsShowAllMonth: true }
+          : { id: newId, duration: baseDuration };
+    } else {
+      replacement = { id: newId, duration: baseDuration };
+    }
+
+    newScreens.splice(ix, 1, replacement);
+    setMutableFlavour({ ...mutableFlavour, screens: newScreens });
+  };
+
+  const updateLastMonthStatsShowAllMonth = (ix: number, showAllMonth: boolean) => {
+    const newScreens = [...mutableFlavour.screens];
+    const screen = newScreens[ix];
+    if (screen.id !== Screens.LAST_MONTH_STATS) return;
+    newScreens.splice(
+      ix,
+      1,
+      showAllMonth
+        ? { ...screen, lastMonthStatsShowAllMonth: true }
+        : { id: screen.id, duration: screen.duration }
+    );
     setMutableFlavour({ ...mutableFlavour, screens: newScreens });
   };
 
@@ -191,9 +246,10 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
     <Stack spacing={6}>
       <Stack>
         <Text>
-          Build the playlist order here. Timing (seconds) is one full step for most screens. For Forecast, Outlook, and
-          Alerts, the number is per page: each paginated slide (forecast continuation, outlook segment, alert/CAP page)
-          uses the same dwell, so total time grows with page count (e.g. 2 outlook pages at 10s ≈ 20s for that block).
+          Build the playlist order here. Timing (seconds) is one full step for most screens. For Forecast and Alerts,
+          the number is per page: each paginated slide (forecast continuation, alert/CAP page) uses the same dwell, so
+          total time grows with page count. Outlook is a single page per dwell. Last month stats: by default the step
+          appears only on station-local days 1–5 of each month (ECCC-style); use the row option to show it all month.
           Minimum {SCREEN_MIN_DISPLAY_LENGTH}s per step.
         </Text>
       </Stack>
@@ -206,15 +262,24 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
             </option>
           ))}
         </Select>
-        <Text>or</Text>
+        <Text>or start new from template</Text>
         <Button
           type="button"
           colorScheme="green"
           size={"md"}
           isDisabled={isSaving || !!mutableFlavour}
-          onClick={createNewFlavour}
+          onClick={() => beginNewFlavour("on-air-cable")}
         >
-          Create new flavour
+          On-air cable (14s)
+        </Button>
+        <Button
+          type="button"
+          colorScheme="green"
+          size={"md"}
+          isDisabled={isSaving || !!mutableFlavour}
+          onClick={() => beginNewFlavour("all-screens-fast")}
+        >
+          All screens (2s)
         </Button>
       </Stack>
 
@@ -238,6 +303,7 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
                   <Tr>
                     <Th>Screen</Th>
                     <Th>Timing (seconds)</Th>
+                    <Th>Options</Th>
                     <Th></Th>
                   </Tr>
                 </Thead>
@@ -280,6 +346,24 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
                             </Text>
                           </Stack>
                         </Td>
+                        <Td verticalAlign="top">
+                          {screen.id === Screens.LAST_MONTH_STATS ? (
+                            <FormControl display="flex" alignItems="center" maxW="sm">
+                              <FormLabel htmlFor={`last-month-all-month-${ix}`} mb="0" fontSize="sm" flex="1">
+                                Show last month stats all month
+                              </FormLabel>
+                              <Switch
+                                id={`last-month-all-month-${ix}`}
+                                isChecked={screen.lastMonthStatsShowAllMonth === true}
+                                onChange={(e) => updateLastMonthStatsShowAllMonth(ix, e.target.checked)}
+                              />
+                            </FormControl>
+                          ) : (
+                            <Text fontSize="sm" color="gray.500">
+                              —
+                            </Text>
+                          )}
+                        </Td>
                         <Td>
                           <Stack direction={"row"} spacing={2}>
                             <Button
@@ -314,13 +398,13 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
                     ))
                   ) : (
                     <Tr>
-                      <Td colSpan={3}>Flavour has no screens, one screen must be present</Td>
+                      <Td colSpan={4}>Flavour has no screens, one screen must be present</Td>
                     </Tr>
                   )}
                 </Tbody>
                 <Tfoot>
                   <Tr>
-                    <Td colSpan={3}>
+                    <Td colSpan={4}>
                       <Button colorScheme="blue" size={"sm"} onClick={addScreenToFlavour} isDisabled={isSaving}>
                         Add screen
                       </Button>
@@ -333,6 +417,12 @@ export function FlavoursConfig({ currentFlavours, onFlavoursListChange }: Flavou
             <Button type="submit" colorScheme="teal" isLoading={isSaving} isDisabled={!isFlavourSaveable}>
               Save
             </Button>
+
+            {mutableFlavour.uuid && selectedFlavour ? (
+              <Button type="button" colorScheme="orange" variant="solid" isDisabled={isSaving} onClick={deleteFlavourFromServer}>
+                Delete this flavour ({selectedFlavour})
+              </Button>
+            ) : null}
 
             <Button type="button" colorScheme="red" isDisabled={isSaving} onClick={discardChanges}>
               Discard changes

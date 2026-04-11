@@ -1,6 +1,6 @@
 {
   "name": "retro-env-can-weather-chan",
-  "version": "2.6.7",
+  "version": "2.6.8",
   "private": true,
   "scripts": {
     "lint": "eslint .",
@@ -16,7 +16,7 @@
     "gate:rc": "yarn typecheck && yarn test",
     "gate:rc:e2e": "yarn gate:rc && yarn test:e2e",
     "test:e2e": "playwright test",
-    "test:e2e:update": "playwright test --update-snapshots",
+    "test:e2e:update": "playwright test --update-snapshots=all",
     "release": "release-it --ci"
   },
   "dependencies": {

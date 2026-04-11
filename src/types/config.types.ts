@@ -54,9 +54,22 @@ export type LookAndFeel = {
   useOfficialFonts: boolean;
 };
 
+/** One row from `POST /config/ltce-stations` (MSC LTCE virtual station, deduped by `VIRTUAL_CLIMATE_ID`). */
+export type LtceVirtualStationSearchHit = {
+  virtualClimateId: string;
+  virtualStationNameEn: string;
+  wxoCityCode: string;
+  provinceCode: string;
+};
+
 export type MiscConfig = {
   rejectInHourConditionUpdates?: boolean;
   alternateRecordsSource?: string;
+  /**
+   * MSC LTCE **virtual climate id** (e.g. `VSMB38V` for Winnipeg Area) — fills almanac record high/low when
+   * citypage omits `<almanac>` (post-2024 MSC). See `docs/specs/SPEC-ltce-almanac-records.md`.
+   */
+  ltceVirtualClimateId?: string;
   /** Console log threshold (`debug` | `notice` | `warn` | `error` | `critical`). Default: `warn`. */
   logLevel?: LogLevel;
 };

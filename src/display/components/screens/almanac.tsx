@@ -42,7 +42,14 @@ export function AlmanacScreen(props: AlmanacScreenProps) {
   // the extra spaces in the table below are intentional. Last year is meant to have a space before it.
   return (
     <div id="almanac_screen">
-      <Conditions city={city} conditions={observed} stationTime={stationTime} showPressure airQuality={airQuality} />
+      <Conditions
+        city={city}
+        stationID={weatherStationResponse.stationID}
+        conditions={observed}
+        stationTime={stationTime}
+        showPressure
+        airQuality={airQuality}
+      />
 
       <div className="forecast-hardware-text-column forecast-hardware-text-column--almanac-records">
         <div> Last Year Normal Records{"".padEnd(2)}Year</div>

@@ -2,12 +2,13 @@ import {
   FLAVOUR_DEFAULT,
   FLAVOUR_DIRECTORY,
   FLAVOUR_NAME_MAX_LENGTH,
+  buildFlavourScreensAllScreenTypes,
   SCREENS_WITH_AUTO_DURATION,
   SCREEN_DEFAULT_DISPLAY_LENGTH,
   SCREEN_MIN_DISPLAY_LENGTH,
   Screens,
 } from "consts";
-import { Flavour } from "types";
+import { Flavour, FlavourCreationTemplateId } from "types";
 import uuid4 from "uuid4";
 import fs from "fs";
 
@@ -18,16 +19,14 @@ export function isAutomaticScreen(screenID: Screens) {
 
 /**
  * Flavour `duration` is interpreted as **seconds per page** for these screens (total time ≈ pages × duration).
- * Shown in the config UI with a “per page” hint.
+ * Shown in the config UI with a “per page” hint. Outlook uses one full-screen step (not paginated).
  */
 export function usesPerPageDwellInFlavourConfig(screenID: Screens): boolean {
-  return (
-    screenID === Screens.FORECAST || screenID === Screens.OUTLOOK || screenID === Screens.ALERTS
-  );
+  return screenID === Screens.FORECAST || screenID === Screens.ALERTS;
 }
 
 /**
- * Coerce flavour JSON (`0`, missing, too small) for playout: missing/0 → default full step; 1–9 → {@link SCREEN_MIN_DISPLAY_LENGTH}.
+ * Coerce flavour JSON (`0`, missing, too small) for playout: missing/0 → default full step; otherwise below {@link SCREEN_MIN_DISPLAY_LENGTH} → min.
  */
 export function resolveScreenDwellSeconds(screen: { duration?: number }): number {
   const d = Number(screen.duration);
@@ -36,14 +35,21 @@ export function resolveScreenDwellSeconds(screen: { duration?: number }): number
   return d;
 }
 
-/** New flavours start from the built-in default screen list (same as loading `default`). */
-export function generateNewFlavour() {
+/**
+ * New flavours start from a built-in template: **on-air-cable** matches {@link FLAVOUR_DEFAULT};
+ * **all-screens-fast** lists every {@link Screens} once at {@link SCREEN_MIN_DISPLAY_LENGTH}s per step.
+ */
+export function generateNewFlavour(template: FlavourCreationTemplateId = "on-air-cable"): Flavour {
   const now = new Date();
+  const screens =
+    template === "all-screens-fast"
+      ? buildFlavourScreensAllScreenTypes(SCREEN_MIN_DISPLAY_LENGTH)
+      : FLAVOUR_DEFAULT.screens.map((s) => ({ ...s }));
   return {
     name: "",
     created: now,
     modified: now,
-    screens: FLAVOUR_DEFAULT.screens.map((s) => ({ ...s })),
+    screens,
   } as Flavour;
 }
 
@@ -63,4 +69,13 @@ export function saveFlavour(flavour: Flavour, isNew: boolean = false) {
 
   // write it to file
   fs.writeFileSync(`${FLAVOUR_DIRECTORY}/${flavourFileName}.json`, JSON.stringify(flavour), "utf8");
+}
+
+/** Remove `cfg/flavours/{safeName}.json` if it exists. Returns whether a file was removed. */
+export function deleteFlavourJsonFile(rawOrSafeName: string): boolean {
+  const flavourFileName = safeFlavourName(rawOrSafeName);
+  const fullPath = `${FLAVOUR_DIRECTORY}/${flavourFileName}.json`;
+  if (!fs.existsSync(fullPath)) return false;
+  fs.unlinkSync(fullPath);
+  return true;
 }

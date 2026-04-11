@@ -47,6 +47,7 @@ import eventbus from "lib/eventbus";
 import { getTempRecordForDate } from "lib/temprecords";
 import { GetWeatherFileFromECCC, legacyHpfxCitypageEnglishXmlUrl } from "./datamart";
 import { parseAlmanacExtremesFromCitypageXml } from "./almanacExtremesFromCitypageXml";
+import { fetchLtceDailyTemperatureExtremes } from "./ltceDailyTemperatureRecords";
 import { isLooseNull } from "lib/isnull";
 import { axiosGetWithMscMirror, normalizeMscHttpUrl } from "lib/eccc/mscHttpMirror";
 import {
@@ -238,7 +239,7 @@ class CurrentConditions {
     this.fillAlmanacExtremesFromRawCitypageXml(rawXml);
     this.generateWindchill(weather.current);
     this.generateForecast(weather.weekly);
-    void this.getTempRecordsForDay();
+    void this.mergeExternalAlmanacRecordSources();
 
     this._conditionsFetchedAt = new Date().toISOString();
 
@@ -433,8 +434,6 @@ class CurrentConditions {
   }
 
   private generateAlmanac(almanac: ECCCAlmanac | null | undefined) {
-    // TODO: fetch records from alternate source
-
     const temps: ECCCAlmanacTemp[] = !almanac?.temperature
       ? []
       : Array.isArray(almanac.temperature)
@@ -545,6 +544,36 @@ class CurrentConditions {
         conditions,
       };
     });
+  }
+
+  /** LTCE (MSC) then optional JSON `alternateRecordsSource` — see SPEC-ltce-almanac-records.md. */
+  private async mergeExternalAlmanacRecordSources() {
+    await this.applyLtceDailyRecordExtremesIfNeeded();
+    await this.getTempRecordsForDay();
+  }
+
+  private async applyLtceDailyRecordExtremesIfNeeded() {
+    const vid = config.misc.ltceVirtualClimateId?.trim();
+    if (!vid) return;
+
+    const needMax = this._almanac.temperatures.extremeMax == null;
+    const needMin = this._almanac.temperatures.extremeMin == null;
+    if (!needMax && !needMin) return;
+
+    const d = this.observedDateTimeAtStation();
+    const row = await fetchLtceDailyTemperatureExtremes(vid, d.getMonth() + 1, d.getDate());
+    if (!row) return;
+
+    let updated = false;
+    if (needMax) {
+      this._almanac.temperatures.extremeMax = row.extremeMax;
+      updated = true;
+    }
+    if (needMin) {
+      this._almanac.temperatures.extremeMin = row.extremeMin;
+      updated = true;
+    }
+    if (updated) eventbus.emit(EVENT_BUS_AUXILIARY_WEATHER_DATA_READY);
   }
 
   private async getTempRecordsForDay() {

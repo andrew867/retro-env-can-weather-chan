@@ -52,6 +52,7 @@ const ConfigScreen = () => {
               <TabPanel>
                 <DisplayConfig
                   alternateRecordsSource={config.misc?.alternateRecordsSource ?? ""}
+                  ltceVirtualClimateId={config.misc?.ltceVirtualClimateId ?? ""}
                   rejectInHourConditionUpdates={config.misc?.rejectInHourConditionUpdates ?? false}
                   flavour={config.lookAndFeel?.flavour ?? ""}
                   showFooterFreshnessHint={config.lookAndFeel?.showFooterFreshnessHint ?? true}
