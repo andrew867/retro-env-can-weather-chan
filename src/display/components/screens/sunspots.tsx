@@ -121,6 +121,9 @@ export function SunspotScreen(props: SunspotScreenProps) {
     }
   }, [solarCycleSwpc]);
   const hasSwpcPlate = swpcLines != null;
+  /** NWS warm-city grid outlook — server only polls during {@link isSunSpotSeason} (Feb–Mar). */
+  const hasTropicalOutlook = inSeason && observations.length > 0;
+  const hasAnyPlate = !!(fluxLines || hasSwpcPlate || hasTropicalOutlook);
 
   const sunspotDate = useMemo(
     () => weatherStationTime?.observedDateTime && formatSunspotDate(weatherStationTime).padEnd(9),
@@ -128,16 +131,12 @@ export function SunspotScreen(props: SunspotScreenProps) {
   );
 
   useEffect(() => {
-    if (!inSeason) {
-      onCompleteRef.current();
-      return;
-    }
     if (!sunspotsFetchAttempted) return;
-    if (!observations.length && !fluxLines && !solarCycleSwpcHasContent(solarCycleSwpc)) onCompleteRef.current();
-  }, [inSeason, sunspotsFetchAttempted, observations.length, fluxLines, solarCycleSwpc]);
+    /** Skip dwell when there is nothing to show; flux + SWPC are year-round (see `getSunspots`). */
+    if (!hasAnyPlate) onCompleteRef.current();
+  }, [sunspotsFetchAttempted, hasAnyPlate]);
 
-  if (!inSeason) return <></>;
-  if (!observations.length && !fluxLines && !hasSwpcPlate) return <></>;
+  if (!hasAnyPlate) return <></>;
 
   const formatTemp = (temperature: number | null | undefined) =>
     Math.round(Number.isFinite(Number(temperature)) ? Number(temperature) : 0)
@@ -160,7 +159,7 @@ export function SunspotScreen(props: SunspotScreenProps) {
           ))}
         </div>
       ) : null}
-      {observations.length > 0 ? (
+      {hasTropicalOutlook ? (
         <>
           <div className="sunspots-outlook-header">NWS TROPICAL SUNSPOT WX</div>
           <div>

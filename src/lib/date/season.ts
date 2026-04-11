@@ -18,11 +18,11 @@ export function isWindchillSeason(month?: number) {
   return month >= 11 || month <= 4;
 }
 
+/** Feb–Mar: NWS tropical “sunspot” grid outlook is polled; MSC flux + NOAA SWPC cycle stay year-round in `getSunspots`. */
 export function isSunSpotSeason(month?: number) {
   const date: Date = new Date();
   if (month === undefined) month = date?.getMonth() + 1;
 
-  // if the month is feb/march then its sunspot season
   return month >= 2 && month < 4;
 }
 

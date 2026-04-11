@@ -38,6 +38,8 @@ import {
 } from "types";
 import eventbus from "lib/eventbus";
 import { LTCE_WINNIPEG_AREA_VIRTUAL_CLIMATE_ID } from "lib/eccc/ltceDailyTemperatureRecords";
+import type { CitypageClimateAnchor } from "lib/config/citypageClimateAnchors";
+import { getCitypageClimateAnchor } from "lib/config/citypageClimateAnchors";
 import { logConfigValidationIssues, validateLoadedConfigJson } from "lib/config/configValidation";
 
 const logger = new Logger("config");
@@ -46,7 +48,10 @@ function normalizeProvinceStationCode(code: string): string {
   return code.replace(/\s/g, "").toUpperCase();
 }
 
-/** Apply known `climateStationId` defaults when JSON config omits them (same `code` as shipped Manitoba list). */
+/**
+ * Apply `climateStationId` (ECCC bulk `stationID` for yesterday precip) when JSON omits it:
+ * shipped Manitoba defaults, then curated citypage anchors (Toronto, Oakville, Hamilton, …).
+ */
 function mergeProvinceStationClimateDefaults(stations: ProvinceStation[]): ProvinceStation[] {
   const defaultsByCode = new Map(
     PROVINCE_TRACKING_DEFAULT_STATIONS.map((s) => [normalizeProvinceStationCode(s.code), s.climateStationId])
@@ -58,6 +63,10 @@ function mergeProvinceStationClimateDefaults(stations: ProvinceStation[]): Provi
     const id = defaultsByCode.get(normalizeProvinceStationCode(row.code));
     if (typeof id === "number" && Number.isFinite(id)) {
       return { ...row, climateStationId: id };
+    }
+    const anchor = getCitypageClimateAnchor(row.code);
+    if (anchor && Number.isFinite(anchor.historicalDataStationID)) {
+      return { ...row, climateStationId: anchor.historicalDataStationID };
     }
     return row;
   });
@@ -283,6 +292,8 @@ class Config {
 
       logConfigValidationIssues(validateLoadedConfigJson(parsedConfig as Record<string, unknown>));
 
+      this.reconcileCitypageClimateAnchorsAfterLoad();
+
       logger.log("Loaded weather channel. Location:", `${name}, ${province}`, `(${location})`);
     } catch (err) {
       if (err.code === FS_NO_FILE_FOUND) {
@@ -419,7 +430,71 @@ class Config {
 
     this.primaryLocation = station;
 
+    const anchor = getCitypageClimateAnchor(station.location);
+    const deltas = anchor
+      ? this.assignCitypageClimateAnchorBundle(anchor, station.province ?? "")
+      : { historical: false, climate: false, ltce: false };
+
     eventbus.emit(EVENT_BUS_CONFIG_CHANGE_PRIMARY_LOCATION, true);
+    if (deltas.historical) eventbus.emit(EVENT_BUS_CONFIG_CHANGE_HISTORICAL_TEMP_PRECIP, true);
+    if (deltas.climate) eventbus.emit(EVENT_BUS_CONFIG_CHANGE_CLIMATE_NORMALS, true);
+  }
+
+  /**
+   * Apply a verified MSC bundle for the primary citypage code. Does not emit events — callers decide
+   * (avoid bus noise during `loadConfig` before listeners attach).
+   */
+  private assignCitypageClimateAnchorBundle(
+    anchor: CitypageClimateAnchor,
+    province: string
+  ): { historical: boolean; climate: boolean; ltce: boolean } {
+    const prov =
+      typeof province === "string" && province.trim().length ? province.trim().toUpperCase() : this.climateNormals.province;
+
+    const deltas = { historical: false, climate: false, ltce: false };
+
+    if (this.historicalDataStationID !== anchor.historicalDataStationID) {
+      this.historicalDataStationID = anchor.historicalDataStationID;
+      deltas.historical = true;
+    }
+
+    const cn = this.climateNormals;
+    if (
+      cn.climateID !== anchor.climateNormalsClimateID ||
+      cn.stationID !== anchor.climateNormalsStationID ||
+      cn.province !== prov
+    ) {
+      this.climateNormals = {
+        climateID: anchor.climateNormalsClimateID,
+        stationID: anchor.climateNormalsStationID,
+        province: prov,
+      };
+      deltas.climate = true;
+    }
+
+    const nextLtce = anchor.ltceVirtualClimateId;
+    if ((this.misc.ltceVirtualClimateId ?? "") !== nextLtce) {
+      this.misc.ltceVirtualClimateId = nextLtce;
+      deltas.ltce = true;
+    }
+
+    return deltas;
+  }
+
+  /** If the primary site has a curated MSC bundle and the file was split-brain (common after a city change), fix and persist. */
+  private reconcileCitypageClimateAnchorsAfterLoad(): void {
+    const anchor = getCitypageClimateAnchor(this.primaryLocation.location);
+    if (!anchor) return;
+
+    const deltas = this.assignCitypageClimateAnchorBundle(anchor, this.primaryLocation.province ?? "");
+    if (deltas.historical || deltas.climate || deltas.ltce) {
+      logger.log(
+        "Reconciled historical / climate normals / LTCE with curated MSC bundle for citypage",
+        this.primaryLocation.location
+      );
+      this.generateConfigVersion();
+      this.saveConfig();
+    }
   }
 
   public setProvinceStations(isEnabled: boolean, stations: ProvinceStations) {

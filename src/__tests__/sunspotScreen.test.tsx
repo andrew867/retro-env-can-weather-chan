@@ -4,8 +4,11 @@ jest.mock("lib/date/season", () => ({ isSunSpotSeason: jest.fn(() => true) }));
 
 import { render } from "@testing-library/react";
 import * as React from "react";
+import { isSunSpotSeason } from "lib/date/season";
 import { SunspotScreen } from "display/components/screens/sunspots";
 import type { SunspotsWeatherPayload, WeatherStationTimeData } from "types";
+
+const isSunSpotSeasonMock = isSunSpotSeason as jest.MockedFunction<typeof isSunSpotSeason>;
 
 const stationTime: WeatherStationTimeData = {
   observedDateTime: "2026-03-10T18:00:00.000Z",
@@ -47,6 +50,35 @@ describe("SunspotScreen", () => {
       <SunspotScreen sunspotsPayload={payload} sunspotsFetchAttempted weatherStationTime={stationTime} onComplete={() => {}} />
     );
     expect(container.textContent).toContain("NOAA SWPC CYCLE (ISN + F10.7)");
+  });
+
+  it("shows MSC flux plate when not in tropical season (Apr–Jan) if flux data exists", () => {
+    isSunSpotSeasonMock.mockReturnValueOnce(false);
+    const payload: SunspotsWeatherPayload = {
+      observations: [
+        {
+          name: "Honolulu",
+          code: "HFO",
+          forecast: "Sunny",
+          abbreviatedForecast: "Sunny",
+          highTemp: 28,
+          lowTemp: 22,
+        },
+      ],
+      solarFlux: {
+        fluxDate: "20260409",
+        fluxTime: "1800",
+        adjustedSfU: 110,
+        observedSfU: 108,
+        ursiSfU: 109,
+      },
+      solarCycleSwpc: { daily: null, monthlyObserved: null, monthlyPredicted: null },
+    };
+    const { container } = render(
+      <SunspotScreen sunspotsPayload={payload} sunspotsFetchAttempted weatherStationTime={stationTime} onComplete={() => {}} />
+    );
+    expect(container.textContent).toContain("F10.7 CM FLUX (SFU)");
+    expect(container.textContent).not.toContain("NWS TROPICAL SUNSPOT WX");
   });
 
   it("shows NWS tropical header above the city outlook table", () => {

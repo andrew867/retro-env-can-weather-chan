@@ -14,6 +14,15 @@ const defaultPrimaryLocation = {
   name: "Winnipeg",
 };
 
+/** Winnipeg primary + MSC bundle so load-time anchor reconciliation is a no-op (tests missing-field merge behaviour). */
+const winnipegPrimaryConfig = {
+  ...exampleConfig,
+  primaryLocation: { province: "MB", location: "s0000193", name: "Winnipeg" },
+  historicalDataStationID: 27174,
+  climateNormals: { stationID: 3698, climateID: 5023222, province: "MB" },
+  misc: { rejectInHourConditionUpdates: true, ltceVirtualClimateId: "VSMB38V" },
+};
+
 describe("Config file loading", () => {
   it("loads from file correctly", () => {
     jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => JSON.stringify(exampleConfig));
@@ -21,7 +30,14 @@ describe("Config file loading", () => {
     const config = initializeConfig();
     expect(config.primaryLocation).toStrictEqual(exampleConfig.primaryLocation);
     expect(config.provinceHighLowEnabled).toStrictEqual(exampleConfig.provinceHighLowEnabled);
-    expect(config.provinceStations).toStrictEqual(exampleConfig.provinceStations);
+    expect(config.provinceStations).toStrictEqual([
+      { name: "Toronto", code: "ON/s0000458", climateStationId: 51459 },
+      { name: "Ottawa", code: "ON/s0000623" },
+      { name: "Hamilton", code: "ON/s0000549", climateStationId: 49908 },
+      { name: "London", code: "ON/s0000326" },
+      { name: "Kitchener", code: "ON/s0000573" },
+      { name: "Windsor", code: "ON/s0000646" },
+    ]);
     expect(config.historicalDataStationID).toStrictEqual(exampleConfig.historicalDataStationID);
     expect(config.climateNormals).toStrictEqual(exampleConfig.climateNormals);
     expect(config.lookAndFeel).toStrictEqual({
@@ -34,13 +50,36 @@ describe("Config file loading", () => {
       ...exampleConfig.misc,
       alternateRecordsSource: undefined,
       logLevel: "warn",
-      ltceVirtualClimateId: "VSMB38V",
+      /** Toronto primary (`exampleConfig`) — load reconciles Winnipeg-default LTCE to the curated Toronto virtual id. */
+      ltceVirtualClimateId: "VSON143",
     });
     expect(config.flavour.name).toStrictEqual(FLAVOUR_DEFAULT.name);
     expect(config.flavour.screens).toStrictEqual(FLAVOUR_DEFAULT.screens);
     expect(config.musicPlaylist).toHaveLength(0);
     expect(config.crawlerMessages).toHaveLength(0);
     expect(config.airportMetarStations).toEqual([...DEFAULT_AIRPORT_METAR_STATIONS]);
+  });
+
+  it("reconciles split-brain MSC settings on load when primary is Hamilton", () => {
+    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() =>
+      JSON.stringify({
+        ...exampleConfig,
+        primaryLocation: { province: "ON", location: "s0000549", name: "Hamilton" },
+        historicalDataStationID: 27174,
+        climateNormals: { stationID: 3698, climateID: 5023222, province: "MB" },
+        misc: { rejectInHourConditionUpdates: false, ltceVirtualClimateId: "VSMB38V" },
+      })
+    );
+    jest.spyOn(fs, "writeFileSync").mockImplementation(() => {});
+
+    const config = initializeConfig();
+    expect(config.historicalDataStationID).toBe(49908);
+    expect(config.climateNormals).toStrictEqual({
+      climateID: 6153194,
+      stationID: 4932,
+      province: "ON",
+    });
+    expect(config.misc.ltceVirtualClimateId).toBe("VSON77V");
   });
 
   it("uses default airport METAR stations when airportMetarStations is []", () => {
@@ -90,7 +129,7 @@ describe("Config file loading", () => {
   it("loads from file correctly when historical data station id is missing", () => {
     jest
       .spyOn(fs, "readFileSync")
-      .mockImplementationOnce(() => JSON.stringify({ ...exampleConfig, historicalDataStationID: undefined }));
+      .mockImplementationOnce(() => JSON.stringify({ ...winnipegPrimaryConfig, historicalDataStationID: undefined }));
 
     const config = initializeConfig();
     expect(config.historicalDataStationID).toStrictEqual(27174);
@@ -99,7 +138,7 @@ describe("Config file loading", () => {
   it("loads from file correctly when climate normals is missing", () => {
     jest
       .spyOn(fs, "readFileSync")
-      .mockImplementationOnce(() => JSON.stringify({ ...exampleConfig, climateNormals: undefined }));
+      .mockImplementationOnce(() => JSON.stringify({ ...winnipegPrimaryConfig, climateNormals: undefined }));
 
     let config = initializeConfig();
     expect(config.climateNormals).toStrictEqual({
@@ -110,7 +149,7 @@ describe("Config file loading", () => {
 
     jest
       .spyOn(fs, "readFileSync")
-      .mockImplementationOnce(() => JSON.stringify({ ...exampleConfig, climateNormals: {} }));
+      .mockImplementationOnce(() => JSON.stringify({ ...winnipegPrimaryConfig, climateNormals: {} }));
 
     config = initializeConfig();
     expect(config.climateNormals).toStrictEqual({
@@ -123,13 +162,15 @@ describe("Config file loading", () => {
   it("loads from file correctly when climate normals is partially present", () => {
     jest
       .spyOn(fs, "readFileSync")
-      .mockImplementationOnce(() => JSON.stringify({ ...exampleConfig, climateNormals: { province: "ON" } }));
+      .mockImplementationOnce(() =>
+        JSON.stringify({ ...winnipegPrimaryConfig, climateNormals: { province: "MB" } })
+      );
 
     const config = initializeConfig();
     expect(config.climateNormals).toStrictEqual({
       stationID: 3698,
       climateID: 5023222,
-      province: "ON",
+      province: "MB",
     });
   });
 
@@ -165,15 +206,28 @@ describe("Config file loading", () => {
       logLevel: "warn",
       ltceVirtualClimateId: "VSMB38V",
     };
-    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => JSON.stringify({ ...exampleConfig, misc: undefined }));
+    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => JSON.stringify({ ...winnipegPrimaryConfig, misc: undefined }));
 
     let config = initializeConfig();
     expect(config.misc).toStrictEqual(defaultMisc);
 
-    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => JSON.stringify({ ...exampleConfig, misc: {} }));
+    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() => JSON.stringify({ ...winnipegPrimaryConfig, misc: {} }));
 
     config = initializeConfig();
     expect(config.misc).toStrictEqual(defaultMisc);
+  });
+
+  it("fills province climateStationId from citypage anchor when omitted (Oakville)", () => {
+    jest.spyOn(fs, "readFileSync").mockImplementationOnce(() =>
+      JSON.stringify({
+        ...winnipegPrimaryConfig,
+        provinceStations: [{ name: "Oakville", code: "ON/s0000367" }],
+      })
+    );
+    const config = initializeConfig();
+    expect(config.provinceStations).toStrictEqual([
+      { name: "Oakville", code: "ON/s0000367", climateStationId: 7868 },
+    ]);
   });
 
   it("loads from file correctly when provinceStations is missing", () => {
@@ -247,6 +301,18 @@ describe("Config updating", () => {
 
     config.setPrimaryLocation(newPrimaryLocation);
     expect(config.primaryLocation).toStrictEqual(newPrimaryLocation);
+  });
+
+  it("aligns historical, climate normals, and LTCE when primary is switched to a curated citypage (Hamilton)", () => {
+    const config = initializeConfig();
+    config.setPrimaryLocation({ province: "ON", location: "s0000549", name: "Hamilton" });
+    expect(config.historicalDataStationID).toBe(49908);
+    expect(config.climateNormals).toStrictEqual({
+      climateID: 6153194,
+      stationID: 4932,
+      province: "ON",
+    });
+    expect(config.misc.ltceVirtualClimateId).toBe("VSON77V");
   });
 
   it("updates the province tracking correcty", () => {
