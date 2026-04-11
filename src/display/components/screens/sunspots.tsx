@@ -20,11 +20,6 @@ type SunspotScreenProps = {
   weatherStationTime: WeatherStationTimeData;
 } & AutomaticScreenProps;
 
-function solarCycleSwpcHasContent(swpc: SolarCycleSwpcData | undefined): boolean {
-  if (!swpc) return false;
-  return !!(swpc.daily || swpc.monthlyObserved || swpc.monthlyPredicted);
-}
-
 function formatSwpcYmShort(timeTag: string): string {
   const [ys, ms] = timeTag.split("-");
   const y = Number(ys);

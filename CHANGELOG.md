@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.7.0-rc5] - 2026-04-09
+
+**2.7.0** release candidate **rc5** — MSC **dynamic** location feeds: `POST /config/locationFeedSuggestions` previews nearest **climate-stations**, **ltce-stations**, **aqhi-stations**, and **swob-stations** (METAR ICAO) from citypage coordinates; `POST /config/locationQuickSetup` accepts opt-in flags for the same; `POST /config/airportMetarStations` saves the METAR list. Locations hub UI adds MSC automation checkboxes, METAR heuristic, preview, and an airport METAR editor. Docs: [SPEC](./docs/specs/SPEC-location-feed-automation-rc5.md), [PLAN](./docs/specs/PLAN-location-feed-automation-rc5.md), [TEST-PLAN](./docs/specs/TEST-PLAN-location-feed-automation-rc5.md).
+
 ## [2.7.0-rc4] - 2026-04-09
 
 **2.7.0** release candidate **rc4** — single **Locations & feeds** config tab with **quick setup** (primary station search → `POST /api/v1/config/locationQuickSetup`) plus existing per-feed editors; optional **ON / MB** province-tracking presets. LTCE virtual station search and **Save LTCE** moved here from Display. Docs: [SPEC](./docs/specs/SPEC-config-location-hub-rc4.md), [PLAN](./docs/specs/PLAN-config-location-hub-rc4.md), [TEST-PLAN](./docs/specs/TEST-PLAN-config-location-hub-rc4.md). Playwright baselines refreshed for config and canonical/forecast visuals.

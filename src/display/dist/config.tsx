@@ -53,6 +53,7 @@ const ConfigScreen = () => {
                   alternateRecordsSource={config.misc?.alternateRecordsSource ?? ""}
                   logLevel={config.misc?.logLevel ?? "warn"}
                   ltceVirtualClimateId={config.misc?.ltceVirtualClimateId ?? ""}
+                  airportMetarStations={config.airportMetarStations ?? []}
                   onQuickSetupDone={() => refetch()}
                 />
               </TabPanel>

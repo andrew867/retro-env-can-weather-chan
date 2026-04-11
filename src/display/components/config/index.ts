@@ -10,3 +10,4 @@ export * from "./display";
 export * from "./gfx";
 export * from "./crawler";
 export * from "./airQuality";
+export * from "./airportMetarConfig";

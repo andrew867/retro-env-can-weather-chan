@@ -30,6 +30,7 @@ import {
   GfxDisplayAspectRatio,
   GfxDisplayResolution,
   GfxRuntimeConfig,
+  LocationFeedSuggestions,
   LookAndFeel,
   MiscConfig,
   PrimaryLocation,
@@ -268,19 +269,7 @@ class Config {
       }
 
       if (Array.isArray(airportMetarStations)) {
-        this.airportMetarStations = airportMetarStations
-          .filter(
-            (row: unknown): row is { name?: unknown; code?: unknown } =>
-              row != null && typeof row === "object" && "code" in row
-          )
-          .map((row) => {
-            const code = typeof row.code === "string" ? row.code.trim().toUpperCase() : "";
-            const name =
-              typeof row.name === "string" && row.name.trim().length ? row.name.trim() : code || "Unknown";
-            return { name, code };
-          })
-          .filter((row) => /^[A-Z0-9]{3,4}$/.test(row.code))
-          .slice(0, MAX_AIRPORT_METAR_STATIONS);
+        this.airportMetarStations = this.normalizeAirportMetarRowsFromPayload(airportMetarStations);
       } else {
         this.airportMetarStations = DEFAULT_AIRPORT_METAR_STATIONS.map((row) => ({ ...row }));
       }
@@ -444,15 +433,53 @@ class Config {
   /**
    * One-shot operator setup: primary (with curated MSC bundle when available) plus optional province grid preset
    * for provinces we ship verified lists for (see `locationQuickSetupPresets.ts`).
+   *
+   * Optional MSC OGC overlays (`resolvedFeeds`) fill historical / normals / LTCE when there is **no** curated
+   * citypage anchor, and can set AQHI + airport METAR lists from `resolveLocationFeedSuggestions` (see rc5 docs).
    */
-  public applyLocationQuickSetup(station: ECCCWeatherStation, options?: { applyProvincePreset?: boolean }) {
+  public applyLocationQuickSetup(
+    station: ECCCWeatherStation,
+    options?: {
+      applyProvincePreset?: boolean;
+      applyDynamicClimateWhenNoAnchor?: boolean;
+      applyNearestAqhi?: boolean;
+      applyNearestMetar?: boolean;
+      resolvedFeeds?: LocationFeedSuggestions | null;
+    }
+  ) {
     if (!station) return;
     this.setPrimaryLocation(station);
+
+    const r = options?.resolvedFeeds ?? null;
+    const noAnchor = !getCitypageClimateAnchor(station.location);
+
+    if (options?.applyDynamicClimateWhenNoAnchor && noAnchor && r) {
+      if (r.climate) {
+        this.setHistoricalDataStationID(r.climate.historicalDataStationID);
+        const prov =
+          typeof station.province === "string" && station.province.trim().length === 2
+            ? station.province.trim().toUpperCase()
+            : this.climateNormals.province;
+        this.setClimateNormals(r.climate.climateNormalsClimateID, r.climate.climateNormalsStationID, prov);
+      }
+      if (r.ltce?.virtualClimateId) {
+        this.misc = { ...this.misc, ltceVirtualClimateId: r.ltce.virtualClimateId };
+      }
+    }
+
     if (options?.applyProvincePreset) {
       const preset = getProvinceTrackingPresetForProvince(station.province ?? "");
       if (preset?.length) {
         this.setProvinceStations(true, preset);
       }
+    }
+
+    if (options?.applyNearestAqhi && r?.aqhi?.stationKey) {
+      this.setAirQualityStation(r.aqhi.stationKey);
+    }
+
+    if (options?.applyNearestMetar && r?.airportMetar?.length) {
+      this.setAirportMetarStations(r.airportMetar);
     }
   }
 
@@ -669,6 +696,28 @@ class Config {
     this.airQualityStation = station;
 
     eventbus.emit(EVENT_BUS_CONFIG_CHANGE_AIR_QUALITY_STATION, true);
+  }
+
+  private normalizeAirportMetarRowsFromPayload(rows: unknown[]): AirportMetarStation[] {
+    return rows
+      .filter(
+        (row: unknown): row is { name?: unknown; code?: unknown } =>
+          row != null && typeof row === "object" && "code" in row
+      )
+      .map((row) => {
+        const code = typeof row.code === "string" ? row.code.trim().toUpperCase() : "";
+        const name = typeof row.name === "string" && row.name.trim().length ? row.name.trim() : code || "Unknown";
+        return { name, code };
+      })
+      .filter((row) => /^[A-Z0-9]{3,4}$/.test(row.code))
+      .slice(0, MAX_AIRPORT_METAR_STATIONS);
+  }
+
+  /** Replace METAR rotator stations (validated ICAO list, max {@link MAX_AIRPORT_METAR_STATIONS}). */
+  public setAirportMetarStations(rows: unknown[]) {
+    const next = this.normalizeAirportMetarRowsFromPayload(rows);
+    if (!next.length) return;
+    this.airportMetarStations = next;
   }
 
   public setCrawlerMessages(crawler: string[]) {

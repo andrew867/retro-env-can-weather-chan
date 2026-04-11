@@ -147,7 +147,7 @@ paths:
   /config/locationQuickSetup:
     post:
       tags: [config]
-      summary: Quick setup — primary + MSC anchor bundle; optional ON/MB province preset
+      summary: Quick setup — primary + MSC anchor bundle; optional ON/MB province preset; optional MSC OGC overlays
       operationId: postLocationQuickSetup
       requestBody:
         required: true
@@ -165,6 +165,87 @@ paths:
                     province: { type: string }
                     location: { type: string }
                 applyProvincePreset: { type: boolean, default: false }
+                applyDynamicClimateWhenNoAnchor:
+                  type: boolean
+                  default: false
+                  description: When true and no curated citypage anchor, resolve nearest climate-stations + LTCE via api.weather.gc.ca
+                applyNearestAqhi:
+                  type: boolean
+                  default: false
+                  description: When true, set AQHI from nearest aqhi-stations feature (citypage lat/lon)
+                applyNearestMetar:
+                  type: boolean
+                  default: false
+                  description: When true, set airport METAR ICAO list from nearest SWOB stations
+                metarHeuristic:
+                  type: string
+                  enum: [nearest, interesting]
+                  default: interesting
+      responses:
+        "200": { description: OK }
+        "400": { description: Invalid body }
+
+  /config/locationFeedSuggestions:
+    post:
+      tags: [config]
+      summary: Preview MSC-backed feed suggestions for a citypage site (no write)
+      operationId: postLocationFeedSuggestions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [station]
+              properties:
+                station:
+                  type: object
+                  required: [name, province, location]
+                  properties:
+                    name: { type: string }
+                    province: { type: string }
+                    location: { type: string }
+                flags:
+                  type: object
+                  properties:
+                    dynamicClimateAndLtce: { type: boolean, default: true }
+                    aqhi: { type: boolean, default: true }
+                    metar: { type: boolean, default: true }
+                    metarHeuristic:
+                      type: string
+                      enum: [nearest, interesting]
+                      default: interesting
+      responses:
+        "200":
+          description: Suggestions payload
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  suggestions: { type: object }
+        "400": { description: Invalid body }
+
+  /config/airportMetarStations:
+    post:
+      tags: [config]
+      summary: Replace ICAO METAR rotator station list
+      operationId: postAirportMetarStations
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stations]
+              properties:
+                stations:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string }
+                      code: { type: string }
       responses:
         "200": { description: OK }
         "400": { description: Invalid body }

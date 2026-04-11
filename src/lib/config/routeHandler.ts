@@ -1,9 +1,17 @@
 import { Request, Response } from "express";
 import { initializeConfig } from "./config";
 import { broadcastCrawlerUpdate, broadcastInitRefresh, registerInitSseClient } from "./initSseHub";
+import { getCitypageClimateAnchor } from "lib/config/citypageClimateAnchors";
 import { getECCCWeatherStations } from "lib/eccc/weatherStations";
 import { searchLtceVirtualStations } from "lib/eccc/ltceStationSearch";
-import { AuthenticRefreshConfig, ECCCWeatherStation, GfxRuntimeConfig } from "types";
+import { resolveLocationFeedSuggestions } from "lib/eccc/mscLocationFeedResolve";
+import {
+  AuthenticRefreshConfig,
+  ECCCWeatherStation,
+  GfxRuntimeConfig,
+  LocationFeedResolveFlags,
+  LocationFeedSuggestions,
+} from "types";
 
 const config = initializeConfig();
 
@@ -82,11 +90,16 @@ export function postPrimaryLocation(req: Request, res: Response) {
   }
 }
 
-/** Primary + MSC anchor bundle; optional ON/MB province tracking preset. */
-export function postLocationQuickSetup(req: Request, res: Response) {
+/** Primary + MSC anchor bundle; optional ON/MB province tracking preset; optional MSC OGC AQHI / METAR / dynamic climate. */
+export async function postLocationQuickSetup(req: Request, res: Response) {
   try {
     const station = req.body?.station as ECCCWeatherStation | undefined;
     const applyProvincePreset = !!req.body?.applyProvincePreset;
+    const applyDynamicClimateWhenNoAnchor = !!req.body?.applyDynamicClimateWhenNoAnchor;
+    const applyNearestAqhi = !!req.body?.applyNearestAqhi;
+    const applyNearestMetar = !!req.body?.applyNearestMetar;
+    const metarHeuristic = req.body?.metarHeuristic === "nearest" ? "nearest" : "interesting";
+
     if (!station || typeof station !== "object") {
       res.status(400).json({ error: "Missing station object" });
       return;
@@ -96,9 +109,76 @@ export function postLocationQuickSetup(req: Request, res: Response) {
       return;
     }
 
+    const hasCuratedAnchor = !!getCitypageClimateAnchor(station.location);
+    const needResolve =
+      (applyDynamicClimateWhenNoAnchor && !hasCuratedAnchor) || applyNearestAqhi || applyNearestMetar;
+
+    let resolved: LocationFeedSuggestions | null = null;
+    if (needResolve) {
+      const flags: LocationFeedResolveFlags = {
+        dynamicClimateAndLtce: applyDynamicClimateWhenNoAnchor,
+        aqhi: applyNearestAqhi,
+        metar: applyNearestMetar,
+        metarHeuristic,
+        hasCuratedAnchor,
+      };
+      resolved = await resolveLocationFeedSuggestions(station, flags);
+    }
+
     config.updateAndSaveConfigOption(() =>
-      config.applyLocationQuickSetup(station, { applyProvincePreset })
+      config.applyLocationQuickSetup(station, {
+        applyProvincePreset,
+        applyDynamicClimateWhenNoAnchor,
+        applyNearestAqhi,
+        applyNearestMetar,
+        resolvedFeeds: resolved,
+      })
     );
+    res.sendStatus(200);
+  } catch (e) {
+    res.status(500).json({ error: e });
+  }
+}
+
+/** Preview MSC-backed AQHI / METAR / dynamic climate suggestions (no config write). */
+export async function postLocationFeedSuggestions(req: Request, res: Response) {
+  try {
+    const station = req.body?.station as ECCCWeatherStation | undefined;
+    if (!station || typeof station !== "object") {
+      res.status(400).json({ error: "Missing station object" });
+      return;
+    }
+    if (typeof station.name !== "string" || typeof station.province !== "string" || typeof station.location !== "string") {
+      res.status(400).json({ error: "station must include name, province, and location strings" });
+      return;
+    }
+
+    const f = req.body?.flags && typeof req.body.flags === "object" ? (req.body.flags as Record<string, unknown>) : {};
+    const hasCuratedAnchor = !!getCitypageClimateAnchor(station.location);
+    const flags: LocationFeedResolveFlags = {
+      dynamicClimateAndLtce: f.dynamicClimateAndLtce !== false,
+      aqhi: f.aqhi !== false,
+      metar: f.metar !== false,
+      metarHeuristic: f.metarHeuristic === "nearest" ? "nearest" : "interesting",
+      hasCuratedAnchor,
+    };
+
+    const suggestions = await resolveLocationFeedSuggestions(station, flags);
+    res.json({ suggestions });
+  } catch (e) {
+    res.status(500).json({ error: String(e) });
+  }
+}
+
+export function postAirportMetarStations(req: Request, res: Response) {
+  try {
+    const rows = req.body?.stations;
+    if (!Array.isArray(rows)) {
+      res.status(400).json({ error: "`stations` must be an array" });
+      return;
+    }
+
+    config.updateAndSaveConfigOption(() => config.setAirportMetarStations(rows));
     res.sendStatus(200);
   } catch (e) {
     res.status(500).json({ error: e });

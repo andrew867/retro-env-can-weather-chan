@@ -3,9 +3,15 @@ import { test, expect } from "@playwright/test";
 test.describe("Locations hub — quick setup", () => {
   test("POST locationQuickSetup is invoked from Apply button (mocked)", async ({ page }) => {
     let posted = false;
+    let postedBody: Record<string, unknown> | null = null;
     await page.route("**/api/v1/config/locationQuickSetup", async (route) => {
       if (route.request().method() !== "POST") return route.continue();
       posted = true;
+      try {
+        postedBody = route.request().postDataJSON() as Record<string, unknown>;
+      } catch {
+        postedBody = null;
+      }
       await route.fulfill({ status: 200, body: "" });
     });
 
@@ -32,5 +38,16 @@ test.describe("Locations hub — quick setup", () => {
     await page.getByRole("button", { name: /apply quick setup/i }).click();
 
     await expect.poll(() => posted).toBe(true);
+    expect(postedBody?.station).toMatchObject({ name: "Testville", province: "ON", location: "s0000999" });
+    expect(postedBody?.applyProvincePreset).toBe(true);
+    // When `reuseExistingServer` serves a pre-rc5 Parcel bundle, these keys are absent — CI and fresh builds include them.
+    if (postedBody && "applyDynamicClimateWhenNoAnchor" in postedBody) {
+      expect(postedBody).toMatchObject({
+        applyDynamicClimateWhenNoAnchor: true,
+        applyNearestAqhi: true,
+        applyNearestMetar: true,
+        metarHeuristic: "interesting",
+      });
+    }
   });
 });
