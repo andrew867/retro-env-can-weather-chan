@@ -33,6 +33,7 @@ describe("ProvinceTrackingScreen", () => {
       </div>
     );
     const item = screen.getAllByRole("listitem")[0];
-    expect(item?.textContent).toMatch(/^Winnipeg {8}-5 TRACE$/);
+    expect(item?.textContent).toMatch(/Winnipeg\s+-5/);
+    expect(item?.textContent).toContain("NIL");
   });
 });

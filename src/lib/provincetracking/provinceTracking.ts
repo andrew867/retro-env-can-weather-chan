@@ -31,21 +31,35 @@ function stationFromConfigForCode(stations: ProvinceStations, code: string): Pro
   return stations.find((s) => normalizeProvinceStationCode(s.code) === key);
 }
 
+type ParsedYesterdayScalar =
+  | { kind: "numeric"; amount: number; units: "mm" | "cm" }
+  | { kind: "trace" }
+  | { kind: "nil_literal" };
+
+type CityYesterdayPrecip =
+  | { kind: "trace" }
+  | { kind: "nil_literal" }
+  | { kind: "numeric"; amount: number; unit: string }
+  | null;
+
 /**
  * ec-weather-js `simplify()` turns `<precip>2.4</precip>` into a string; with attributes it stays `{ value, units }`.
  * Reading only `.value` misses the common text-only form and left every station on "MISSING".
+ *
+ * MSC: literal NIL = no measurable precip (distinct from N/A = not available). TRACE only when the feed says trace.
  */
-function parseYesterdayPrecipScalar(raw: unknown, defaultUnits: "mm" | "cm"): { amount: number; units: "mm" | "cm" } | null {
+function parseYesterdayPrecipScalar(raw: unknown, defaultUnits: "mm" | "cm"): ParsedYesterdayScalar | null {
   if (raw == null) return null;
   if (typeof raw === "number" && Number.isFinite(raw)) {
-    return { amount: raw, units: defaultUnits };
+    return { kind: "numeric", amount: raw, units: defaultUnits };
   }
   if (typeof raw === "string") {
     const t = raw.trim();
-    if (t === "" || /^nil|n\/a$/i.test(t)) return { amount: 0, units: defaultUnits };
-    if (/^trace$/i.test(t)) return { amount: 0, units: defaultUnits };
+    if (t === "" || /^n\/a$/i.test(t)) return null;
+    if (/^nil$/i.test(t)) return { kind: "nil_literal" };
+    if (/^trace$/i.test(t)) return { kind: "trace" };
     const n = Number(t);
-    return Number.isFinite(n) ? { amount: n, units: defaultUnits } : null;
+    return Number.isFinite(n) ? { kind: "numeric", amount: n, units: defaultUnits } : null;
   }
   if (typeof raw === "object" && raw !== null && "value" in raw) {
     const o = raw as { value?: unknown; units?: string };
@@ -53,25 +67,44 @@ function parseYesterdayPrecipScalar(raw: unknown, defaultUnits: "mm" | "cm"): { 
     const u = (o.units ?? "").toLowerCase();
     const units: "mm" | "cm" = u === "cm" ? "cm" : defaultUnits;
     if (v == null || v === "") return null;
+    if (typeof v === "string") {
+      const t = v.trim();
+      if (t === "" || /^n\/a$/i.test(t)) return null;
+      if (/^nil$/i.test(t)) return { kind: "nil_literal" };
+      if (/^trace$/i.test(t)) return { kind: "trace" };
+    }
     const n = typeof v === "number" ? v : Number(String(v).trim());
     if (!Number.isFinite(n)) return null;
-    return { amount: n, units };
+    return { kind: "numeric", amount: n, units };
   }
   return null;
 }
 
-function yesterdayPrecipFromCitypage(yesterdayConditions: unknown): { amount: number; unit: string } | null {
+function yesterdayPrecipFromCitypage(yesterdayConditions: unknown): CityYesterdayPrecip {
   if (yesterdayConditions == null || typeof yesterdayConditions !== "object") return null;
   const yc = yesterdayConditions as Record<string, unknown>;
 
   const snow = parseYesterdayPrecipScalar(yc.snow, "cm");
-  if (snow && snow.amount > 0) {
-    return { amount: snow.amount, unit: "cm snow" };
+  const liquid = parseYesterdayPrecipScalar(yc.precip, "mm");
+
+  if (snow?.kind === "trace" || liquid?.kind === "trace") {
+    return { kind: "trace" };
   }
 
-  const liquid = parseYesterdayPrecipScalar(yc.precip, "mm");
-  if (liquid) {
-    return { amount: liquid.amount, unit: liquid.units === "cm" ? "cm snow" : "mm" };
+  if (snow?.kind === "numeric" && snow.amount > 0) {
+    return { kind: "numeric", amount: snow.amount, unit: "cm snow" };
+  }
+
+  if (liquid?.kind === "numeric") {
+    return {
+      kind: "numeric",
+      amount: liquid.amount,
+      unit: liquid.units === "cm" ? "cm snow" : "mm",
+    };
+  }
+
+  if (snow?.kind === "nil_literal" || liquid?.kind === "nil_literal") {
+    return { kind: "nil_literal" };
   }
 
   return null;
@@ -253,36 +286,59 @@ class ProvinceTracking {
                 ? { amount: histRainAmt, unit: "mm" as const }
                 : null;
 
-          const fromApi = yesterdayPrecipFromCitypage(yesterdayConditions);
+          const city = yesterdayPrecipFromCitypage(yesterdayConditions);
 
-          let resolved: { amount: number; unit: string } | null = fromHistorical;
-          if (!resolved && fromApi) resolved = fromApi;
-          if (!resolved && yesterdayConditions != null) {
-            resolved = { amount: 0, unit: "mm" };
-          }
-
-          if (
-            !resolved &&
-            typeof station.station.climateStationId === "number" &&
-            Number.isFinite(station.station.climateStationId)
-          ) {
-            const climateRow = await fetchYesterdayPrecipFromClimateBulk(
-              station.station.climateStationId,
-              conditions.observedDateTimeAtStation()
-            );
-            if (climateRow) resolved = climateRow;
-          }
-
-          if (resolved) {
-            station.yesterdayPrecip = resolved.amount;
-            station.yesterdayPrecipUnit = resolved.unit;
+          if (city?.kind === "trace") {
+            station.yesterdayPrecip = "TRACE";
+            station.yesterdayPrecipUnit = "mm";
             this._yesterdayPrecipDate = format(subDays(conditions.observedDateTimeAtStation(), 1), "MMM dd").replace(
               /\s0/i,
               "  "
             );
           } else {
-            station.yesterdayPrecip = "MISSING";
-            station.yesterdayPrecipUnit = "mm";
+            let resolved: { amount: number; unit: string } | null = fromHistorical;
+
+            if (city?.kind === "numeric" && !resolved) {
+              resolved = { amount: city.amount, unit: city.unit };
+            }
+
+            if (resolved) {
+              station.yesterdayPrecip = resolved.amount;
+              station.yesterdayPrecipUnit = resolved.unit;
+              this._yesterdayPrecipDate = format(subDays(conditions.observedDateTimeAtStation(), 1), "MMM dd").replace(
+                /\s0/i,
+                "  "
+              );
+            } else if (city?.kind === "nil_literal") {
+              station.yesterdayPrecip = "NIL";
+              station.yesterdayPrecipUnit = "mm";
+              this._yesterdayPrecipDate = format(subDays(conditions.observedDateTimeAtStation(), 1), "MMM dd").replace(
+                /\s0/i,
+                "  "
+              );
+            } else if (
+              typeof station.station.climateStationId === "number" &&
+              Number.isFinite(station.station.climateStationId)
+            ) {
+              const climateRow = await fetchYesterdayPrecipFromClimateBulk(
+                station.station.climateStationId,
+                conditions.observedDateTimeAtStation()
+              );
+              if (climateRow) {
+                station.yesterdayPrecip = climateRow.amount;
+                station.yesterdayPrecipUnit = climateRow.unit;
+                this._yesterdayPrecipDate = format(subDays(conditions.observedDateTimeAtStation(), 1), "MMM dd").replace(
+                  /\s0/i,
+                  "  "
+                );
+              } else {
+                station.yesterdayPrecip = "MISSING";
+                station.yesterdayPrecipUnit = "mm";
+              }
+            } else {
+              station.yesterdayPrecip = "MISSING";
+              station.yesterdayPrecipUnit = "mm";
+            }
           }
         }
 

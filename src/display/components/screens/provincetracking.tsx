@@ -3,6 +3,7 @@ import {
   PROVINCE_TRACKING_TEMP_PRECIP_GAP_WIDTH,
 } from "consts/provincetracking.consts";
 import { adjustObservedDateTimeToStationTime } from "lib/date";
+import { formatProvinceYesterdayPrecipDisplay } from "lib/display/provinceYesterdayPrecipDisplay";
 import { coerceArray } from "lib/display/safeData";
 import { useStableOnCompleteRef } from "lib/display/useStableOnCompleteRef";
 import { useEffect, useMemo } from "react";
@@ -30,25 +31,6 @@ export function ProvinceTrackingScreen(props: ProvinceTrackingProps) {
   }, [yesterdayPrecipDate, weatherStationTime?.observedDateTime]);
 
   if (!stations.length) return <></>;
-
-  // precip string must be longer than 13 chars
-  const precipString = (precip: string | number | null | undefined, unit: string | null | undefined) => {
-    const unitStr = unit == null ? "" : String(unit);
-    if (typeof precip === "string") return precip;
-    if (precip === null || precip === undefined) return "NIL".padStart(5);
-
-    const precipNumber = Number(precip);
-    if (!Number.isFinite(precipNumber)) return "NIL".padStart(5);
-
-    // less than 0.2mm is trace amounts (0 is a real measured zero, not missing)
-    if (precipNumber > 0 && precipNumber < 0.2) return "TRACE";
-
-    const noPrecipType = unitStr.length === 2;
-    if (precipNumber === 0) {
-      return `${noPrecipType ? "".padStart(2) : ""}0.0 ${unitStr || "mm"}`.toUpperCase();
-    }
-    return `${noPrecipType ? "".padStart(2) : ""}${precipNumber.toFixed(1)} ${unitStr || "mm"}`.toUpperCase();
-  };
 
   const formatTemp = (temp: number | string) => {
     if (typeof temp === "string") return temp;
@@ -94,7 +76,7 @@ export function ProvinceTrackingScreen(props: ProvinceTrackingProps) {
             </span>
             <span>{formatTemp(station?.displayTemp ?? 0).padStart(tempColW)}</span>
             <span>{"".padEnd(gapColW)}</span>
-            <span>{precipString(station?.yesterdayPrecip, station?.yesterdayPrecipUnit)}</span>
+            <span>{formatProvinceYesterdayPrecipDisplay(station?.yesterdayPrecip, station?.yesterdayPrecipUnit)}</span>
           </li>
         ))}
       </ol>

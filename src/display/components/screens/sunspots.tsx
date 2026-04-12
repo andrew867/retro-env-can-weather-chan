@@ -38,7 +38,7 @@ function formatSwpcDailyDate(iso: string): string {
 /** NOAA SWPC plate lines; `null` if no slice loaded yet. */
 function formatSwpcLines(swpc: SolarCycleSwpcData): string[] | null {
   /** ISN = international sunspot context; F10.7 = 10.7 cm radio flux index (same family as MSC flux plate). */
-  /** Two-line title so half-width plate columns do not clip the header. */
+  /** Two-line title keeps the NOAA header readable at recwc body size. */
   const lines: string[] = ["NOAA SWPC\nISN + F10.7"];
   if (swpc.daily) {
     const ssn = Math.round(Number(swpc.daily.swpcSsn));
@@ -87,7 +87,7 @@ function formatFluxLines(flux: SolarFluxLatest | null | undefined): string[] | n
     const obs = Math.round(Number(flux.observedSfU));
     const ursi = Math.round(Number(flux.ursiSfU));
     if (![adj, obs, ursi].every((n) => Number.isFinite(n))) return null;
-    /** F10.7 = international index name for 2800 MHz flux; SFU = solar flux unit. Narrow rows for half-width plate. */
+    /** F10.7 = international index name for 2800 MHz flux; SFU = solar flux unit. */
     return [
       "F10.7 CM FLUX (SFU)\nMSC/DRAO",
       `${dateStr}  ${hourZ}Z`,
@@ -152,7 +152,7 @@ export function SunspotScreen(props: SunspotScreenProps) {
   return (
     <div id="sunspots_screen" className="sunspots-screen">
       {fluxLines || swpcLines ? (
-        <div className="sunspots-plates-row">
+        <div className="sunspots-plates-stack" aria-label="Solar flux and SWPC telemetry">
           {fluxLines ? (
             <section className="sunspots-plate sunspots-plate--flux" aria-label="MSC solar flux">
               {renderPlateLines(fluxLines, "flux")}

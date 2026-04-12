@@ -230,8 +230,8 @@ ol {
     }
 
     /**
-     * Sunspot rotator: two telemetry “cards” (MSC flux + NOAA SWPC) + optional NWS outlook grid.
-     * Overrides inherited `white-space: pre` so long flux / cycle lines wrap instead of clipping at overflow:hidden.
+     * Sunspot rotator: MSC flux and NOAA SWPC each in their own full-width plate (stacked), plus optional NWS outlook.
+     * Overrides inherited `white-space: pre` so long lines wrap instead of clipping at overflow:hidden.
      */
     #sunspots_screen.sunspots-screen {
       align-items: stretch;
@@ -260,38 +260,32 @@ ol {
       display: none;
     }
 
-    #sunspots_screen .sunspots-plates-row {
-      align-items: flex-start;
+    #sunspots_screen .sunspots-plates-stack {
+      align-items: stretch;
+      align-self: stretch;
       display: flex;
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 0.42em 0.55em;
-      justify-content: center;
+      flex-direction: column;
+      gap: 0.42em;
       min-width: 0;
       width: 100%;
     }
 
-    /** Single telemetry plate: avoid stretching to half the row width. */
-    #sunspots_screen .sunspots-plates-row > .sunspots-plate:only-child {
-      flex: 0 1 min(100%, 22rem);
-    }
-
     #sunspots_screen .sunspots-plate {
+      align-self: stretch;
       background: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(0, 0, 0, 0.2) 100%);
       border: 2px solid rgba(200, 220, 255, 0.48);
       border-radius: 3px;
       box-shadow:
         0 1px 0 rgba(255, 255, 255, 0.12),
         inset 0 1px 0 rgba(255, 255, 255, 0.07);
-      flex: 1 1 calc(50% - 0.35em);
       max-width: 100%;
       min-height: 0;
-      min-width: min(100%, 14.75rem);
+      min-width: 0;
       padding: 0.26em 0.34em 0.32em;
+      width: 100%;
     }
 
     #sunspots_screen .sunspots-plate--outlook {
-      flex: 1 1 100%;
       min-width: 0;
     }
 
