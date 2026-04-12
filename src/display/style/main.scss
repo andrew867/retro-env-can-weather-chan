@@ -203,7 +203,12 @@ ol {
       min-width: 0;
       min-height: 0;
       overflow: hidden;
-      padding-bottom: 4px;
+      /**
+       * Hair inset on all sides: `#display` / this node use `overflow: hidden`; WebKit AA / subpixel text can lose a
+       * pixel at the bottom and right edges on every rotator plate (same class of issue as `#stats_screen`).
+       * Keep values small so layout and line breaks are unchanged.
+       */
+      padding: 0 2px 8px;
       width: 100%;
     }
 

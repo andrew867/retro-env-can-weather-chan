@@ -39,7 +39,7 @@ function formatSwpcDailyDate(iso: string): string {
 function formatSwpcLines(swpc: SolarCycleSwpcData): string[] | null {
   /** ISN = international sunspot context; F10.7 = 10.7 cm radio flux index (same family as MSC flux plate). */
   /** Two-line title so half-width plate columns do not clip the header. */
-  const lines: string[] = ["NOAA SWPC\nISN + F10.7 CYCLE"];
+  const lines: string[] = ["NOAA SWPC\nISN + F10.7"];
   if (swpc.daily) {
     const ssn = Math.round(Number(swpc.daily.swpcSsn));
     if (Number.isFinite(ssn)) {
@@ -159,7 +159,7 @@ export function SunspotScreen(props: SunspotScreenProps) {
             </section>
           ) : null}
           {swpcLines ? (
-            <section className="sunspots-plate sunspots-plate--swpc" aria-label="NOAA SWPC solar cycle">
+            <section className="sunspots-plate sunspots-plate--swpc" aria-label="NOAA SWPC ISN and F10.7">
               {renderPlateLines(swpcLines, "swpc")}
             </section>
           ) : null}

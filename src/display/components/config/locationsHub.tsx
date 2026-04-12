@@ -18,6 +18,8 @@ import {
   Tr,
   useToast,
 } from "@chakra-ui/react";
+import { DISPLAY_CONFIG_MSC_RESOLVE_TIMEOUT_MS } from "consts";
+import { isAxiosError } from "axios";
 import axios from "lib/axios";
 import type { ChangeEvent, FormEvent } from "react";
 import { useState } from "react";
@@ -130,15 +132,19 @@ export function LocationsHubConfig({
     }
     setPreviewLoading(true);
     axios
-      .post<{ suggestions: LocationFeedSuggestions }>("config/locationFeedSuggestions", {
-        station: quickSelected,
-        flags: {
-          dynamicClimateAndLtce: applyDynamicClimate,
-          aqhi: applyNearestAqhi,
-          metar: applyNearestMetar,
-          metarHeuristic,
+      .post<{ suggestions: LocationFeedSuggestions }>(
+        "config/locationFeedSuggestions",
+        {
+          station: quickSelected,
+          flags: {
+            dynamicClimateAndLtce: applyDynamicClimate,
+            aqhi: applyNearestAqhi,
+            metar: applyNearestMetar,
+            metarHeuristic,
+          },
         },
-      })
+        { timeout: DISPLAY_CONFIG_MSC_RESOLVE_TIMEOUT_MS }
+      )
       .then((resp) => {
         const s = resp.data?.suggestions;
         if (!s) {
@@ -147,9 +153,14 @@ export function LocationsHubConfig({
         }
         setPreviewText(summarizeSuggestions(s));
       })
-      .catch(() => {
+      .catch((err: unknown) => {
         setPreviewText(null);
-        toast({ title: "Preview failed", status: "error" });
+        const timedOut = isAxiosError(err) && err.code === "ECONNABORTED";
+        toast({
+          title: timedOut ? "Preview timed out" : "Preview failed",
+          description: timedOut ? "MSC lookups are slow; try again or narrow flags (e.g. METAR off)." : undefined,
+          status: "error",
+        });
       })
       .finally(() => setPreviewLoading(false));
   };
@@ -161,14 +172,18 @@ export function LocationsHubConfig({
     }
     setQuickApplying(true);
     axios
-      .post("config/locationQuickSetup", {
-        station: quickSelected,
-        applyProvincePreset,
-        applyDynamicClimateWhenNoAnchor: applyDynamicClimate,
-        applyNearestAqhi,
-        applyNearestMetar,
-        metarHeuristic,
-      })
+      .post(
+        "config/locationQuickSetup",
+        {
+          station: quickSelected,
+          applyProvincePreset,
+          applyDynamicClimateWhenNoAnchor: applyDynamicClimate,
+          applyNearestAqhi,
+          applyNearestMetar,
+          metarHeuristic,
+        },
+        { timeout: DISPLAY_CONFIG_MSC_RESOLVE_TIMEOUT_MS }
+      )
       .then(() => {
         toast({
           title: "Quick setup applied",

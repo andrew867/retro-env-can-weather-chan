@@ -36,7 +36,7 @@ describe("SunspotScreen", () => {
     expect(container.textContent).toContain("MSC/DRAO");
   });
 
-  it("shows ISN/F10.7 header when SWPC cycle data is present", () => {
+  it("shows ISN/F10.7 header when SWPC data is present", () => {
     const payload: SunspotsWeatherPayload = {
       observations: [],
       solarFlux: null,
@@ -50,7 +50,7 @@ describe("SunspotScreen", () => {
       <SunspotScreen sunspotsPayload={payload} sunspotsFetchAttempted weatherStationTime={stationTime} onComplete={() => {}} />
     );
     expect(container.textContent).toContain("NOAA SWPC");
-    expect(container.textContent).toContain("ISN + F10.7 CYCLE");
+    expect(container.textContent).toContain("ISN + F10.7");
   });
 
   it("shows MSC flux plate when not in tropical season (Apr–Jan) if flux data exists", () => {

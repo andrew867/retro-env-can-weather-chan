@@ -6,9 +6,13 @@ All notable changes to this project are documented here. The format follows [Kee
 
 **2.7.0** release candidate **rc5** — MSC **dynamic** location feeds: `POST /config/locationFeedSuggestions` previews nearest **climate-stations**, **ltce-stations**, **aqhi-stations**, and **swob-stations** (METAR ICAO) from citypage coordinates; `POST /config/locationQuickSetup` accepts opt-in flags for the same; `POST /config/airportMetarStations` saves the METAR list. Locations hub UI adds MSC automation checkboxes, METAR heuristic, preview, and an airport METAR editor. Docs: [SPEC](./docs/specs/SPEC-location-feed-automation-rc5.md), [PLAN](./docs/specs/PLAN-location-feed-automation-rc5.md), [TEST-PLAN](./docs/specs/TEST-PLAN-location-feed-automation-rc5.md).
 
+### Config
+
+- **Locations hub:** **Preview MSC suggestions** and **quick setup** use a **180s** display axios timeout (was the default **25s**) so multi-step MSC datamart + OGC resolution can complete; clearer toast when the client still aborts.
+
 ### Display
 
-- **Sunspot screen:** Two framed **plates** (MSC **F10.7** flux + NOAA **SWPC** cycle) side‑by‑side when both are present; **SWPC** monthly lines split across shorter rows and the **NOAA** title wraps on two lines so half-width columns stay readable. **`#sunspots_screen`** uses **`min-height: 0`**, **`max-height: 100%`**, slightly tighter vertical rhythm, and a hidden scrollbar **`overflow-y: auto`** fallback so the tropical outlook table is not clipped at the bottom. **NWS tropical** block uses a **CSS grid** table (city / conditions / hi‑lo) instead of padded monospace columns, with `white-space: normal` / `pre-wrap` so glyphs are not clipped under channel `overflow`.
+- **Sunspot screen:** Two framed **plates** (MSC **F10.7** flux + NOAA **SWPC**) side‑by‑side when both are present; **SWPC** monthly lines split across shorter rows and the **NOAA** title wraps on two lines so half-width columns stay readable. **`#sunspots_screen`** uses **`min-height: 0`**, **`max-height: 100%`**, slightly tighter vertical rhythm, and a hidden scrollbar **`overflow-y: auto`** fallback so the tropical outlook table is not clipped at the bottom. **NWS tropical** block uses a **CSS grid** table (city / conditions / hi‑lo) instead of padded monospace columns, with `white-space: normal` / `pre-wrap` so glyphs are not clipped under channel `overflow`.
 
 ## [2.7.0-rc4] - 2026-04-09
 
