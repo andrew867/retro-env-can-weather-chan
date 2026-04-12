@@ -2,11 +2,11 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [2.7.0-rc6] - 2026-04-09
+## [2.7.0-rc6] - 2026-04-12
 
 **2.7.0** release candidate **rc6** — **Sunspot / solar telemetry playout:** legacy flavour row **`Screens.SUNSPOTS`** expands into **separate rotator steps** (full dwell each): **`SUNSPOTS_SOLAR_FLUX`** (MSC/DRAO F10.7), **`SUNSPOTS_NOAA_SWPC`**, and **`SUNSPOTS_TROPICAL`** only when **`season.season.sunspot`** is true (NWS warm-city grid season). **`SunspotScreen`** takes a **`plate`** prop so each step is one readable page instead of stacked plates. **All screens (fast)** template omits the legacy combined id and lists the three new ids. Flavour validation accepts ids through **`SCREENS_MAX_FLAVOUR_SCREEN_ID`**. **`ScreenRotator`** builds the channel playlist from **filtered + expanded** screens (aligned with playlist reset).
 
-## [2.7.0-rc5] - 2026-04-09
+## [2.7.0-rc5] - 2026-04-11
 
 **2.7.0** release candidate **rc5** — MSC **dynamic** location feeds: `POST /config/locationFeedSuggestions` previews nearest **climate-stations**, **ltce-stations**, **aqhi-stations**, and **swob-stations** (METAR ICAO) from citypage coordinates; `POST /config/locationQuickSetup` accepts opt-in flags for the same; `POST /config/airportMetarStations` saves the METAR list. Locations hub UI adds MSC automation checkboxes, METAR heuristic, preview, and an airport METAR editor. Docs: [SPEC](./docs/specs/SPEC-location-feed-automation-rc5.md), [PLAN](./docs/specs/PLAN-location-feed-automation-rc5.md), [TEST-PLAN](./docs/specs/TEST-PLAN-location-feed-automation-rc5.md).
 
@@ -20,7 +20,7 @@ All notable changes to this project are documented here. The format follows [Kee
 - **Sunspot screen:** MSC **F10.7** flux and NOAA **SWPC** each use a **full-width** framed plate (stacked vertically when both are present) so cycle copy is not squeezed into a half-column; **SWPC** monthly lines stay split for readability and the **NOAA** title can wrap on two lines. **`#sunspots_screen`** uses **`min-height: 0`**, **`max-height: 100%`**, slightly tighter vertical rhythm, and a hidden scrollbar **`overflow-y: auto`** fallback so the tropical outlook table is not clipped at the bottom. **NWS tropical** block uses a **CSS grid** table (city / conditions / hi‑lo) instead of padded monospace columns, with `white-space: normal` / `pre-wrap` so glyphs are not clipped under channel `overflow`.
 - **Province tracking (24h precip):** **`formatProvinceYesterdayPrecipDisplay`** encodes MSC rules (**NIL** for sub-threshold amounts including zero and for literal **NIL**; **MISSING** for **N/A**, **M**, empty, null; **TRACE** only for an explicit trace token). Citypage parsing no longer maps **N/A** or trace to `{ amount: 0 }`, drops the “assume 0 mm when yesterday exists but unresolved” fallback, and can persist **`"TRACE"`** / **`"NIL"`** when the feed is explicit.
 
-## [2.7.0-rc4] - 2026-04-09
+## [2.7.0-rc4] - 2026-04-11
 
 **2.7.0** release candidate **rc4** — single **Locations & feeds** config tab with **quick setup** (primary station search → `POST /api/v1/config/locationQuickSetup`) plus existing per-feed editors; optional **ON / MB** province-tracking presets. LTCE virtual station search and **Save LTCE** moved here from Display. Docs: [SPEC](./docs/specs/SPEC-config-location-hub-rc4.md), [PLAN](./docs/specs/PLAN-config-location-hub-rc4.md), [TEST-PLAN](./docs/specs/TEST-PLAN-config-location-hub-rc4.md). Playwright baselines refreshed for config and canonical/forecast visuals.
 
