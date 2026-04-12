@@ -1,5 +1,5 @@
 import fs from "fs";
-import { FLAVOUR_DEFAULT, FLAVOUR_DIRECTORY, FS_NO_FILE_FOUND, Screens } from "consts";
+import { FLAVOUR_DEFAULT, FLAVOUR_DIRECTORY, FS_NO_FILE_FOUND, SCREENS_MAX_FLAVOUR_SCREEN_ID, Screens } from "consts";
 import { logConfigValidationIssues, validateFlavourScreenIds } from "lib/config/configValidation";
 import { parseISO } from "date-fns";
 import { resolveScreenDwellSeconds } from "lib/flavour/utils";
@@ -72,7 +72,7 @@ export class FlavourLoader {
       !isNaN(screen.id) &&
       typeof screen.duration !== "string" &&
       screen.id >= Screens.ALERTS &&
-      screen.id <= Screens.CANADA_TEMP_CONDITIONS_ON
+      screen.id <= SCREENS_MAX_FLAVOUR_SCREEN_ID
     );
   }
 }

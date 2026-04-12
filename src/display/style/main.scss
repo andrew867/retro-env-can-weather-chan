@@ -230,7 +230,7 @@ ol {
     }
 
     /**
-     * Sunspot rotator: MSC flux and NOAA SWPC each in their own full-width plate (stacked), plus optional NWS outlook.
+     * Sunspot rotator: one full-width plate per playlist step (flux, SWPC, or tropical outlook).
      * Overrides inherited `white-space: pre` so long lines wrap instead of clipping at overflow:hidden.
      */
     #sunspots_screen.sunspots-screen {
@@ -258,16 +258,6 @@ ol {
 
     #sunspots_screen.sunspots-screen::-webkit-scrollbar {
       display: none;
-    }
-
-    #sunspots_screen .sunspots-plates-stack {
-      align-items: stretch;
-      align-self: stretch;
-      display: flex;
-      flex-direction: column;
-      gap: 0.42em;
-      min-width: 0;
-      width: 100%;
     }
 
     #sunspots_screen .sunspots-plate {

@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [2.7.0-rc6] - 2026-04-09
+
+**2.7.0** release candidate **rc6** — **Sunspot / solar telemetry playout:** legacy flavour row **`Screens.SUNSPOTS`** expands into **separate rotator steps** (full dwell each): **`SUNSPOTS_SOLAR_FLUX`** (MSC/DRAO F10.7), **`SUNSPOTS_NOAA_SWPC`**, and **`SUNSPOTS_TROPICAL`** only when **`season.season.sunspot`** is true (NWS warm-city grid season). **`SunspotScreen`** takes a **`plate`** prop so each step is one readable page instead of stacked plates. **All screens (fast)** template omits the legacy combined id and lists the three new ids. Flavour validation accepts ids through **`SCREENS_MAX_FLAVOUR_SCREEN_ID`**. **`ScreenRotator`** builds the channel playlist from **filtered + expanded** screens (aligned with playlist reset).
+
 ## [2.7.0-rc5] - 2026-04-09
 
 **2.7.0** release candidate **rc5** — MSC **dynamic** location feeds: `POST /config/locationFeedSuggestions` previews nearest **climate-stations**, **ltce-stations**, **aqhi-stations**, and **swob-stations** (METAR ICAO) from citypage coordinates; `POST /config/locationQuickSetup` accepts opt-in flags for the same; `POST /config/airportMetarStations` saves the METAR list. Locations hub UI adds MSC automation checkboxes, METAR heuristic, preview, and an airport METAR editor. Docs: [SPEC](./docs/specs/SPEC-location-feed-automation-rc5.md), [PLAN](./docs/specs/PLAN-location-feed-automation-rc5.md), [TEST-PLAN](./docs/specs/TEST-PLAN-location-feed-automation-rc5.md).

@@ -17,7 +17,16 @@ export enum Screens {
   /** ICAO METAR (AWC) — Canadian/US/international airports from config. */
   AIRPORT_METAR,
   CANADA_TEMP_CONDITIONS_ON,
+  /** MSC/DRAO F10.7 flux plate (one rotator step). */
+  SUNSPOTS_SOLAR_FLUX,
+  /** NOAA SWPC ISN + F10.7 plate (one rotator step). */
+  SUNSPOTS_NOAA_SWPC,
+  /** NWS warm-city tropical outlook (Feb–Mar; one rotator step). */
+  SUNSPOTS_TROPICAL,
 }
+
+/** Highest numeric {@link Screens} id accepted in flavour JSON ({@link FlavourLoader}). */
+export const SCREENS_MAX_FLAVOUR_SCREEN_ID = Screens.SUNSPOTS_TROPICAL;
 
 export const SCREEN_NAMES = {
   [Screens.ALERTS]: "Alerts",
@@ -37,6 +46,9 @@ export const SCREEN_NAMES = {
   [Screens.WINDCHILL]: "Windchill Explanation",
   [Screens.AIRPORT_METAR]: "Airport METAR",
   [Screens.CANADA_TEMP_CONDITIONS_ON]: "Conditions in Ontario",
+  [Screens.SUNSPOTS_SOLAR_FLUX]: "Solar flux (F10.7)",
+  [Screens.SUNSPOTS_NOAA_SWPC]: "NOAA SWPC cycle",
+  [Screens.SUNSPOTS_TROPICAL]: "NWS tropical sunspot outlook",
 };
 
 export const SCREEN_DESCRIPTIONS = {
@@ -64,6 +76,9 @@ export const SCREEN_DESCRIPTIONS = {
   [Screens.AIRPORT_METAR]:
     "Selected ICAO stations — temperatures and flight category / sky from NOAA AWC METAR (same feed as USA backup)",
   [Screens.CANADA_TEMP_CONDITIONS_ON]: "List of Ontario cities with the current temperature and conditions",
+  [Screens.SUNSPOTS_SOLAR_FLUX]: "MSC/DRAO 10.7 cm solar flux (SFU) for the latest UTC interval",
+  [Screens.SUNSPOTS_NOAA_SWPC]: "NOAA Space Weather Prediction Center estimated sunspot number and F10.7",
+  [Screens.SUNSPOTS_TROPICAL]: "NWS grid warm-city outlook shown during sunspot season (Feb–Mar)",
 };
 
 /** Rotator does not arm an outer dwell timer — the screen advances itself (per-page timers inside the component). */

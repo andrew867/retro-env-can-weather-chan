@@ -7,7 +7,7 @@ info:
 
     **Security:** Config and weather routes are unauthenticated unless you add a reverse proxy.
     Optional bearer tokens apply to `/metrics` and `/status` when env vars are set (see OPERATORS.md).
-  version: "2.7.0-rc3"
+  version: "2.7.0-rc6"
 
 servers:
   - url: http://127.0.0.1:8600/api/v1

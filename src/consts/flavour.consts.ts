@@ -93,6 +93,7 @@ export function buildFlavourScreensAllScreenTypes(
 ): { id: Screens; duration: number }[] {
   const ids = (Object.values(Screens) as (keyof typeof Screens | Screens)[])
     .filter((v): v is Screens => typeof v === "number")
+    .filter((id) => id !== Screens.SUNSPOTS)
     .sort((a, b) => a - b);
   return ids.map((id) => ({ id, duration }));
 }

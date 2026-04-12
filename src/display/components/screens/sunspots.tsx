@@ -14,7 +14,10 @@ import {
   AutomaticScreenProps,
 } from "types";
 
+export type SunspotScreenPlate = "flux" | "swpc" | "tropical";
+
 type SunspotScreenProps = {
+  plate: SunspotScreenPlate;
   sunspotsPayload: SunspotsWeatherPayload | undefined;
   sunspotsFetchAttempted: boolean;
   weatherStationTime: WeatherStationTimeData;
@@ -100,7 +103,7 @@ function formatFluxLines(flux: SolarFluxLatest | null | undefined): string[] | n
 }
 
 export function SunspotScreen(props: SunspotScreenProps) {
-  const { sunspotsPayload, sunspotsFetchAttempted, weatherStationTime, onComplete } = props ?? {};
+  const { plate, sunspotsPayload, sunspotsFetchAttempted, weatherStationTime, onComplete } = props ?? {};
   const onCompleteRef = useStableOnCompleteRef(onComplete);
   const inSeason = isSunSpotSeason();
 
@@ -119,10 +122,14 @@ export function SunspotScreen(props: SunspotScreenProps) {
       return null;
     }
   }, [solarCycleSwpc]);
-  const hasSwpcPlate = swpcLines != null;
-  /** NWS warm-city grid outlook — server only polls during {@link isSunSpotSeason} (Feb–Mar). */
+
   const hasTropicalOutlook = inSeason && observations.length > 0;
-  const hasAnyPlate = !!(fluxLines || hasSwpcPlate || hasTropicalOutlook);
+  const hasPlateContent =
+    plate === "flux"
+      ? !!fluxLines
+      : plate === "swpc"
+        ? !!swpcLines
+        : plate === "tropical" && hasTropicalOutlook;
 
   const sunspotDate = useMemo(
     () => (weatherStationTime?.observedDateTime ? formatSunspotDate(weatherStationTime) : ""),
@@ -131,11 +138,10 @@ export function SunspotScreen(props: SunspotScreenProps) {
 
   useEffect(() => {
     if (!sunspotsFetchAttempted) return;
-    /** Skip dwell when there is nothing to show; flux + SWPC are year-round (see `getSunspots`). */
-    if (!hasAnyPlate) onCompleteRef.current();
-  }, [sunspotsFetchAttempted, hasAnyPlate]);
+    if (!hasPlateContent) onCompleteRef.current();
+  }, [sunspotsFetchAttempted, hasPlateContent]);
 
-  if (!hasAnyPlate) return <></>;
+  if (!hasPlateContent) return <></>;
 
   const formatTemp = (temperature: number | null | undefined) =>
     Math.round(Number.isFinite(Number(temperature)) ? Number(temperature) : 0)
@@ -151,21 +157,17 @@ export function SunspotScreen(props: SunspotScreenProps) {
 
   return (
     <div id="sunspots_screen" className="sunspots-screen">
-      {fluxLines || swpcLines ? (
-        <div className="sunspots-plates-stack" aria-label="Solar flux and SWPC telemetry">
-          {fluxLines ? (
-            <section className="sunspots-plate sunspots-plate--flux" aria-label="MSC solar flux">
-              {renderPlateLines(fluxLines, "flux")}
-            </section>
-          ) : null}
-          {swpcLines ? (
-            <section className="sunspots-plate sunspots-plate--swpc" aria-label="NOAA SWPC ISN and F10.7">
-              {renderPlateLines(swpcLines, "swpc")}
-            </section>
-          ) : null}
-        </div>
+      {plate === "flux" && fluxLines ? (
+        <section className="sunspots-plate sunspots-plate--flux" aria-label="MSC solar flux">
+          {renderPlateLines(fluxLines, "flux")}
+        </section>
       ) : null}
-      {hasTropicalOutlook ? (
+      {plate === "swpc" && swpcLines ? (
+        <section className="sunspots-plate sunspots-plate--swpc" aria-label="NOAA SWPC ISN and F10.7">
+          {renderPlateLines(swpcLines, "swpc")}
+        </section>
+      ) : null}
+      {plate === "tropical" && hasTropicalOutlook ? (
         <section className="sunspots-plate sunspots-plate--outlook" aria-label="NWS tropical sunspot outlook">
           <div className="sunspots-plate-title sunspots-plate-title--outlook">NWS TROPICAL SUNSPOT WX</div>
           <div className="sunspots-outlook-meta">

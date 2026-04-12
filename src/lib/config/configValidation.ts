@@ -1,4 +1,4 @@
-import { Screens } from "consts";
+import { SCREENS_MAX_FLAVOUR_SCREEN_ID, Screens } from "consts";
 import { MAX_AIRPORT_METAR_STATIONS } from "consts";
 import Logger from "lib/logger";
 
@@ -79,7 +79,7 @@ export function validateLoadedConfigJson(parsed: Record<string, unknown>): Confi
 
 export function validateFlavourScreenIds(screens: { id?: unknown }[]): ConfigValidationIssue[] {
   const issues: ConfigValidationIssue[] = [];
-  const maxId = Screens.CANADA_TEMP_CONDITIONS_ON;
+  const maxId = SCREENS_MAX_FLAVOUR_SCREEN_ID;
   const minId = Screens.ALERTS;
   screens.forEach((s, ix) => {
     const id = s?.id;

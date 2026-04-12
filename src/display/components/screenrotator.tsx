@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { SCREEN_BACKGROUND_BLUE, SCREEN_BACKGROUND_RED, Screens } from "consts";
 import { buildChannelPlaylist, getChannelPlaylistStructureKey } from "lib/display/channelPlaylist";
 import { getAqhiCityAbbreviation } from "lib/display/outlookRegionalLabel";
-import { filterFlavourScreensForPlayout } from "lib/flavour/lastMonthStatsSchedule";
+import { effectiveFlavourScreensForChannelPlaylist } from "lib/flavour/sunspotPlayout";
 import { isAutomaticScreen, resolveScreenDwellSeconds } from "lib/flavour/utils";
 import {
   AQHIObservationResponse,
@@ -92,12 +92,17 @@ export function ScreenRotator(props: ScreenRotatorProps) {
   } = props ?? {};
 
   const { channelPlaylist, playlistStructureKey } = useMemo(() => {
-    const pl = buildChannelPlaylist(screens ?? [], {
+    const input = effectiveFlavourScreensForChannelPlaylist(
+      screens,
+      weatherStationResponse?.stationTime,
+      season.season.sunspot
+    );
+    const pl = buildChannelPlaylist(input, {
       weatherStationResponse,
       alert: alerts?.mostImportantAlert,
     });
     return { channelPlaylist: pl, playlistStructureKey: getChannelPlaylistStructureKey(pl) };
-  }, [screens, weatherStationResponse, alerts?.mostImportantAlert]);
+  }, [screens, weatherStationResponse, alerts?.mostImportantAlert, season.season.sunspot]);
 
   /** Bumps when observation/config changes or playlist topology changes (e.g. alert clears → fewer forecast pages). */
   const playlistGenerationKey = useMemo(
@@ -115,8 +120,8 @@ export function ScreenRotator(props: ScreenRotatorProps) {
   /** Coalesce rapid playlist steps so each still flips blue/red (debounced timer used to drop toggles). */
   const pendingBackgroundToggles = useRef(0);
 
-  const playlistInputRef = useRef({ screens, weatherStationResponse, alerts });
-  playlistInputRef.current = { screens, weatherStationResponse, alerts };
+  const playlistInputRef = useRef({ screens, weatherStationResponse, alerts, season });
+  playlistInputRef.current = { screens, weatherStationResponse, alerts, season };
 
   // Basic rotation: advance dwell timers when the displayed index or playlist length changes.
   // Do **not** depend on `configVersion` here: it changes on every API process start (new UUID). The
@@ -144,9 +149,9 @@ export function ScreenRotator(props: ScreenRotatorProps) {
   useEffect(() => {
     screenRotatorTimeout.current && clearTimeout(screenRotatorTimeout.current);
 
-    const { screens: s, weatherStationResponse: w, alerts: a } = playlistInputRef.current;
-    const effectiveScreens = filterFlavourScreensForPlayout(s, w?.stationTime);
-    const playlist = buildChannelPlaylist(effectiveScreens, {
+    const { screens: s, weatherStationResponse: w, alerts: a, season: se } = playlistInputRef.current;
+    const input = effectiveFlavourScreensForChannelPlaylist(s, w?.stationTime, se.season.sunspot);
+    const playlist = buildChannelPlaylist(input, {
       weatherStationResponse: w,
       alert: a?.mostImportantAlert,
     });
@@ -370,9 +375,32 @@ export function ScreenRotator(props: ScreenRotatorProps) {
           />
         );
 
-      case Screens.SUNSPOTS:
+      case Screens.SUNSPOTS_SOLAR_FLUX:
         return (
           <SunspotScreen
+            plate="flux"
+            sunspotsPayload={sunspotsPayload}
+            sunspotsFetchAttempted={sunspotsFetchAttempted}
+            weatherStationTime={weatherStationResponse?.stationTime}
+            onComplete={switchToNextScreen}
+          />
+        );
+
+      case Screens.SUNSPOTS_NOAA_SWPC:
+        return (
+          <SunspotScreen
+            plate="swpc"
+            sunspotsPayload={sunspotsPayload}
+            sunspotsFetchAttempted={sunspotsFetchAttempted}
+            weatherStationTime={weatherStationResponse?.stationTime}
+            onComplete={switchToNextScreen}
+          />
+        );
+
+      case Screens.SUNSPOTS_TROPICAL:
+        return (
+          <SunspotScreen
+            plate="tropical"
             sunspotsPayload={sunspotsPayload}
             sunspotsFetchAttempted={sunspotsFetchAttempted}
             weatherStationTime={weatherStationResponse?.stationTime}

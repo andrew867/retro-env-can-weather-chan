@@ -30,7 +30,13 @@ describe("SunspotScreen", () => {
       solarCycleSwpc: { daily: null, monthlyObserved: null, monthlyPredicted: null },
     };
     const { container } = render(
-      <SunspotScreen sunspotsPayload={payload} sunspotsFetchAttempted weatherStationTime={stationTime} onComplete={() => {}} />
+      <SunspotScreen
+        plate="flux"
+        sunspotsPayload={payload}
+        sunspotsFetchAttempted
+        weatherStationTime={stationTime}
+        onComplete={() => {}}
+      />
     );
     expect(container.textContent).toContain("F10.7 CM FLUX (SFU)");
     expect(container.textContent).toContain("MSC/DRAO");
@@ -47,7 +53,13 @@ describe("SunspotScreen", () => {
       },
     };
     const { container } = render(
-      <SunspotScreen sunspotsPayload={payload} sunspotsFetchAttempted weatherStationTime={stationTime} onComplete={() => {}} />
+      <SunspotScreen
+        plate="swpc"
+        sunspotsPayload={payload}
+        sunspotsFetchAttempted
+        weatherStationTime={stationTime}
+        onComplete={() => {}}
+      />
     );
     expect(container.textContent).toContain("NOAA SWPC");
     expect(container.textContent).toContain("ISN + F10.7");
@@ -76,7 +88,13 @@ describe("SunspotScreen", () => {
       solarCycleSwpc: { daily: null, monthlyObserved: null, monthlyPredicted: null },
     };
     const { container } = render(
-      <SunspotScreen sunspotsPayload={payload} sunspotsFetchAttempted weatherStationTime={stationTime} onComplete={() => {}} />
+      <SunspotScreen
+        plate="flux"
+        sunspotsPayload={payload}
+        sunspotsFetchAttempted
+        weatherStationTime={stationTime}
+        onComplete={() => {}}
+      />
     );
     expect(container.textContent).toContain("F10.7 CM FLUX (SFU)");
     expect(container.textContent).not.toContain("NWS TROPICAL SUNSPOT WX");
@@ -98,7 +116,13 @@ describe("SunspotScreen", () => {
       solarCycleSwpc: { daily: null, monthlyObserved: null, monthlyPredicted: null },
     };
     const { container } = render(
-      <SunspotScreen sunspotsPayload={payload} sunspotsFetchAttempted weatherStationTime={stationTime} onComplete={() => {}} />
+      <SunspotScreen
+        plate="tropical"
+        sunspotsPayload={payload}
+        sunspotsFetchAttempted
+        weatherStationTime={stationTime}
+        onComplete={() => {}}
+      />
     );
     expect(container.textContent).toContain("NWS TROPICAL SUNSPOT WX");
   });

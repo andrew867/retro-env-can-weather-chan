@@ -1,5 +1,5 @@
 import { validateFlavourScreenIds, validateLoadedConfigJson } from "lib/config/configValidation";
-import { Screens } from "consts";
+import { SCREENS_MAX_FLAVOUR_SCREEN_ID } from "consts";
 
 describe("configValidation", () => {
   it("validateLoadedConfigJson warns on empty primaryLocation fields", () => {
@@ -10,7 +10,7 @@ describe("configValidation", () => {
   });
 
   it("validateFlavourScreenIds warns on out-of-range screen id", () => {
-    const issues = validateFlavourScreenIds([{ id: Screens.CANADA_TEMP_CONDITIONS_ON + 99 }]);
+    const issues = validateFlavourScreenIds([{ id: SCREENS_MAX_FLAVOUR_SCREEN_ID + 99 }]);
     expect(issues.length).toBeGreaterThan(0);
   });
 
